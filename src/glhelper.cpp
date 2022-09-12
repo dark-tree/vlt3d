@@ -1,53 +1,11 @@
 
 #include "glhelper.hpp"
 
-std::list<int> keys;
-int mx = 0, my = 0, px = 0, py = 0, wx = 0, wy = 0;
-int w, h;
-
 bool GLHelper::init(int width, int height, const char* name) {
 
-//	glfwWindowHint(GLFW_SAMPLES, 4);
-	winxHint(WINX_HINT_OPENGL_MAJOR, 4);
-	winxHint(WINX_HINT_OPENGL_MINOR, 3);
-	winxHint(WINX_HINT_OPENGL_CORE, true);
-
-	if (!winxOpen(width, height, name)) {
-		logger::fatal("Error occured during window creation! ", winxGetError());
+	if (!Input::open(width, height, name)) {
 		return false;
 	}
-
-	w = width;
-	h = height;
-
-	winxSetCursorCapture(true);
-
-	WinxCursor* cursor = winxCreateNullCursorIcon();
-	winxSetCursorIcon(cursor);
-
-	winxSetResizeEventHandle([] (int width, int height) -> void {
-		glViewport(0, 0, width, height);
-		w = width;
-		h = height;
-	});
-
-	winxSetKeybordEventHandle([] (int state, int keycode) -> void {
-		if (state == WINX_PRESSED) {
-			keys.push_back(keycode);
-		} else {
-			keys.remove(keycode);
-		}
-	});
-
-	winxSetCursorEventHandle([] (int x, int y) -> void {
-		const int xr = w/2, yr = h/2;
-
-		if ((xr != x || yr != y) && winxGetFocus()) {
-			mx += (x - xr);
-			my += (y - yr);
-			winxSetCursorPos(xr, yr);
-		}
-	});
 
 	gladLoadGL();
 
@@ -82,21 +40,6 @@ bool GLHelper::init(int width, int height, const char* name) {
 
 	return true;
 
-}
-
-void GLHelper::centerPointer() {
-//	winxSetCursorPos(w/2, h/2);
-	wx = w/2;
-	wy = h/2;
-}
-
-bool GLHelper::isPressed(int keycode) {
-	return std::find(keys.begin(), keys.end(), keycode) != keys.end();
-}
-
-void GLHelper::getMouse(int& x, int& y) {
-	x = mx;
-	y = my;
 }
 
 void GLHelper::frame() {

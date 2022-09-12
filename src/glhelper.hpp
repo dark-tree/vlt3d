@@ -16,10 +16,6 @@ namespace GLHelper {
 	bool init(int, int, const char*);
 	void frame();
 
-	void centerPointer();
-	bool isPressed(int keycode);
-	void getMouse(int& x, int& y);
-
 	// screenshot utilities
 	byte* capture( int*, int* );
 	void screenshot( const std::string& path );

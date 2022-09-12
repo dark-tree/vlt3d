@@ -2,8 +2,6 @@
 #include "camera.hpp"
 
 void Camera::update() {
-	GLHelper::centerPointer();
-
 	this->updateTime();
 	float x = 0, y = 0;
 
@@ -42,31 +40,31 @@ void Camera::update() {
 	const float speed = this->speed * this->delta_time;
 
 	//keyboard input
-	if( GLHelper::isPressed('w') ) {
+	if( Input::isPressed('w') ) {
 		this->pos += this->direction * speed;
 	}
 
-	if( GLHelper::isPressed('s') ) {
+	if( Input::isPressed('s') ) {
 		this->pos -= this->direction * speed;
 	}
 
-	if( GLHelper::isPressed('d') ) {
+	if( Input::isPressed('d') ) {
 		glm::vec3 vec = glm::cross( this->direction, glm::vec3(0, 1, 0) );
 		this->pos += glm::normalize(vec) * speed;
 	}
 
-	if( GLHelper::isPressed('a') ) {
+	if( Input::isPressed('a') ) {
 		glm::vec3 vec = glm::cross( this->direction, glm::vec3(0, 1, 0) );
 		this->pos -= glm::normalize(vec) * speed;
 	}
 
-	this->pos.y -= GLHelper::isPressed('q') ? speed : 0;
-	this->pos.y += GLHelper::isPressed('e') ? speed : 0;
+	this->pos.y -= Input::isPressed('q') ? speed : 0;
+	this->pos.y += Input::isPressed('e') ? speed : 0;
 }
 
 void Camera::getCursorPos( float* x, float* y ) {
 	int cx, cy;
-	GLHelper::getMouse(cx, cy);
+	Input::getMousePos(cx, cy);
 
 	*x = (float) cx;
 	*y = (float) cy;

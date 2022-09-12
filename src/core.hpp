@@ -6,6 +6,7 @@
 
 // internal
 #include "logger.hpp"
+#include "input.hpp"
 #include "glhelper.hpp"
 #include "camera.hpp"
 #include "util/buffer.hpp"
@@ -26,6 +27,6 @@
 #include "loader/parser_mtl.hpp"
 
 // When adding a file here, remember to add its forward definition to the 'include/forward.hpp'!
-// Include this file to gain access to all LT3D components, external libraries and macros.
+// Include this file to gain access to all GLPH components, external libraries and macros.
 // If your component is to be used in a header file, it MUST NOT include core.hpp, and can only use headers from the 'include/' directory
 
