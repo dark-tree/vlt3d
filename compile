@@ -1,0 +1,21 @@
+#!/bin/env bash
+
+if [ ! -d build ]; then
+	mkdir build
+fi
+
+echo "Generating..."
+cmake . -B build
+
+if [ $? -ne 0 ]; then
+	echo "Failed to generate build scripts!"
+	exit 1
+fi
+
+echo "Building..."
+cmake --build build/ -j $(($(nproc --all) + 1))
+
+if [ $? -ne 0 ]; then
+	echo "Failed to build!"
+	exit 2
+fi

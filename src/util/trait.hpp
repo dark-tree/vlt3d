@@ -1,13 +1,21 @@
 #pragma once
 
 namespace trait {
-	
-	/// internal utility, check if the given types are equal
-	template<class Type, class... Args>
-	using are_of_type = std::conjunction<std::is_same<Type, Args>...>;
 
-	/// internal utility, asserts that given types are equal
-	template<class Type, class... Args>
-	using are_types_equal = std::enable_if_t<are_of_type<Type, Args...>::value, void>;
+	// https://stackoverflow.com/a/53967057
+	template <typename T, typename = void>
+	struct is_iterable : std::false_type {};
+
+	template <typename T>
+	struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T&>())), decltype(std::end(std::declval<T&>()))>> : std::true_type {};
+
+	template<typename T>
+	concept IterableContainer = is_iterable<T>::value;
+
+	template <typename T>
+	concept ConvertibleToStdString = requires(T a){ std::to_string(a); };
+
+	template <typename T>
+	concept CastableToStdString = std::convertible_to<T, std::string>;
 
 }

@@ -1,0 +1,153 @@
+#pragma once
+
+#include "external.hpp"
+#include "util/util.hpp"
+#include "picker.hpp"
+#include "proxy.hpp"
+#include "messanger.hpp"
+#include "device.hpp"
+#include "surface.hpp"
+#include "window/window.hpp"
+
+class Instance {
+
+	public:
+
+		READONLY VkInstance vk_instance;
+
+	private:
+
+		DebugMessanger messenger;
+		bool validation;
+		std::vector<DeviceInfo> devices;
+
+	public:
+
+		Instance(VkInstance vk_instance, DebugMessanger messenger, bool validation)
+		: vk_instance(vk_instance), messenger(messenger), validation(validation) {
+
+			uint32_t count = 0;
+			vkEnumeratePhysicalDevices(vk_instance, &count, nullptr);
+
+			std::vector<VkPhysicalDevice> entries {count};
+			vkEnumeratePhysicalDevices(vk_instance, &count, entries.data());
+
+			devices.reserve(count);
+			for (VkPhysicalDevice& device : entries) {
+				devices.emplace_back(device);
+			}
+
+		}
+
+		void close() {
+			messenger.close();
+			vkDestroyInstance(vk_instance, nullptr);
+		}
+
+		std::vector<DeviceInfo>& getDevices() {
+			return devices;
+		}
+
+		WindowSurface createSurface(Window& window) {
+			return {window, vk_instance};
+		}
+
+};
+
+class InstanceBuilder {
+
+	private:
+
+		const char* name = "Unknown";
+		uint16_t major = 0, minor = 0, patch = 0;
+
+		InstanceExtensionPicker instance_extensions;
+		ValidationLayerPicker validation_layers;
+		DebugMessangerConfig messenger;
+
+	private:
+
+		std::vector<const char*> getRequiredExtensions() {
+			uint32_t count = 0;
+			const char** array = glfwGetRequiredInstanceExtensions(&count);
+			return {array, array + count};
+		}
+
+	public:
+
+		void addApplicationInfo(const char* name, uint16_t major = 1, uint16_t minor = 0, uint16_t patch = 0) {
+			this->name = name;
+			this->major = major;
+			this->minor = minor;
+			this->patch = patch;
+		}
+
+		void addDebugMessenger(PFN_vkDebugUtilsMessengerCallbackEXT callback = DebugMessangerConfig::Default, void* user_data = nullptr) {
+			messenger.configure(callback, user_data);
+		}
+
+		Result<std::string> addInstanceExtension(const std::string& name) {
+			return instance_extensions.select(name);
+		}
+
+		Result<std::string> addValidationLayer(const std::string& name) {
+			return validation_layers.select(name);
+		}
+
+		Instance build() {
+
+			// validation requires this extension to be enabled
+			if (validation_layers.isAnySelected()) {
+				addInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME).orFail();
+			}
+
+			#ifdef API_WIN32
+				addInstanceExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME).orFail();
+			#endif
+
+			#ifdef API_XLIB
+				addInstanceExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME).orWarn();
+			#endif
+
+			#ifdef API_WAYLAND
+				addInstanceExtension(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME).orWarn();
+			#endif
+
+			// make sure extensions required by GLFW are available
+			for (const char* name : getRequiredExtensions()) {
+				addInstanceExtension(name).orFail();
+			}
+
+			// optional, general info about the application
+			VkApplicationInfo app_info {};
+			app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+			app_info.pApplicationName = name;
+			app_info.applicationVersion = VK_MAKE_VERSION(major, minor, patch);
+			app_info.pEngineName = "GLPH";
+			app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+			app_info.apiVersion = VK_API_VERSION_1_0;
+
+			// information required for creating an instance
+			VkInstanceCreateInfo create_info {};
+			create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+			create_info.pApplicationInfo = &app_info;
+			create_info.enabledExtensionCount = instance_extensions.size();
+			create_info.ppEnabledExtensionNames = instance_extensions.data();
+			create_info.enabledLayerCount = validation_layers.size();
+			create_info.ppEnabledLayerNames = validation_layers.data();
+
+			// attach debug messenger if configured
+			if (messenger.isEnabled()) {
+				create_info.pNext = messenger.getConfigPointer();
+			}
+
+			VkInstance instance;
+			if (vkCreateInstance(&create_info, nullptr, &instance) != VK_SUCCESS) {
+				throw std::runtime_error("vkCreateInstance: Failed to create instance!");
+			}
+
+			return Instance {instance, messenger.attach(instance), validation_layers.isAnySelected()};
+
+		}
+
+};
