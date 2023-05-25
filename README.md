@@ -13,6 +13,6 @@ for more info see https://vulkan.lunarg.com/sdk/home#linux (see the "Ubuntu Pack
 **3**. Now run `./compile --sync` to download the required dependencies, this process can take some time.
 
 #### Running
-* Use `./compile --run` to run the default example
+* Use `./compile --run main` to run the "main" example
 * Use `./compile --list` to list avaible example programs
 * Use `./compile --help` for aditional info
