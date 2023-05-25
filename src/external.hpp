@@ -17,7 +17,7 @@
 #include <set>
 #include <algorithm>
 
-#include "stb/image/read.h"
+#include "stb_image.h"
 
 #include <shaderc/shaderc.hpp>
 

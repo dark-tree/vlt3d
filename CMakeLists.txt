@@ -32,7 +32,7 @@ add_subdirectory (lib)
 include_directories(
 	lib/
 	src/
-	lib/shaderc/libshaderc/include
+	lib/stb/
 )
 
 file(GLOB_RECURSE GLPH_SOURCES RELATIVE
@@ -45,8 +45,6 @@ add_library(GLPH STATIC
 )
 
 target_link_libraries(GLPH
-	GLAD
-	STB_IMAGE
 	Threads::Threads
 	vulkan
 	glfw

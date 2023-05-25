@@ -1,5 +1,72 @@
 #!/bin/env bash
 
+#!/bin/bash
+
+arg_clean=false
+arg_target=""
+arg_list=false
+arg_sync=false
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		--clean)
+			arg_clean=true
+			shift
+			;;
+		--run)
+			arg_target="$2"
+			shift 2
+			;;
+		--list)
+			arg_list=true
+			shift
+			;;
+		--sync)
+			arg_sync=true
+			shift
+			;;
+		--help)
+			echo "GLPH Builder"
+			echo "Usage: script.sh [options]"
+			echo "Options:"
+			echo "  --clean           (re-)generate build system"
+			echo "  --run [target]    execute given target"
+			echo "  --list            list available targets"
+			echo "  --sync            download the required dependencies"
+			echo "  --help            display this help message"
+			exit
+			;;
+		*)
+			shift
+			;;
+	esac
+done
+
+if $arg_sync; then
+    echo "Synchronizing dependencies, this can take some time..."
+    cd lib && ./git-sync-deps
+    exit
+fi
+
+if $arg_list; then
+    echo "Available targets:"
+    path="./test"
+
+    for file in $(ls $path | grep -v "/"); do
+        if [[ ! -f "$path/$file" ]]; then
+            echo " * --run=$file"
+        fi
+    done
+
+    exit
+fi
+
+if $arg_clean; then
+	rm -rf ./build
+fi
+
+rm -rf "./build/test/$arg_target/main"
+
 if [ ! -d build ]; then
 	mkdir build
 fi
@@ -18,4 +85,8 @@ cmake --build build/ -j $(($(nproc --all) + 1))
 if [ $? -ne 0 ]; then
 	echo "Failed to build!"
 	exit 2
+fi
+
+if [[ -n $arg_target ]]; then
+	./build/test/$arg_target/main
 fi

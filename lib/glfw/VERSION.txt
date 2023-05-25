@@ -1,2 +1,0 @@
-latest (commit 3fa2360, Mar 31, 2023, 4:18 PM GMT+2) https://github.com/glfw/glfw/commit/3fa2360720eeba1964df3c0ecf4b5df8648a8e52
-update to 3.4.0 once available

@@ -7,7 +7,7 @@
 
 #if defined(__linux__)
 #	define API_XLIB
-#	define API_WAYLAND
+//#	define API_WAYLAND this is not really working so well...
 #	define GLPH_LINUX
 #endif
 
