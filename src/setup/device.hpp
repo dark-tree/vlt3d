@@ -2,6 +2,9 @@
 
 #include "external.hpp"
 #include "queues.hpp"
+#include "features.hpp"
+#include "sync/fence.hpp"
+#include "sync/semaphore.hpp"
 
 class Device {
 
@@ -12,8 +15,12 @@ class Device {
 
 	public:
 
-		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device)
-		: vk_physical_device(vk_physical_device), vk_device(vk_device) {}
+		const FeatureSetView features;
+
+	public:
+
+		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, FeatureSetView& features)
+		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features) {}
 
 		VkQueue get(QueueInfo& info, uint32_t index) {
 			return info.get(vk_device, index);
@@ -27,6 +34,14 @@ class Device {
 			vkDestroyDevice(vk_device, nullptr);
 		}
 
+		Fence fence(bool signaled = false) {
+			return {vk_device, signaled};
+		}
+
+		Semaphore semaphore() {
+			return {vk_device};
+		}
+
 };
 
 class DeviceBuilder {
@@ -38,6 +53,10 @@ class DeviceBuilder {
 
 		DeviceExtensionPicker device_extensions;
 		std::vector<QueueFamilyConfig> configured;
+
+	public:
+
+		READONLY FeatureSet features;
 
 	public:
 
@@ -59,9 +78,10 @@ class DeviceBuilder {
 			return config.getDelegate();
 		}
 
-		Device create(VkPhysicalDeviceFeatures enabled_features) {
+		Device create() {
 
 			std::vector<VkDeviceQueueCreateInfo> configs;
+			FeatureSetView view = features.view();
 
 			// append configured family queues
 			for (QueueFamilyConfig& family : configured) {
@@ -73,7 +93,7 @@ class DeviceBuilder {
 			create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			create_info.pQueueCreateInfos = configs.data();
 			create_info.queueCreateInfoCount = configs.size();
-			create_info.pEnabledFeatures = &enabled_features;
+			create_info.pEnabledFeatures = &view.vk_features;
 
 			// pass extensions
 			create_info.enabledExtensionCount = device_extensions.size();
@@ -87,7 +107,7 @@ class DeviceBuilder {
 				throw std::runtime_error("vkCreateDevice: Failed to create logical device!");
 			}
 
-			return {info, device};
+			return {info, device, view};
 
 		}
 
@@ -95,8 +115,8 @@ class DeviceBuilder {
 
 		friend class DeviceInfo;
 
-		DeviceBuilder(VkPhysicalDevice& info, std::vector<QueueFamily>& families)
-		: info(info), families(families), device_extensions(info) {}
+		DeviceBuilder(VkPhysicalDevice& info, std::vector<QueueFamily>& families, FeatureSet features)
+		: info(info), families(families), device_extensions(info), features(features) {}
 
 };
 
@@ -136,8 +156,8 @@ class DeviceInfo {
 		}
 
 		// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
-		VkPhysicalDeviceFeatures getFeatures() {
-			return features;
+		FeatureSetView getFeatures() {
+			return FeatureSet {features}.view();
 		}
 
 		bool hasSwapchain(WindowSurface& surface) {
@@ -155,7 +175,7 @@ class DeviceInfo {
 		}
 
 		DeviceBuilder builder() {
-			return {info, families};
+			return {info, families, features};
 		}
 
 };

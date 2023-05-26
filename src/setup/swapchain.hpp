@@ -166,27 +166,28 @@ class SwapchainInfo {
 
 	public:
 
-		SwapchainInfo(const VkPhysicalDevice& device, WindowSurface& surface) {
+		SwapchainInfo(const Device& device, WindowSurface& surface) {
 
 			uint32_t count;
+			VkPhysicalDevice vk_device = device.vk_physical_device;
 
 			// load structure describing capabilities of a surface
-			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface.vk_surface, &capabilities);
+			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk_device, surface.vk_surface, &capabilities);
 
 			// load structures describing a supported swapchain format-color space pair
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface.vk_surface, &count, nullptr);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(vk_device, surface.vk_surface, &count, nullptr);
 
 			if (count != 0) {
 				formats.resize(count);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface.vk_surface, &count, formats.data());
+				vkGetPhysicalDeviceSurfaceFormatsKHR(vk_device, surface.vk_surface, &count, formats.data());
 			}
 
 			// load strucutres describing supported presentation modes of a surface
-			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface.vk_surface, &count, nullptr);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(vk_device, surface.vk_surface, &count, nullptr);
 
 			if (count != 0) {
 				modes.resize(count);
-				vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface.vk_surface, &count, modes.data());
+				vkGetPhysicalDeviceSurfacePresentModesKHR(vk_device, surface.vk_surface, &count, modes.data());
 			}
 
 		}

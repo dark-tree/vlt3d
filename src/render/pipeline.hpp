@@ -4,6 +4,9 @@
 #include "external.hpp"
 #include "util/format.hpp"
 #include "renderpass.hpp"
+#include "setup/features.hpp"
+
+#define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw std::runtime_error("feature '" #feature "' not enabled on this device!"); }
 
 enum GlphBlendMode {
 	GLPH_BLEND_BITWISE = 1,
@@ -54,6 +57,7 @@ class GraphicsPipelineBuilder {
 		VkRect2D scissor {};
 		VkRenderPass pass;
 		int subpass = -1;
+		Device& device;
 
 		void finalize() {
 
@@ -70,7 +74,8 @@ class GraphicsPipelineBuilder {
 
 	public:
 
-		GraphicsPipelineBuilder() {
+		GraphicsPipelineBuilder(Device& device)
+		: device(device) {
 
 			view.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 			view.viewportCount = 1;
@@ -187,10 +192,13 @@ class GraphicsPipelineBuilder {
 	// rasterizer configuration
 
 		void setDepthClamp(bool enable) {
+			ASSERT_FEATURE(enable, device, DepthClamp);
 			rasterizer.depthClampEnable = enable;
 		}
 
 		void setDepthBias(bool enable, float constant = 0.0f, float clamp = 0.0f, float slope = 0.0f) {
+			ASSERT_FEATURE(clamp != 0.0f, device, DepthBiasClamp);
+
 			rasterizer.depthBiasEnable = enable;
 			rasterizer.depthBiasConstantFactor = constant;
 			rasterizer.depthBiasClamp = clamp;
@@ -198,10 +206,12 @@ class GraphicsPipelineBuilder {
 		}
 
 		void setPolygonMode(VkPolygonMode mode) {
+			ASSERT_FEATURE(mode != VK_POLYGON_MODE_FILL, device, FillModeNonSolid);
 			rasterizer.polygonMode = mode;
 		}
 
 		void setLineWidth(float width) {
+			ASSERT_FEATURE(width > 1.0f, device, WideLines);
 			rasterizer.lineWidth = width;
 		}
 
@@ -258,6 +268,7 @@ class GraphicsPipelineBuilder {
 			}
 
 			if (mode == GLPH_BLEND_BITWISE) {
+				ASSERT_FEATURE(true, device, LogicOp);
 				blending.logicOpEnable = true;
 				attachment.blendEnable = false;
 			}
@@ -279,7 +290,7 @@ class GraphicsPipelineBuilder {
 
 	public:
 
-		GraphicsPipeline build(Device& device) {
+		GraphicsPipeline build() {
 
 			if (subpass == -1) {
 				throw std::runtime_error("vkCreatePipelineLayout: Render pass needs to be specified!");

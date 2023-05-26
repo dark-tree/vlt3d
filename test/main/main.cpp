@@ -56,7 +56,6 @@ int main() {
 	InstanceBuilder builder;
 	builder.addApplicationInfo("My Funny Vulkan Application");
 	builder.addValidationLayer("VK_LAYER_KHRONOS_validation").orFail();
-	//builder.addValidationLayer("VK_LAYER_LUNARG_api_dump").orFail();
 	builder.addDebugMessenger();
 
 	// instance and surface creation, and device selection
@@ -69,13 +68,16 @@ int main() {
 	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
 	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
+	device_builder.features.enableFillModeNonSolid().orFail();
+	device_builder.features.enableWideLines().orFail();
+
 	// device and queue creation
-	Device device = device_builder.create({});
+	Device device = device_builder.create();
 	VkQueue graphics = device.get(graphics_ref, 0);
 	VkQueue presentation = device.get(presentation_ref, 0);
 
 	// swapchain information gathering
-	SwapchainInfo info {device.vk_physical_device, surface};
+	SwapchainInfo info {device, surface};
 	auto extent = info.getExtent(window);
 	auto images = info.getImageCount();
 	auto transform = info.getTransform();
@@ -132,21 +134,24 @@ int main() {
 	}
 
 	// pipeline creation
-	GraphicsPipelineBuilder pipe_builder;
+	GraphicsPipelineBuilder pipe_builder {device};
 	pipe_builder.setDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
 	pipe_builder.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder.setRenderPass(pass);
 	pipe_builder.setShaders(vert_mod, frag_mod);
 
-	GraphicsPipeline pipeline = pipe_builder.build(device);
+	pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
+	pipe_builder.setLineWidth(3.0f);
+
+	GraphicsPipeline pipeline = pipe_builder.build();
 
 	// create command buffer
 	CommandPool pool = CommandPool::build(device, graphics_ref, false);
 	CommandBuffer buffer = pool.allocate();
 
-	Semaphore image_available_semaphore {device.vk_device};
-	Semaphore render_finished_semaphore {device.vk_device};
-	Fence in_flight_fence {device.vk_device, true};
+	Semaphore image_available_semaphore = device.semaphore();
+	Semaphore render_finished_semaphore = device.semaphore();
+	Fence in_flight_fence = device.fence(true);
 
 	while (!window.shouldClose()) {
 		window.poll();
@@ -172,7 +177,6 @@ int main() {
 			.done(graphics);
 
 		swapchain.present(presentation, render_finished_semaphore, image_index);
-
 	}
 
 	device.wait();
