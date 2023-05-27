@@ -12,6 +12,47 @@ DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
 	throw std::runtime_error("No viable vulkan device found!");
 }
 
+Swapchain createSwapchain(Device& device, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& presentation) {
+
+	// swapchain information gathering
+	SwapchainInfo info {device, surface};
+	auto extent = info.getExtent(window);
+	auto images = info.getImageCount();
+	auto transform = info.getTransform();
+
+	VkSurfaceFormatKHR selected_format = info.getFormats()[0];
+
+	for (auto& format : info.getFormats()) {
+		if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+			selected_format = format;
+		}
+	}
+
+	// swapchain creation
+	SwapchainBuilder swapchain_builder {VK_PRESENT_MODE_FIFO_KHR, selected_format, extent, images, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, transform};
+	swapchain_builder.addSyncedQueue(graphics);
+	swapchain_builder.addSyncedQueue(presentation);
+
+	return swapchain_builder.build(device, surface);
+
+}
+
+void recreateSwapchain(Device& device, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& presentation, RenderPass& pass, std::vector<Framebuffer>& framebuffers, Swapchain& swapchain) {
+
+	device.wait();
+	swapchain.close();
+
+	for (Framebuffer& framebuffer : framebuffers) {
+		framebuffer.close();
+	}
+
+	swapchain = createSwapchain(device, surface, window, graphics, presentation);
+	framebuffers = swapchain.getFramebuffers(pass);
+
+	logger::info("Swapchain recreated!");
+
+}
+
 constexpr const char* vert_shader = R"(
 	#version 450
 
@@ -76,31 +117,9 @@ int main() {
 	VkQueue graphics = device.get(graphics_ref, 0);
 	VkQueue presentation = device.get(presentation_ref, 0);
 
-	// swapchain information gathering
-	SwapchainInfo info {device, surface};
-	auto extent = info.getExtent(window);
-	auto images = info.getImageCount();
-	auto transform = info.getTransform();
-
-	VkSurfaceFormatKHR selected_format = info.getFormats()[0];
-
-	for (auto& f : info.getFormats()) {
-		if (f.format == VK_FORMAT_B8G8R8A8_SRGB && f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-			selected_format = f;
-		}
-	}
-
 	// swapchain creation
-	SwapchainBuilder swapchain_builder {VK_PRESENT_MODE_FIFO_KHR, selected_format, extent, images, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, transform};
-	swapchain_builder.addSyncedQueue(graphics_ref);
-	swapchain_builder.addSyncedQueue(presentation_ref);
-	Swapchain swapchain = swapchain_builder.build(device, surface);
-
-	// get images from the swapchain
-	std::vector<ImageView> image_views;
-	for (Image& image : swapchain.getImages()) {
-		image_views.push_back(image.builder().build(device));
-	}
+	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
+	auto extent = swapchain.vk_extent;
 
 	// create a compiler and compile the glsl into spirv
 	Compiler compiler;
@@ -128,10 +147,7 @@ int main() {
 	RenderPass pass = pass_builder.build(device);
 
 	// create framebuffers
-	std::vector<Framebuffer> framebuffers;
-	for (ImageView& view : image_views) {
-		framebuffers.push_back(Framebuffer::build(device, pass, view, extent.width, extent.height));
-	}
+	std::vector<Framebuffer> framebuffers = swapchain.getFramebuffers(pass);
 
 	// pipeline creation
 	GraphicsPipelineBuilder pipe_builder {device};
@@ -139,7 +155,6 @@ int main() {
 	pipe_builder.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder.setRenderPass(pass);
 	pipe_builder.setShaders(vert_mod, frag_mod);
-
 	pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
 	pipe_builder.setLineWidth(3.0f);
 
@@ -156,9 +171,15 @@ int main() {
 	while (!window.shouldClose()) {
 		window.poll();
 
-		in_flight_fence.lock();
+		in_flight_fence.wait();
 
-		uint32_t image_index = swapchain.getNextImage(image_available_semaphore);
+		uint32_t image_index;
+		if (swapchain.getNextImage(image_available_semaphore, &image_index).mustReplace()) {
+			recreateSwapchain(device, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
+			extent = swapchain.vk_extent;
+		}
+
+		in_flight_fence.reset();
 
 		// record commands
 		buffer.record()
@@ -176,7 +197,12 @@ int main() {
 			.onFinished(in_flight_fence)
 			.done(graphics);
 
-		swapchain.present(presentation, render_finished_semaphore, image_index);
+		if (swapchain.present(presentation, render_finished_semaphore, image_index).mustReplace()) {
+			recreateSwapchain(device, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
+			extent = swapchain.vk_extent;
+		}
+
+
 	}
 
 	device.wait();

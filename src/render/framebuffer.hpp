@@ -21,7 +21,7 @@ class Framebuffer {
 			vkDestroyFramebuffer(vk_device, vk_buffer, nullptr);
 		}
 
-		static Framebuffer build(Device& device, RenderPass& pass, ImageView& view, uint32_t width, uint32_t height) {
+		static Framebuffer build(Device& device, RenderPass& pass, const ImageView& view, uint32_t width, uint32_t height) {
 
 			VkFramebufferCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

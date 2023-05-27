@@ -198,7 +198,6 @@ class GraphicsPipelineBuilder {
 
 		void setDepthBias(bool enable, float constant = 0.0f, float clamp = 0.0f, float slope = 0.0f) {
 			ASSERT_FEATURE(clamp != 0.0f, device, DepthBiasClamp);
-
 			rasterizer.depthBiasEnable = enable;
 			rasterizer.depthBiasConstantFactor = constant;
 			rasterizer.depthBiasClamp = clamp;

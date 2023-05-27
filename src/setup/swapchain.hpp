@@ -4,9 +4,11 @@
 
 #include "device.hpp"
 #include "queues.hpp"
+#include "present.hpp"
 #include "surface.hpp"
 #include "render/image.hpp"
 #include "sync/semaphore.hpp"
+#include "render/framebuffer.hpp"
 
 class Swapchain {
 
@@ -15,24 +17,24 @@ class Swapchain {
 		READONLY VkSwapchainKHR vk_swapchain;
 		READONLY VkSurfaceFormatKHR vk_surface_format;
 		READONLY VkExtent2D vk_extent;
-		READONLY VkDevice vk_device;
 
 	private:
 
 		std::vector<Image> images;
+		std::reference_wrapper<Device> device;
 
 	public:
 
-		Swapchain(VkSwapchainKHR vk_swapchain, VkSurfaceFormatKHR vk_surface_format, VkExtent2D vk_extent, VkDevice vk_device)
-		: vk_swapchain(vk_swapchain), vk_surface_format(vk_surface_format), vk_extent(vk_extent), vk_device(vk_device) {
+		Swapchain(VkSwapchainKHR vk_swapchain, VkSurfaceFormatKHR vk_surface_format, VkExtent2D vk_extent, Device& device)
+		: vk_swapchain(vk_swapchain), vk_surface_format(vk_surface_format), vk_extent(vk_extent), device(device) {
 
 			uint32_t count;
 
-			vkGetSwapchainImagesKHR(vk_device, vk_swapchain, &count, nullptr);
+			vkGetSwapchainImagesKHR(device.vk_device, vk_swapchain, &count, nullptr);
 
 			if (count > 0) {
 				std::vector<VkImage> entries {count};
-				vkGetSwapchainImagesKHR(vk_device, vk_swapchain, &count, entries.data());
+				vkGetSwapchainImagesKHR(device.vk_device, vk_swapchain, &count, entries.data());
 
 				images.reserve(count);
 
@@ -47,14 +49,22 @@ class Swapchain {
 			return images;
 		}
 
-		uint32_t getNextImage(Semaphore& semaphore) {
-			uint32_t index;
-   			vkAcquireNextImageKHR(vk_device, vk_swapchain, UINT64_MAX, semaphore.vk_semaphore, VK_NULL_HANDLE, &index);
+		std::vector<Framebuffer> getFramebuffers(RenderPass& pass) {
+			std::vector<Framebuffer> framebuffers;
+			framebuffers.reserve(images.size());
 
-			return index;
+			for (Image& image : images) {
+				framebuffers.push_back(Framebuffer::build(device, pass, image.builder().build(device), vk_extent.width, vk_extent.height));
+			}
+
+			return framebuffers;
 		}
 
-		VkResult present(VkQueue queue, Semaphore& await, uint32_t image_index) {
+		PresentResult getNextImage(Semaphore& semaphore, uint32_t* image_index) {
+			return {vkAcquireNextImageKHR(device.get().vk_device, vk_swapchain, UINT64_MAX, semaphore.vk_semaphore, VK_NULL_HANDLE, image_index)};
+		}
+
+		PresentResult present(VkQueue queue, Semaphore& await, uint32_t image_index) {
 
 			VkPresentInfoKHR info {};
 			info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -67,12 +77,12 @@ class Swapchain {
 			info.pImageIndices = &image_index;
 			info.pResults = nullptr;
 
-			return vkQueuePresentKHR(queue, &info);
+			return {vkQueuePresentKHR(queue, &info)};
 
 		}
 
 		void close() {
-			vkDestroySwapchainKHR(vk_device, vk_swapchain, nullptr);
+			vkDestroySwapchainKHR(device.get().vk_device, vk_swapchain, nullptr);
 		}
 
 };
@@ -150,7 +160,7 @@ class SwapchainBuilder {
 				throw std::runtime_error("vkCreateSwapchainKHR: Failed to create swapchain!");
 			}
 
-			return Swapchain {swapchain, format, extent, device.vk_device};
+			return Swapchain {swapchain, format, extent, device};
 
 		}
 
