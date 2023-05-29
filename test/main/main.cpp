@@ -115,8 +115,12 @@ int main() {
 	VkQueue presentation = device.get(presentation_ref, 0);
 
 	// buffer
-	Buffer vertices = Buffer::from(device, sizeof(float) * 15, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	vertices.access().write(float_data);
+	Buffer vertices = Buffer::from(device, sizeof(float) * 15, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	MemoryAccess access = vertices.access();
+
+	access.map(float_data);
+	access.flush();
+	access.unmap();
 
 	// swapchain creation
 	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
@@ -158,10 +162,10 @@ int main() {
 	pipe_builder.setShaders(vert_mod, frag_mod);
 	pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
 	pipe_builder.setLineWidth(3.0f);
-	
+
 	pipe_builder.addBinding()
-		.addAttribute(0, VK_FORMAT_R32G32_SFLOAT)
-		.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT)
+		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(1, VK_FORMAT_R32G32B32_SFLOAT)
 		.done();
 
 	GraphicsPipeline pipeline = pipe_builder.build();
