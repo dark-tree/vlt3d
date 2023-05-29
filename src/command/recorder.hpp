@@ -3,6 +3,7 @@
 
 #include "external.hpp"
 #include "render/pipeline.hpp"
+#include "buffer/buffer.hpp"
 
 class CommandRecorder {
 
@@ -61,6 +62,12 @@ class CommandRecorder {
 			scissor.extent = {width, height};
 
 			vkCmdSetScissor(vk_buffer, 0, 1, &scissor);
+			return *this;
+		}
+		
+		CommandRecorder& bindBuffer(Buffer& buffer) {
+			VkDeviceSize offsets[] = {0};
+			vkCmdBindVertexBuffers(vk_buffer, 0, 1, &buffer.vk_buffer, offsets);
 			return *this;
 		}
 

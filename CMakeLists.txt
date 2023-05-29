@@ -33,6 +33,7 @@ include_directories(
 	lib/
 	src/
 	lib/stb/
+	lib/glm/
 )
 
 file(GLOB_RECURSE GLPH_SOURCES RELATIVE

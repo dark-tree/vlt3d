@@ -5,6 +5,7 @@
 #include "util/format.hpp"
 #include "renderpass.hpp"
 #include "setup/features.hpp"
+#include "binding.hpp"
 
 #define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw std::runtime_error("feature '" #feature "' not enabled on this device!"); }
 
@@ -154,27 +155,19 @@ class GraphicsPipelineBuilder {
 
 	// vertex configuration
 
-		void addAttribute(uint32_t location, uint32_t binding, VkFormat format, uint32_t offset) {
+		BindingBuilder addBinding(VkVertexInputRate rate = VK_VERTEX_INPUT_RATE_VERTEX) {
 
-			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkVertexInputAttributeDescription.html
-			VkVertexInputAttributeDescription description {};
-			description.location = location;
-			description.binding = binding;
-			description.format = format;
-			description.offset = offset;
-
-			attributes.push_back(description);
-		}
-
-		void addBinding(uint32_t binding, uint32_t stride, VkVertexInputRate rate) {
+			uint32_t binding = (uint32_t) bindings.size();
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkVertexInputBindingDescription.html
 			VkVertexInputBindingDescription description {};
 			description.binding = binding;
-			description.stride = stride;
+			description.stride = 0;
 			description.inputRate = rate;
 
 			bindings.push_back(description);
+			return {bindings.back(), attributes};
+
 		}
 
 	// layout configuration

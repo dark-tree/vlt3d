@@ -56,23 +56,14 @@ void recreateSwapchain(Device& device, WindowSurface& surface, Window& window, Q
 constexpr const char* vert_shader = R"(
 	#version 450
 
+	layout(location = 0) in vec2 inPosition;
+	layout(location = 1) in vec3 inColor;
+
 	layout(location = 0) out vec3 fragColor;
 
-	vec2 positions[3] = vec2[](
-		vec2(0.0, -0.5),
-		vec2(0.5, 0.5),
-		vec2(-0.5, 0.5)
-	);
-
-	vec3 colors[3] = vec3[](
-		vec3(1.0, 0.0, 0.0),
-		vec3(0.0, 1.0, 0.0),
-		vec3(0.0, 0.0, 1.0)
-	);
-
 	void main() {
-		gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
-		fragColor = colors[gl_VertexIndex];
+	    gl_Position = vec4(inPosition, 0.0, 1.0);
+	    fragColor = inColor;
 	}
 )";
 
@@ -87,6 +78,12 @@ constexpr const char* frag_shader = R"(
 		outColor = vec4(fragColor, 1.0);
 	}
 )";
+
+float float_data[] = {
+	 0.0, -0.5, 1.0, 0.0, 0.0,
+	 0.5,  0.5, 0.0, 1.0, 0.0,
+	-0.5,  0.5, 0.0, 0.0, 1.0,
+};
 
 int main() {
 
@@ -116,6 +113,10 @@ int main() {
 	Device device = device_builder.create();
 	VkQueue graphics = device.get(graphics_ref, 0);
 	VkQueue presentation = device.get(presentation_ref, 0);
+
+	// buffer
+	Buffer vertices = Buffer::from(device, sizeof(float) * 15, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	vertices.access().write(float_data);
 
 	// swapchain creation
 	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
@@ -157,6 +158,11 @@ int main() {
 	pipe_builder.setShaders(vert_mod, frag_mod);
 	pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
 	pipe_builder.setLineWidth(3.0f);
+	
+	pipe_builder.addBinding()
+		.addAttribute(0, VK_FORMAT_R32G32_SFLOAT)
+		.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT)
+		.done();
 
 	GraphicsPipeline pipeline = pipe_builder.build();
 
@@ -187,6 +193,7 @@ int main() {
 			.bindPipeline(pipeline)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
+			.bindBuffer(vertices)
 			.draw(3)
 			.endRenderPass()
 			.done();

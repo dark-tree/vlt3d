@@ -5,6 +5,7 @@
 #include "features.hpp"
 #include "sync/fence.hpp"
 #include "sync/semaphore.hpp"
+#include "buffer/memory.hpp"
 
 class Device {
 
@@ -16,11 +17,12 @@ class Device {
 	public:
 
 		const FeatureSetView features;
+		const MemoryInfo memory;
 
 	public:
 
 		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, FeatureSetView& features)
-		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features) {}
+		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features), memory(vk_physical_device, vk_device) {}
 
 		VkQueue get(QueueInfo& info, uint32_t index) {
 			return info.get(vk_device, index);
