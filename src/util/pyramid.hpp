@@ -15,25 +15,32 @@ class Pyramid {
 
 			private:
 
-				Pyramid& pyramid;
+				const Pyramid& pyramid;
 				int index;
 
 				friend class Pyramid;
 
-				View(Pyramid& pyramid)
+				View(const Pyramid& pyramid)
 				: pyramid(pyramid), index(0) {}
 
 			public:
 
+				/**
+				 * Move one layer up
+				 */
 				void up() {
 					index ++;
 				}
 
+				/**
+				 * Returns a set of all the elements in the current layer
+				 * and in all layers above it
+				 */
 				std::set<T> collect() {
 					std::set<T> values;
 
 					for (int i = index; i < pyramid.size(); i ++) {
-						for (T& value : pyramid.get(i)) values.insert(value);
+						for (const T& value : pyramid.get(i)) values.insert(value);
 					}
 
 					return values;
@@ -41,31 +48,52 @@ class Pyramid {
 
 		};
 
+		/**
+		 * Move one layer up
+		 */
 		void push() {
 			pyramid.emplace_back();
 		}
 
-		bool empty() {
+		/**
+		 * Check if the pyramid has no layers (is empty)
+		 */
+		bool empty() const {
 			return pyramid.empty();
 		}
 
-		int size() {
+		/**
+		 * Get the number of layers in the pyramid
+		 */
+		int size() const {
 			return pyramid.size();
 		}
 
-		std::vector<T>& get(int index) {
+		/**
+		 * Get a vector of elements at the specified layer
+		 */
+		const std::vector<T>& get(int index) const {
 			return pyramid.at(index);
 		}
 
-		std::vector<T>& top() {
+		/**
+		 * Get the top layer (the layer currently being appended to)
+		 */
+		const std::vector<T>& top() const {
 			return pyramid.back();
 		}
 
+		/**
+		 * Add a element to the top layer
+		 */
 		void append(const T& value) {
-			top().push_back(value);
+			pyramid.back().push_back(value);
 		}
 
-		View view() {
+		/**
+		 * Get a read-only iterator-like view of the pyramid
+		 */
+		View view() const {
 			return {*this};
 		}
 

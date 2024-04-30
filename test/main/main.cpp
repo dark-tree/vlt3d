@@ -1,6 +1,7 @@
 #include "glph.hpp"
 #include "context.hpp"
 
+/// Pick a device that has all the features that we need
 DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
 	for (DeviceInfo& device : instance.getDevices()) {
 		if (device.getQueueFamily(VK_QUEUE_GRAPHICS_BIT) && device.getQueueFamily(surface) && device.hasSwapchain(surface)) {
@@ -9,7 +10,7 @@ DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
 		}
 	}
 
-	throw std::runtime_error("No viable vulkan device found!");
+	throw std::runtime_error("No viable Vulkan device found!");
 }
 
 Swapchain createSwapchain(Device& device, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& presentation) {
@@ -106,6 +107,7 @@ int main() {
 	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
 	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
+	// enable some additional features
 	device_builder.features.enableFillModeNonSolid().orFail();
 	device_builder.features.enableWideLines().orFail();
 
@@ -136,8 +138,8 @@ int main() {
 	RenderPassBuilder pass_builder;
 
 	pass_builder.addAttachment(swapchain.vk_surface_format.format, VK_SAMPLE_COUNT_1_BIT)
-		.input(VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED)
-		.output(VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+		.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
+		.output(ColorOp::STORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 		.next();
 
 	pass_builder.addDependency()
@@ -212,7 +214,6 @@ int main() {
 			recreateSwapchain(device, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
 			extent = swapchain.vk_extent;
 		}
-
 
 	}
 

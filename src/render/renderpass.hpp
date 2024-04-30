@@ -2,6 +2,7 @@
 #pragma once
 
 #include "external.hpp"
+#include "attachment.hpp"
 #include "util/pyramid.hpp"
 
 class RenderPassBuilder;
@@ -20,14 +21,6 @@ class AttachmentBuilder {
 			return description;
 		}
 
-	public:
-
-		AttachmentBuilder(T& builder, VkFormat format, VkSampleCountFlagBits samples)
-		: builder(builder) {
-			description.format = format;
-			description.samples = samples;
-		}
-
 		AttachmentBuilder& input(VkAttachmentLoadOp color, VkAttachmentLoadOp stencil, VkImageLayout layout) {
 			description.loadOp = color;
 			description.stencilLoadOp = stencil;
@@ -40,6 +33,38 @@ class AttachmentBuilder {
 			description.stencilStoreOp = stencil;
 			description.finalLayout = layout;
 			return *this;
+		}
+
+	public:
+
+		AttachmentBuilder(T& builder, VkFormat format, VkSampleCountFlagBits samples)
+		: builder(builder) {
+			description.format = format;
+			description.samples = samples;
+		}
+
+		/**
+		 * Describes how the attachment data should be treated on load
+		 *
+		 * @param color describes what should happen to the color data
+		 * @param stencil describes what should happen to the stencil data
+		 * @param layout describes what layout should be used
+		 */
+		template <typename C, typename S>
+		AttachmentBuilder& input(AttachmentOp<ColorOp, C> color, AttachmentOp<StencilOp, S> stencil, VkImageLayout layout) {
+			return input(color.load(), stencil.load(), layout);
+		}
+
+		/**
+		 * Describes how the attachment data should be treated on write
+		 *
+		 * @param color describes what should happen to the color data
+		 * @param stencil describes what should happen to the stencil data
+		 * @param layout describes what layout should be used
+		 */
+		template <typename C, typename S>
+		AttachmentBuilder& output(AttachmentOp<ColorOp, C> color, AttachmentOp<StencilOp, S> stencil, VkImageLayout layout) {
+			return output(color.store(), stencil.store(), layout);
 		}
 
 		T& next() {
@@ -69,6 +94,13 @@ class DependencyBuilder {
 			description.dependencyFlags = flags;
 		}
 
+		/**
+		 * Specify the operation to wait for in the given stage of the given subpass
+		 *
+		 * @param subpass the index of the subpass in which is the stage and operation to wait for
+		 * @param stage the stage in which is the operation to wait for
+		 * @param access the operation to wait for, pass 0 to just wait for stage
+		 */
 		DependencyBuilder& input(uint32_t subpass, VkPipelineStageFlags stage, VkAccessFlags access) {
 			description.srcSubpass = subpass;
 			description.srcStageMask = stage;
@@ -76,6 +108,13 @@ class DependencyBuilder {
 			return *this;
 		}
 
+		/**
+		 * Specify the operation of a stage of a subpass that will wait for this dependency
+		 *
+		 * @param subpass the index of the subpass in which is the stage and operation to wait for
+		 * @param stage the stage in which is the operation to wait for
+		 * @param access the operation to wait for, pass 0 to just wait for stage
+		 */
 		DependencyBuilder& output(uint32_t subpass, VkPipelineStageFlags stage, VkAccessFlags access) {
 			description.dstSubpass = subpass;
 			description.dstStageMask = stage;
@@ -224,6 +263,9 @@ class RenderPassBuilder {
 			return *this;
 		}
 
+		/**
+		 * Adds and makes usable an attachment for subpasses in the render pass
+		 */
 		AttachmentBuilder<> addAttachment(VkFormat format, VkSampleCountFlagBits samples) {
 			return {*this, format, samples};
 		}
@@ -235,6 +277,9 @@ class RenderPassBuilder {
 			return *this;
 		}
 
+		/**
+		 * Adds a render pass sub-stage, subpasses are executed in order
+		 */
 		SubpassBuilder<> addSubpass(VkPipelineBindPoint bind_point) {
 			preserve.push();
 			return {*this, bind_point, (uint32_t) attachments.size(), preserve};
@@ -247,6 +292,9 @@ class RenderPassBuilder {
 			return *this;
 		}
 
+		/**
+		 * Add a data dependency to a subpass
+		 */
 		DependencyBuilder<> addDependency(VkDependencyFlags flags = 0) {
 			return {*this, flags};
 		}

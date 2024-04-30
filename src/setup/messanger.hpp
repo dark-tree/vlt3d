@@ -27,12 +27,16 @@ class DebugMessangerConfig {
 
 	public:
 
-		static VKAPI_ATTR VkBool32 VKAPI_CALL Default(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT* data, void* user) {
+		using CallbackFunction = std::function<VKAPI_ATTR VkBool32 VKAPI_CALL(VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT*)>;
+
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DefaultExt(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT* data) {
+			return DefaultRaw(severity, type, data, nullptr);
+		}
+
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DefaultRaw(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT* data, void* user) {
 			if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 				logger::error("[Vulkan] ", data->pMessage);
-			}
-
-			else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+			} else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 				logger::warn("[Vulkan] ", data->pMessage);
 			}
 
@@ -41,10 +45,21 @@ class DebugMessangerConfig {
 
 	private:
 
+		static VKAPI_ATTR VkBool32 VKAPI_CALL WrapperFunction(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT* data, void* user) {
+			return (*(CallbackFunction*)(user))(severity, type, data);
+		}
+
 		VkDebugUtilsMessengerCreateInfoEXT create_info {};
 		bool enabled = false;
 
 	public:
+
+		void configure(const CallbackFunction& callback) {
+
+			// yes we leak the function here
+			configure(WrapperFunction, new CallbackFunction {callback});
+
+		}
 
 		void configure(PFN_vkDebugUtilsMessengerCallbackEXT callback, void* user_data) {
 

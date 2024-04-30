@@ -54,7 +54,7 @@ if $arg_list; then
 
     for file in $(ls $path | grep -v "/"); do
         if [[ ! -f "$path/$file" ]]; then
-            echo " * --run=$file"
+            echo " * --run $file"
         fi
     done
 
@@ -88,5 +88,5 @@ if [ $? -ne 0 ]; then
 fi
 
 if [[ -n $arg_target ]]; then
-	./build/test/$arg_target/main
+	./build/test/"$arg_target"/main
 fi

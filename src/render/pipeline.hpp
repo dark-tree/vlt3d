@@ -79,6 +79,8 @@ class GraphicsPipelineBuilder {
 		: device(device) {
 
 			view.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+
+			// TODO because of this section GraphicsPipelineBuilder is not safe to copy
 			view.viewportCount = 1;
 			view.pViewports = &viewport;
 			view.scissorCount = 1;

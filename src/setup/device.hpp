@@ -7,6 +7,9 @@
 #include "sync/semaphore.hpp"
 #include "buffer/memory.hpp"
 
+/**
+ * A Vulkan Logical Device, a configured connection to a physical device
+ */
 class Device {
 
 	public:
@@ -24,6 +27,9 @@ class Device {
 		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, FeatureSetView& features)
 		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features), memory(vk_physical_device, vk_device) {}
 
+		/**
+		 * Get a previously requested Vulkan Queue from the device
+		 */
 		VkQueue get(QueueInfo& info, uint32_t index) {
 			return info.get(vk_device, index);
 		}
@@ -62,12 +68,24 @@ class DeviceBuilder {
 
 	public:
 
+		/**
+		 * Request a extension from the device, this is different than requesting a
+		 * extension from a Instance
+		 */
 		Result<std::string> addDeviceExtension(const std::string& name) {
 			return device_extensions.select(name);
 		}
 
+		/**
+		 * Request a queue from a device and returns a reference to it,
+		 * the queue will be usable only after the device is created
+		 *
+		 * FIXME this implementation is incorrect and buggy
+		 *   * the count and priority are passed incorrectly into the vulkan structures
+		 *   * this method will not work for count > 1 (possibly with a SEGFAULT)
+		 */
 		QueueInfo addQueue(const QueueFamilyPredicate& predicate, uint32_t count, float priority = 1.0) {
-			// we can't just do it one by one, all queues for a family need to be reqested at once
+			// we can't just do it one by one, all queues for a family need to be requested at once
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDeviceCreateInfo.html#VUID-VkDeviceCreateInfo-queueFamilyIndex-02802
 
 			QueueFamilyConfig config = predicate.pick(families)->configure(count, priority);
@@ -152,16 +170,24 @@ class DeviceInfo {
 			}
 		}
 
-		// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceProperties.html
+		/**
+		 * @see https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceProperties.html
+		 */
 		VkPhysicalDeviceProperties getProperties() {
 			return properties;
 		}
 
-		// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
+		/**
+		 * @see https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
+		 */
 		FeatureSetView getFeatures() {
 			return FeatureSet {features}.view();
 		}
 
+		/**
+		 * Check if the device's swap chain is compatible with our window surface,
+		 * we will consider it compatible if at least one image format and presentation mode match
+		 */
 		bool hasSwapchain(WindowSurface& surface) {
 			uint32_t formats, modes;
 
@@ -172,6 +198,10 @@ class DeviceInfo {
 			return formats != 0 && modes != 0;
 		}
 
+		/**
+		 * Returns a queue family that supports the given queue type bit mask or the given swapchain (presentation queue),
+		 * a single family can be returned for different queue types
+		 */
 		const QueueFamily* getQueueFamily(const QueueFamilyPredicate& predicate) {
 			return predicate.pick(families);
 		}

@@ -9,6 +9,10 @@
 #include "surface.hpp"
 #include "window/window.hpp"
 
+/**
+ * A structure describing the application
+ * and the connection with the Vulkan API
+ */
 class Instance {
 
 	public:
@@ -44,10 +48,16 @@ class Instance {
 			vkDestroyInstance(vk_instance, nullptr);
 		}
 
+		/**
+		 * Get a list of Physical Devices that support our Instance configuration
+		 */
 		std::vector<DeviceInfo>& getDevices() {
 			return devices;
 		}
 
+		/**
+		 * Get a representation of a connection between Vulkan API and our window
+		 */
 		WindowSurface createSurface(Window& window) {
 			return {window, vk_instance};
 		}
@@ -75,6 +85,10 @@ class InstanceBuilder {
 
 	public:
 
+		/**
+		 * Provide a basic and optional description of the application.
+		 * This information COULD be used by the graphics driver
+		 */
 		void addApplicationInfo(const char* name, uint16_t major = 1, uint16_t minor = 0, uint16_t patch = 0) {
 			this->name = name;
 			this->major = major;
@@ -82,14 +96,26 @@ class InstanceBuilder {
 			this->patch = patch;
 		}
 
-		void addDebugMessenger(PFN_vkDebugUtilsMessengerCallbackEXT callback = DebugMessangerConfig::Default, void* user_data = nullptr) {
-			messenger.configure(callback, user_data);
+		/**
+		 * Set a error handler for when a Vulkan API is incorrectly used,
+		 * some validation layer should be enabled for this call to be useful
+		 */
+		void addDebugMessenger(const DebugMessangerConfig::CallbackFunction& callback = DebugMessangerConfig::DefaultExt) {
+			messenger.configure(callback);
 		}
 
+		/**
+		 * Add instance-level extensions, this is internally used for adding extensions needed
+		 * by the window creation library and for the 'VK_KHR_*_surface' and 'VK_EXT_debug_utils' extensions
+		 */
 		Result<std::string> addInstanceExtension(const std::string& name) {
 			return instance_extensions.select(name);
 		}
 
+		/**
+		 * Enable error checking validation layer, without validation layers Vulkan API will silently fail
+		 * and any non-valid usage will produce undefined behaviour
+		 */
 		Result<std::string> addValidationLayer(const std::string& name) {
 			return validation_layers.select(name);
 		}

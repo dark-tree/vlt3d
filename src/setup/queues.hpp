@@ -81,6 +81,7 @@ class QueueFamily {
 			return properties.queueCount;
 		}
 
+		// TODO implement
 		bool canPresentTo(WindowSurface& surface) const {
 			VkBool32 supported = true;
 			//vkGetPhysicalDeviceSurfaceSupportKHR(device, index, surface, &supported);
@@ -120,6 +121,9 @@ class QueueFamilyPredicate {
 
 	public:
 
+		/**
+		 * Picks a matching QueueFamily from a vector and returns it, otherwise returns a nullptr
+		 */
 		QueueFamily* pick(std::vector<QueueFamily>& families) const {
 
 			for (QueueFamily& family : families) {

@@ -3,6 +3,9 @@
 #include "setup/device.hpp"
 #include "kind.hpp"
 
+/**
+ * Class representing a single shader stage (like vertex shader or fragment shader)
+ */
 class ShaderModule {
 
 	public:
@@ -26,7 +29,7 @@ class ShaderModule {
 
 		}
 
-		VkPipelineShaderStageCreateInfo getStageConfig() {
+		VkPipelineShaderStageCreateInfo getStageConfig() const {
 
 			VkPipelineShaderStageCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

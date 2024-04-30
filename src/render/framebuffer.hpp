@@ -26,10 +26,15 @@ class Framebuffer {
 			VkFramebufferCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			create_info.renderPass = pass.vk_pass;
+
+			// TODO if we ever want more than once image per frame buffer this will fail up
 			create_info.attachmentCount = 1;
 			create_info.pAttachments = &view.vk_view;
+
 			create_info.width = width;
 			create_info.height = height;
+
+			// TODO should this be passed by the image?
 			create_info.layers = 1;
 
 			VkFramebuffer framebuffer;
