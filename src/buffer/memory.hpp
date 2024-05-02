@@ -2,93 +2,63 @@
 
 #include "external.hpp"
 
-class MemoryRange {
+class MemoryMap {
+
+	private:
+
+		VmaAllocator vma_allocator;
+		VmaAllocation vma_allocation;
+		uint8_t* pointer;
 
 	public:
 
-		READONLY VkMappedMemoryRange vk_range {};
+		MemoryMap(VmaAllocator vma_allocator, VmaAllocation vma_allocation, void* pointer)
+		: vma_allocator(vma_allocator), vma_allocation(vma_allocation), pointer((uint8_t*) pointer) {}
 
-	public:
-
-		MemoryRange(VkDeviceMemory vk_memory, uint64_t offset, uint64_t size) {
-			vk_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			vk_range.memory = vk_memory;
-			vk_range.offset = offset;
-			vk_range.size = size;
+		void invalidate(size_t offset = 0, size_t size = VK_WHOLE_SIZE) {
+			vmaInvalidateAllocation(vma_allocator, vma_allocation, offset, size);
 		}
 
-		void flush(VkDevice vk_device) const {
-			vkFlushMappedMemoryRanges(vk_device, 1, &vk_range);
+		void flush(size_t offset = 0, size_t size = VK_WHOLE_SIZE) {
+			vmaFlushAllocation(vma_allocator, vma_allocation, offset, size);
 		}
 
-		void invalidate(VkDevice vk_device) const {
-			vkInvalidateMappedMemoryRanges(vk_device, 1, &vk_range);
+		void read(void* dst, size_t size, size_t offset = 0) {
+			memcpy(dst, pointer + offset, size);
+		}
+
+		void write(void* src, size_t size, size_t offset = 0) {
+			memcpy(pointer + offset, src, size);
+		}
+
+		void unmap() {
+			vmaUnmapMemory(vma_allocator, vma_allocation);
 		}
 
 };
 
 class MemoryAccess {
 
-	private:
+	public:
 
-		VkDeviceMemory vk_memory;
-		VkDevice vk_device;
-		uint64_t size;
+		READONLY VmaAllocator vma_allocator;
+		READONLY VmaAllocation vma_allocation;
 
 	public:
 
-		MemoryAccess(VkDevice vk_device, VkDeviceMemory vk_memory, uint64_t size)
-		: vk_device(vk_device), vk_memory(vk_memory), size(size) {}
+		MemoryAccess(VmaAllocator vma_allocator, VmaAllocation vma_allocation)
+		: vma_allocator(vma_allocator), vma_allocation(vma_allocation) {}
 
-		MemoryRange range(uint64_t offset, uint64_t size) const {
-			return {vk_memory, offset, size};
+		VmaAllocationInfo getInfo() const {
+			VmaAllocationInfo info;
+			vmaGetAllocationInfo(vma_allocator, vma_allocation, &info);
+			return info;
 		}
 
-	public:
-
-		void* map() const {
-			void* data;
-			vkMapMemory(vk_device, vk_memory, 0, size, 0, &data);
-			return data;
-		}
-
-		void map(void* src) const {
-			void* dst = map();
-			memcpy(dst, src, size);
-		}
-
-		void unmap() const {
-			vkUnmapMemory(vk_device, vk_memory);
-		}
-
-		void flush() const {
-			range(0, size).flush(vk_device);
-		}
-
-		void invalidate() const {
-			range(0, size).invalidate(vk_device);
-		}
-
-};
-
-class Memory {
-
-	public:
-
-		READONLY VkDeviceMemory vk_memory;
-		READONLY VkDevice vk_device;
-
-	public:
-
-		Memory(VkDeviceMemory vk_memory, VkDevice vk_device)
-		: vk_memory(vk_memory), vk_device(vk_device) {}
-
-		void close() const {
-			vkFreeMemory(vk_device, vk_memory, nullptr);
-		}
-
-		MemoryAccess access(uint64_t size) const {
-			return {vk_device, vk_memory, size};
+		MemoryMap map() {
+			void* pointer;
+			vmaMapMemory(vma_allocator, vma_allocation, &pointer);
+			return {vma_allocator, vma_allocation, pointer};
 		}
 
 };
@@ -98,42 +68,48 @@ class MemoryInfo {
 	public:
 
 		READONLY VkPhysicalDeviceMemoryProperties vk_properties;
-		READONLY VkPhysicalDevice vk_physical_device;
 		READONLY VkDevice vk_device;
 
 	public:
 
 		MemoryInfo(VkPhysicalDevice vk_physical_device, VkDevice vk_device)
-		: vk_physical_device(vk_physical_device), vk_device(vk_device) {
+		: vk_device(vk_device) {
 			vkGetPhysicalDeviceMemoryProperties(vk_physical_device, &vk_properties);
+		}
+
+		void printInfo(uint32_t index) const {
+			VkMemoryType type = vk_properties.memoryTypes[index];
+			VkMemoryHeap heap = vk_properties.memoryHeaps[type.heapIndex];
+
+			VkMemoryPropertyFlags tf = type.propertyFlags;
+			VkMemoryHeapFlags hf = heap.flags;
+
+			printf("Memory #%u attributes:\n", index);
+
+			if (tf & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) printf(" [T] VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT\n");
+			if (tf & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) printf(" [T] VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT\n");
+			if (tf & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) printf(" [T] VK_MEMORY_PROPERTY_HOST_COHERENT_BIT\n");
+			if (tf & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) printf(" [T] VK_MEMORY_PROPERTY_HOST_CACHED_BIT\n");
+			if (tf & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) printf(" [T] VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT\n");
+			if (tf & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD) printf(" [T] VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD\n");
+			if (tf & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD) printf(" [T] VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD\n");
+			if (tf & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV) printf(" [T] VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV\n");
+			if (hf & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) printf(" [H] VK_MEMORY_HEAP_DEVICE_LOCAL_BIT\n");
+			if (hf & VK_MEMORY_HEAP_MULTI_INSTANCE_BIT) printf(" [H] VK_MEMORY_HEAP_MULTI_INSTANCE_BIT\n");
+
+			printf(" [S] From heap #%d of size %lu MiB\n", type.heapIndex, heap.size / 1024 / 1024);
 		}
 
 	public:
 
-		uint32_t find(int32_t filter, VkMemoryPropertyFlags flags) const {
+		void print() const {
+
+			printf("There are %d memory types and %d memory heaps\n", vk_properties.memoryTypeCount, vk_properties.memoryHeapCount);
+
 			for (uint32_t i = 0; i < vk_properties.memoryTypeCount; i ++) {
-				if ((filter & (1 << i)) && (vk_properties.memoryTypes[i].propertyFlags & flags) == flags) {
-					return i;
-				}
+				printf("\n");
+				printInfo(i);
 			}
-
-			throw std::runtime_error("Failed to find matching memory!");
-		}
-
-		Memory allocate(const VkMemoryRequirements& requirements, VkMemoryPropertyFlags flags) const {
-
-			VkMemoryAllocateInfo alloc_info {};
-			alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			alloc_info.allocationSize = requirements.size;
-			alloc_info.memoryTypeIndex = find(requirements.memoryTypeBits, flags);
-
-			VkDeviceMemory memory;
-
-			if (vkAllocateMemory(vk_device, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
-				throw std::runtime_error("vkAllocateMemory: Failed to allocate memory!");
-			}
-
-			return {memory, vk_device};
 		}
 
 };

@@ -38,8 +38,8 @@ class Fence {
 			vkResetFences(vk_device, 1, &vk_fence);
 		}
 
-		void lock() {
-			wait();
+		void lock(size_t timeout = UINT64_MAX) {
+			wait(timeout);
 			reset();
 		}
 

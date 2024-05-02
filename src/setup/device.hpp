@@ -42,11 +42,11 @@ class Device {
 			vkDestroyDevice(vk_device, nullptr);
 		}
 
-		Fence fence(bool signaled = false) {
+		Fence fence(bool signaled = false) const {
 			return {vk_device, signaled};
 		}
 
-		Semaphore semaphore() {
+		Semaphore semaphore() const {
 			return {vk_device};
 		}
 
@@ -168,6 +168,13 @@ class DeviceInfo {
 			for (VkQueueFamilyProperties& family : entires) {
 				families.emplace_back(family, index ++);
 			}
+		}
+
+		/**
+		 * @see VkPhysicalDeviceType
+		 */
+		VkPhysicalDeviceType getType() {
+			return properties.deviceType;
 		}
 
 		/**

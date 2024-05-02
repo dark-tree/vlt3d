@@ -17,13 +17,18 @@
 #include <set>
 #include <algorithm>
 
+// external libs
 #include "stb_image.h"
-
 #include <shaderc/shaderc.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
 #include "GLFW/glfw3native.h"
+
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#define VMA_VULKAN_VERSION 1000000
+#include "vma/include/vk_mem_alloc.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

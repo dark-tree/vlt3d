@@ -3,7 +3,7 @@
 
 #include "external.hpp"
 #include "render/pipeline.hpp"
-#include "buffer/buffer.hpp"
+#include "buffer/allocator.hpp"
 
 class CommandRecorder {
 

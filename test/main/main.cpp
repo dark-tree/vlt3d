@@ -1,6 +1,16 @@
 #include "glph.hpp"
 #include "context.hpp"
 
+struct Frame {
+	CommandBuffer buffer;
+	Semaphore image_available_semaphore;
+	Semaphore render_finished_semaphore;
+	Fence in_flight_fence;
+
+	Frame(const CommandPool& pool, const Device& device)
+	: buffer(pool.allocate()), image_available_semaphore(device.semaphore()), render_finished_semaphore(device.semaphore()), in_flight_fence(device.fence(true)) {}
+};
+
 /// Pick a device that has all the features that we need
 DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
 	for (DeviceInfo& device : instance.getDevices()) {
@@ -116,13 +126,20 @@ int main() {
 	VkQueue graphics = device.get(graphics_ref, 0);
 	VkQueue presentation = device.get(presentation_ref, 0);
 
-	// buffer
-	Buffer vertices = Buffer::from(device, sizeof(float) * 15, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	MemoryAccess access = vertices.access();
+	// create VMA based memory allocator
+	Allocator allocator {device, instance};
 
-	access.map(float_data);
-	access.flush();
-	access.unmap();
+	// buffer
+	BufferInfo buffer_builder {sizeof(float) * 15, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+	Buffer vertices = allocator.allocateBuffer(buffer_builder);
+
+	MemoryMap map = vertices.access().map();
+	map.write(float_data, 15 * sizeof(float));
+	map.flush();
+	map.unmap();
 
 	// swapchain creation
 	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
@@ -174,27 +191,28 @@ int main() {
 
 	// create command buffer
 	CommandPool pool = CommandPool::build(device, graphics_ref, false);
-	CommandBuffer buffer = pool.allocate();
 
-	Semaphore image_available_semaphore = device.semaphore();
-	Semaphore render_finished_semaphore = device.semaphore();
-	Fence in_flight_fence = device.fence(true);
+	int concurrent_frames = 2;
+	int frame = 0;
+	std::vector<Frame> frames;
+
+	for (int i = 0; i < concurrent_frames; i ++) {
+		frames.emplace_back(pool, device);
+	}
 
 	while (!window.shouldClose()) {
 		window.poll();
 
-		in_flight_fence.wait();
+		frames[frame].in_flight_fence.lock();
 
 		uint32_t image_index;
-		if (swapchain.getNextImage(image_available_semaphore, &image_index).mustReplace()) {
+		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {
 			recreateSwapchain(device, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
 			extent = swapchain.vk_extent;
 		}
 
-		in_flight_fence.reset();
-
 		// record commands
-		buffer.record()
+		frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(pipeline)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
@@ -204,16 +222,18 @@ int main() {
 			.endRenderPass()
 			.done();
 
-		buffer.submit()
-			.awaits(image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-			.unlocks(render_finished_semaphore)
-			.onFinished(in_flight_fence)
+		frames[frame].buffer.submit()
+			.awaits(frames[frame].image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+			.unlocks(frames[frame].render_finished_semaphore)
+			.onFinished(frames[frame].in_flight_fence)
 			.done(graphics);
 
-		if (swapchain.present(presentation, render_finished_semaphore, image_index).mustReplace()) {
+		if (swapchain.present(presentation, frames[frame].render_finished_semaphore, image_index).mustReplace()) {
 			recreateSwapchain(device, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
 			extent = swapchain.vk_extent;
 		}
+
+		frame = (frame + 1) % concurrent_frames;
 
 	}
 

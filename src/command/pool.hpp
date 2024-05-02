@@ -21,7 +21,7 @@ class CommandPool {
 			vkDestroyCommandPool(vk_device, vk_pool, nullptr);
 		}
 
-		CommandBuffer allocate(VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+		CommandBuffer allocate(VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const {
 
 			VkCommandBufferAllocateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -36,7 +36,6 @@ class CommandPool {
 			}
 
 			return {vk_pool, buffer, vk_device};
-
 		}
 
 		static CommandPool build(Device& device, QueueInfo info, bool transient) {
