@@ -6,6 +6,7 @@
 #include "renderpass.hpp"
 #include "setup/features.hpp"
 #include "binding.hpp"
+#include "descriptor/layout.hpp"
 
 #define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw std::runtime_error("feature '" #feature "' not enabled on this device!"); }
 
@@ -39,6 +40,7 @@ class GraphicsPipelineBuilder {
 
 	private:
 
+		std::vector<VkDescriptorSetLayout> sets;
 		std::vector<VkDynamicState> dynamics;
 		std::vector<VkVertexInputBindingDescription> bindings;
 		std::vector<VkVertexInputAttributeDescription> attributes;
@@ -70,6 +72,9 @@ class GraphicsPipelineBuilder {
 
 			dynamic.dynamicStateCount = (uint32_t) dynamics.size();
 			dynamic.pDynamicStates = dynamics.data();
+
+			layout.setLayoutCount = (uint32_t) sets.size();
+			layout.pSetLayouts = sets.data();
 
 		}
 
@@ -174,8 +179,11 @@ class GraphicsPipelineBuilder {
 
 	// layout configuration
 
-		// https://registry.khronos.org/vulkan/site/guide/latest/push_constants.html
-		// TODO
+		// TODO https://registry.khronos.org/vulkan/site/guide/latest/push_constants.html
+
+		DescriptorSetBuilder addDescriptorSet(VkDescriptorSetLayoutCreateFlags flags = 0) {
+			return {device.vk_device, flags, sets};
+		}
 
 	// assembly configuration
 

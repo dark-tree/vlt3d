@@ -13,6 +13,8 @@ class Buffer {
 
 	public:
 
+		Buffer() {}
+
 		Buffer(VkBuffer vk_buffer, const MemoryAccess& memory)
 		: vk_buffer(vk_buffer), memory(memory) {}
 

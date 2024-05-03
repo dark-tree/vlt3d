@@ -31,8 +31,8 @@ class CompilerResult {
 
 		ShaderModule create(Device& device) {
 			if (!successful) {
-				logger::error("Shader compilation failed: ", error);
-				throw std::runtime_error("Unable to create shader module!");
+				logger::error("shaderc: Shader compilation failed: ", error);
+				throw std::runtime_error {"shaderc: Unable to create shader module!"};
 			}
 
 			return {device, data(), bytes(), kind};
@@ -92,7 +92,7 @@ class Compiler {
 
 		// shaderc_optimization_level_zero, shaderc_optimization_level_size, shaderc_optimization_level_performance
 		void setOptimization(shaderc_optimization_level value) {
-			options.SetOptimizationLevel(shaderc_optimization_level_size);
+			options.SetOptimizationLevel(value);
 		}
 
 		// simmilar to adding -Dkey=value

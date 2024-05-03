@@ -12,6 +12,8 @@ class MemoryMap {
 
 	public:
 
+		MemoryMap() {}
+
 		MemoryMap(VmaAllocator vma_allocator, VmaAllocation vma_allocation, void* pointer)
 		: vma_allocator(vma_allocator), vma_allocation(vma_allocation), pointer((uint8_t*) pointer) {}
 
@@ -45,6 +47,8 @@ class MemoryAccess {
 		READONLY VmaAllocation vma_allocation;
 
 	public:
+
+		MemoryAccess() {}
 
 		MemoryAccess(VmaAllocator vma_allocator, VmaAllocation vma_allocation)
 		: vma_allocator(vma_allocator), vma_allocation(vma_allocation) {}

@@ -1,14 +1,34 @@
 #include "glph.hpp"
 #include "context.hpp"
 
+struct UBO {
+	float value;
+};
+
 struct Frame {
+
 	CommandBuffer buffer;
 	Semaphore image_available_semaphore;
 	Semaphore render_finished_semaphore;
 	Fence in_flight_fence;
 
-	Frame(const CommandPool& pool, const Device& device)
-	: buffer(pool.allocate()), image_available_semaphore(device.semaphore()), render_finished_semaphore(device.semaphore()), in_flight_fence(device.fence(true)) {}
+	Buffer ubo;
+	MemoryMap map;
+	DescriptorSet set;
+
+	Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor)
+	: buffer(pool.allocate()), image_available_semaphore(device.semaphore()), render_finished_semaphore(device.semaphore()), in_flight_fence(device.fence(true)) {
+
+		BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
+		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+		ubo = allocator.allocateBuffer(buffer_builder);
+		map = ubo.access().map();
+		set = descriptor;
+
+		descriptor.write(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ubo, sizeof(UBO));
+	}
 };
 
 /// Pick a device that has all the features that we need
@@ -81,12 +101,17 @@ constexpr const char* vert_shader = R"(
 constexpr const char* frag_shader = R"(
 	#version 450
 
+	layout(binding = 0) uniform UniformBufferObject {
+		float value;
+	} ubo;
+
 	layout(location = 0) in vec3 fragColor;
 
 	layout(location = 0) out vec4 outColor;
 
 	void main() {
 		outColor = vec4(fragColor, 1.0);
+		outColor.r = ubo.value;
 	}
 )";
 
@@ -129,7 +154,7 @@ int main() {
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
 
-	// buffer
+	// vertex buffer
 	BufferInfo buffer_builder {sizeof(float) * 15, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
@@ -187,6 +212,10 @@ int main() {
 		.attribute(1, VK_FORMAT_R32G32B32_SFLOAT)
 		.done();
 
+	VkDescriptorSetLayout descriptor_layout = pipe_builder.addDescriptorSet()
+		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.done();
+
 	GraphicsPipeline pipeline = pipe_builder.build();
 
 	// create command buffer
@@ -194,16 +223,25 @@ int main() {
 
 	int concurrent_frames = 2;
 	int frame = 0;
+
+	DescriptorPoolBuilder descriptor_pool_builder;
+	descriptor_pool_builder.add(concurrent_frames, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	DescriptorPool descriptor_pool = descriptor_pool_builder.build(device, concurrent_frames);
+
 	std::vector<Frame> frames;
+	std::vector<VkDescriptorSet> sets;
 
 	for (int i = 0; i < concurrent_frames; i ++) {
-		frames.emplace_back(pool, device);
+		frames.emplace_back(allocator, pool, device, descriptor_pool.allocate(descriptor_layout));
 	}
 
 	while (!window.shouldClose()) {
 		window.poll();
 
 		frames[frame].in_flight_fence.lock();
+
+		float value = (sin(glfwGetTime() * 3) * 0.5) + 0.5;
+		frames[frame].map.write(&value, sizeof(float));
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {
@@ -215,6 +253,7 @@ int main() {
 		frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(pipeline)
+			.bindDescriptorSet(pipeline, frames[frame].set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)

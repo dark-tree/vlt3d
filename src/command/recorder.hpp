@@ -4,6 +4,7 @@
 #include "external.hpp"
 #include "render/pipeline.hpp"
 #include "buffer/allocator.hpp"
+#include "descriptor/descriptor.hpp"
 
 class CommandRecorder {
 
@@ -38,6 +39,11 @@ class CommandRecorder {
 
 		CommandRecorder& bindPipeline(GraphicsPipeline& pipeline) {
 			vkCmdBindPipeline(vk_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk_pipeline);
+			return *this;
+		}
+
+		CommandRecorder& bindDescriptorSet(GraphicsPipeline& pipeline, DescriptorSet& set) {
+			vkCmdBindDescriptorSets(vk_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk_layout, 0, 1, &set.vk_set, 0, nullptr);
 			return *this;
 		}
 
