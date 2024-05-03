@@ -16,7 +16,7 @@ struct Frame {
 	MemoryMap map;
 	DescriptorSet set;
 
-	Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor)
+	Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, ImageSampler& sampler)
 	: buffer(pool.allocate()), image_available_semaphore(device.semaphore()), render_finished_semaphore(device.semaphore()), in_flight_fence(device.fence(true)) {
 
 		BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
@@ -27,7 +27,8 @@ struct Frame {
 		map = ubo.access().map();
 		set = descriptor;
 
-		descriptor.write(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ubo, sizeof(UBO));
+		descriptor.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ubo, sizeof(UBO));
+		descriptor.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
 	}
 };
 
@@ -87,14 +88,17 @@ void recreateSwapchain(Device& device, WindowSurface& surface, Window& window, Q
 constexpr const char* vert_shader = R"(
 	#version 450
 
-	layout(location = 0) in vec2 inPosition;
-	layout(location = 1) in vec3 inColor;
+	layout(location = 0) in vec2 iPosition;
+	layout(location = 1) in vec3 iColor;
+	layout(location = 2) in vec2 iTexture;
 
-	layout(location = 0) out vec3 fragColor;
+	layout(location = 0) out vec3 vColor;
+	layout(location = 1) out vec2 vTexture;
 
 	void main() {
-	    gl_Position = vec4(inPosition, 0.0, 1.0);
-	    fragColor = inColor;
+	    gl_Position = vec4(iPosition, 0.0, 1.0);
+	    vColor = iColor;
+		vTexture = iTexture;
 	}
 )";
 
@@ -103,28 +107,33 @@ constexpr const char* frag_shader = R"(
 
 	layout(binding = 0) uniform UniformBufferObject {
 		float value;
-	} ubo;
+	} uObject;
+	layout(binding = 1) uniform sampler2D uSampler;
 
-	layout(location = 0) in vec3 fragColor;
+	layout(location = 0) in vec3 vColor;
+	layout(location = 1) in vec2 vTexture;
 
-	layout(location = 0) out vec4 outColor;
+	layout(location = 0) out vec4 fColor;
 
 	void main() {
-		outColor = vec4(fragColor, 1.0);
-		outColor.r = ubo.value;
+		fColor = mix(texture(uSampler, vTexture).rgba, vec4(vColor, 1.0f), (uObject.value * 0.8) + 0.1);
 	}
 )";
 
 float float_data[] = {
-	 0.0, -0.5, 1.0, 0.0, 0.0,
-	 0.5,  0.5, 0.0, 1.0, 0.0,
-	-0.5,  0.5, 0.0, 0.0, 1.0,
+	-0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
+	 0.5,  0.5, 0.0, 1.0, 0.0, 1.0, 1.0,
+	-0.5,  0.5, 0.0, 0.0, 1.0, 0.0, 1.0,
+
+	-0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
+	 0.5,  0.5, 0.0, 1.0, 0.0, 1.0, 1.0,
+	 0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 0.0,
 };
 
 int main() {
 
     glfwInit();
-	Window window {800, 600, "Funny Vulkan App"};
+	Window window {700, 700, "Funny Vulkan App"};
 
 	// instance configuration
 	InstanceBuilder builder;
@@ -140,7 +149,7 @@ int main() {
 	// device configuration
 	QueueInfo graphics_ref = device_builder.addQueue(VK_QUEUE_GRAPHICS_BIT, 1);
 	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
-	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
 
 	// enable some additional features
 	device_builder.features.enableFillModeNonSolid().orFail();
@@ -155,16 +164,20 @@ int main() {
 	Allocator allocator {device, instance};
 
 	// vertex buffer
-	BufferInfo buffer_builder {sizeof(float) * 15, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
-	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+	Buffer vertices;
 
-	Buffer vertices = allocator.allocateBuffer(buffer_builder);
+	{
+		BufferInfo buffer_builder{sizeof(float) * 7 * 6, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
-	MemoryMap map = vertices.access().map();
-	map.write(float_data, 15 * sizeof(float));
-	map.flush();
-	map.unmap();
+		vertices = allocator.allocateBuffer(buffer_builder);
+
+		MemoryMap map = vertices.access().map();
+		map.write(float_data, 7 * 6 * sizeof(float));
+		map.flush();
+		map.unmap();
+	}
 
 	// swapchain creation
 	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
@@ -204,35 +217,87 @@ int main() {
 	pipe_builder.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder.setRenderPass(pass);
 	pipe_builder.setShaders(vert_mod, frag_mod);
-	pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
-	pipe_builder.setLineWidth(3.0f);
+	//pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
+	//pipe_builder.setLineWidth(3.0f);
 
 	pipe_builder.addBinding()
 		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
 		.attribute(1, VK_FORMAT_R32G32B32_SFLOAT)
+		.attribute(2, VK_FORMAT_R32G32_SFLOAT)
 		.done();
 
 	VkDescriptorSetLayout descriptor_layout = pipe_builder.addDescriptorSet()
 		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done();
 
 	GraphicsPipeline pipeline = pipe_builder.build();
 
-	// create command buffer
-	CommandPool pool = CommandPool::build(device, graphics_ref, false);
+	// create command pools
+	CommandPool main_pool = CommandPool::build(device, graphics_ref, false);
+	CommandPool transient_pool = CommandPool::build(device, graphics_ref, true);
+
+	// quad texture
+	Image image;
+	ImageView image_view;
+	ImageSampler image_sampler;
+
+	// load file and copy it through a staging buffer into a device local image
+	{
+		ImageFile image_file {"assets/vkblob.png", 4};
+
+		BufferInfo buffer_builder {image_file.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
+		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+		Buffer staging = allocator.allocateBuffer(buffer_builder);
+
+		MemoryMap map = staging.access().map();
+		map.write(image_file.data(), image_file.size());
+		map.flush();
+		map.unmap();
+
+		ImageInfo image_builder {image_file.width(), image_file.height(), VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
+		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
+
+		image = allocator.allocateImage(image_builder);
+		image_file.close();
+
+		Fence copy_fence = device.fence();
+		CommandBuffer buffer = transient_pool.allocate();
+
+		buffer.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+			.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED)
+			.copyBufferToImage(image, staging, 256, 256)
+			.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			.done();
+
+		buffer.submit()
+			.onFinished(copy_fence)
+			.done(graphics);
+
+		copy_fence.wait();
+		buffer.close();
+		//staging.close();
+
+		image_view = image.getViewBuilder().build(device);
+		image_sampler = image_view.getSamplerBuilder().build(device);
+	}
 
 	int concurrent_frames = 2;
 	int frame = 0;
 
 	DescriptorPoolBuilder descriptor_pool_builder;
 	descriptor_pool_builder.add(concurrent_frames, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	descriptor_pool_builder.add(concurrent_frames, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	DescriptorPool descriptor_pool = descriptor_pool_builder.build(device, concurrent_frames);
 
 	std::vector<Frame> frames;
 	std::vector<VkDescriptorSet> sets;
 
 	for (int i = 0; i < concurrent_frames; i ++) {
-		frames.emplace_back(allocator, pool, device, descriptor_pool.allocate(descriptor_layout));
+		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(descriptor_layout), image_sampler);
 	}
 
 	while (!window.shouldClose()) {
@@ -257,7 +322,7 @@ int main() {
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)
-			.draw(3)
+			.draw(6)
 			.endRenderPass()
 			.done();
 

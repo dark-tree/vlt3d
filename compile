@@ -88,5 +88,9 @@ if [ $? -ne 0 ]; then
 fi
 
 if [[ -n $arg_target ]]; then
-	./build/test/"$arg_target"/main
+	cd "build/test/$arg_target/" || {
+	  echo "Target directory not found! Aborting..." && exit
+	}
+
+	./main
 fi

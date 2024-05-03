@@ -29,7 +29,7 @@ class MemoryMap {
 			memcpy(dst, pointer + offset, size);
 		}
 
-		void write(void* src, size_t size, size_t offset = 0) {
+		void write(const void* src, size_t size, size_t offset = 0) {
 			memcpy(pointer + offset, src, size);
 		}
 

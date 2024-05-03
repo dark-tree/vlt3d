@@ -3,16 +3,106 @@
 #include "external.hpp"
 #include "setup/device.hpp"
 
+class ImageSampler {
+
+	public:
+
+		READONLY VkSampler vk_sampler;
+		READONLY VkImageView vk_view;
+
+	public:
+
+		ImageSampler() {}
+
+		ImageSampler(VkSampler sampler, VkImageView view)
+		: vk_sampler(sampler), vk_view(view) {}
+
+};
+
+class ImageSamplerBuilder {
+
+	private:
+
+		VkImageView vk_view;
+		VkSamplerCreateInfo create_info {};
+
+	public:
+
+		ImageSamplerBuilder()
+		: vk_view() {}
+
+		ImageSamplerBuilder(VkImageView view)
+		: create_info({}), vk_view(view) {
+			create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			setFilter(VK_FILTER_LINEAR);
+			setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT);
+			setAnisotropy(0.0f);
+			setBorder(VK_BORDER_COLOR_INT_OPAQUE_BLACK);
+		}
+
+		ImageSamplerBuilder& setFilter(VkFilter filter) {
+			create_info.magFilter = filter;
+			create_info.minFilter = filter;
+			return *this;
+		}
+
+		ImageSamplerBuilder& setMode(VkSamplerAddressMode mode) {
+			create_info.addressModeU = mode;
+			create_info.addressModeV = mode;
+			create_info.addressModeW = mode;
+			return *this;
+		}
+
+		ImageSamplerBuilder& setAnisotropy(float anisotropy) {
+			create_info.anisotropyEnable = (anisotropy > 0);
+			create_info.maxAnisotropy = anisotropy;
+			return *this;
+		}
+
+		ImageSamplerBuilder& setBorder(VkBorderColor border) {
+			create_info.borderColor = border;
+			return *this;
+		}
+
+		ImageSampler build(Device& device) {
+			create_info.unnormalizedCoordinates = VK_FALSE;
+			create_info.compareEnable = VK_FALSE;
+			create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+
+			create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			create_info.mipLodBias = 0.0f;
+			create_info.minLod = 0.0f;
+			create_info.maxLod = 0.0f;
+
+			VkSampler sampler;
+
+			if (vkCreateSampler(device.vk_device, &create_info, nullptr, &sampler) != VK_SUCCESS) {
+				throw std::runtime_error("vkCreateSampler: Failed to create image sampler!");
+			}
+
+			return {sampler, vk_view};
+		}
+
+
+};
+
 class ImageView {
 
 	public:
 
 		READONLY VkImageView vk_view;
+		READONLY VkImage vk_image;
 
 	public:
 
-		ImageView(VkImageView vk_view)
-		: vk_view(vk_view) {}
+		ImageView() {}
+
+		ImageView(VkImageView vk_view, VkImage vk_image)
+		: vk_view(vk_view), vk_image(vk_image) {}
+
+		ImageSamplerBuilder getSamplerBuilder() {
+			return {vk_view};
+		}
 
 };
 
@@ -48,7 +138,6 @@ class ImageViewBuilder {
 			create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			create_info.image = image;
 
-			create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			create_info.viewType = type;
 			create_info.format = format;
 			create_info.components = components;
@@ -65,7 +154,7 @@ class ImageViewBuilder {
 				throw std::runtime_error("vkCreateImageView: Failed to create image view!");
 			}
 
-			return ImageView {view};
+			return ImageView {view, image};
 
 		}
 

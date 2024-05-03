@@ -2,23 +2,75 @@
 
 #include "external.hpp"
 #include "buffer.hpp"
+#include "image.hpp"
 
-class BufferInfo {
+template <typename S>
+class AllocationInfo {
 
-	private:
+	protected:
 
 		READONLY VkMemoryPropertyFlags vk_required_flags;
 		READONLY VkMemoryPropertyFlags vk_preferred_flags;
 		READONLY VmaMemoryUsage vma_usage;
 		READONLY VmaAllocationCreateFlags vma_flags;
-		READONLY VkBufferUsageFlags vk_buffer_usage;
 		READONLY VkSharingMode vk_sharing;
-		READONLY uint32_t bytes;
 
 	public:
 
-		BufferInfo(uint32_t size, VkBufferUsageFlags usage)
-		: vk_required_flags(0), vk_preferred_flags(0), vma_usage(VMA_MEMORY_USAGE_AUTO), vma_flags(0), vk_buffer_usage(usage), vk_sharing(VK_SHARING_MODE_EXCLUSIVE), bytes(size) {}
+		AllocationInfo()
+		: vk_required_flags(0), vk_preferred_flags(0), vma_usage(VMA_MEMORY_USAGE_AUTO), vma_flags(0), vk_sharing(VK_SHARING_MODE_EXCLUSIVE) {}
+
+		VmaAllocationCreateInfo getAllocationInfo() const {
+			VmaAllocationCreateInfo create_info {};
+
+			create_info.flags = vma_flags;
+			create_info.usage = vma_usage;
+			create_info.preferredFlags = vk_preferred_flags;
+			create_info.requiredFlags = vk_required_flags;
+
+			return create_info;
+		}
+
+	public:
+
+		inline S& required(VkMemoryPropertyFlags flags) {
+			vk_required_flags = flags;
+			return (S&) *this;
+		}
+
+		inline S& preferred(VkMemoryPropertyFlags flags) {
+			vk_preferred_flags = flags;
+			return (S&) *this;
+		}
+
+		inline S& flags(VmaAllocationCreateFlagBits flags) {
+			vma_flags = flags;
+			return (S&) *this;
+		}
+
+		inline S& hint(VmaMemoryUsage usage) {
+			vma_usage = usage;
+			return (S&) *this;
+		}
+
+		inline S& shared(bool flag = true) {
+			vk_sharing = flag ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
+			return (S&) *this;
+		}
+
+};
+
+class BufferInfo : public AllocationInfo<BufferInfo> {
+
+	private:
+
+		READONLY VkBufferUsageFlags vk_buffer_usage;
+		READONLY size_t bytes;
+
+	public:
+
+		BufferInfo(size_t size, VkBufferUsageFlags usage)
+		: AllocationInfo(), vk_buffer_usage(usage), bytes(size) {}
 
 		BufferInfo()
 		: BufferInfo(0, 0) {}
@@ -34,36 +86,10 @@ class BufferInfo {
 			return create_info;
 		}
 
-		VmaAllocationCreateInfo getAllocationInfo() const {
-			VmaAllocationCreateInfo create_info {};
-
-			create_info.flags = vma_flags;
-			create_info.usage = vma_usage;
-			create_info.preferredFlags = vk_preferred_flags;
-			create_info.requiredFlags = vk_required_flags;
-
-			return create_info;
-		}
-
 	public:
 
-		inline BufferInfo& required(VkMemoryPropertyFlags flags) {
-			vk_required_flags = flags;
-			return *this;
-		}
-
-		inline BufferInfo& preferred(VkMemoryPropertyFlags flags) {
-			vk_preferred_flags = flags;
-			return *this;
-		}
-
-		inline BufferInfo& flags(VmaAllocationCreateFlagBits flags) {
-			vma_flags = flags;
-			return *this;
-		}
-
-		inline BufferInfo& hint(VmaMemoryUsage usage) {
-			vma_usage = usage;
+		inline BufferInfo& size(size_t size) {
+			bytes = size;
 			return *this;
 		}
 
@@ -72,15 +98,88 @@ class BufferInfo {
 			return *this;
 		}
 
-		inline BufferInfo& size(uint32_t size) {
-			bytes = size;
+};
+
+class ImageInfo : public AllocationInfo<ImageInfo> {
+
+	private:
+
+		READONLY VkExtent3D vk_extent;
+		READONLY VkFormat vk_format;
+		READONLY VkImageTiling vk_tiling;
+		READONLY VkImageUsageFlags vk_image_usage;
+		READONLY VkSampleCountFlagBits vk_samples;
+
+		VkImageType getImageType() const {
+			if (vk_extent.depth == 1 && vk_extent.height == 1) {
+				return VK_IMAGE_TYPE_1D;
+			}
+
+			if (vk_extent.depth == 1) {
+				return VK_IMAGE_TYPE_2D;
+			}
+
+			return VK_IMAGE_TYPE_3D;
+		}
+
+	public:
+
+		ImageInfo(size_t width, size_t height, VkFormat format, VkImageUsageFlags usage)
+		: AllocationInfo(), vk_format(format), vk_tiling(VK_IMAGE_TILING_OPTIMAL), vk_image_usage(usage), vk_samples(VK_SAMPLE_COUNT_1_BIT) {
+			size(width, height);
+		}
+
+		ImageInfo()
+		: ImageInfo(0, 0, VK_FORMAT_R8G8B8_UINT, 0) {}
+
+		VkImageCreateInfo getImageInfo() const {
+			VkImageCreateInfo create_info {};
+
+			create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			create_info.imageType = getImageType();
+			create_info.extent = vk_extent;
+			create_info.mipLevels = 1;
+			create_info.arrayLayers = 1;
+			create_info.format = vk_format;
+			create_info.tiling = vk_tiling;
+			create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			create_info.usage = vk_image_usage;
+			create_info.sharingMode = vk_sharing;
+			create_info.samples = vk_samples;
+			create_info.flags = 0;
+
+			return create_info;
+		}
+
+	public:
+
+		inline ImageInfo& size(size_t width, size_t height, size_t depth = 1) {
+			vk_extent.width = width;
+			vk_extent.height = height;
+			vk_extent.depth = depth;
 			return *this;
 		}
 
-		inline BufferInfo& shared(bool flag = true) {
-			vk_sharing = flag ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
+		inline ImageInfo& format(VkFormat format) {
+			vk_format = format;
 			return *this;
 		}
+
+		inline ImageInfo& tiling(VkImageTiling tiling) {
+			vk_tiling = tiling;
+			return *this;
+		}
+
+		inline ImageInfo& usage(VkImageUsageFlags usage) {
+			vk_image_usage = usage;
+			return *this;
+		}
+
+		inline ImageInfo& samples(int samples) {
+			vk_samples = (VkSampleCountFlagBits) samples;
+			return *this;
+		}
+
 
 };
 
@@ -129,6 +228,20 @@ class Allocator {
 			}
 
 			return {buffer, {vma_allocator, allocation}};
+		}
+
+		Image allocateImage(const ImageInfo& info) {
+			VkImage image;
+			VmaAllocation allocation;
+
+			const VmaAllocationCreateInfo allocation_info = info.getAllocationInfo();
+			const VkImageCreateInfo image_info = info.getImageInfo();
+
+			if(vmaCreateImage(vma_allocator, &image_info, &allocation_info, &image, &allocation, nullptr) != VK_SUCCESS) {
+				throw std::runtime_error {"vmaCreateBuffer: Failed to allocated buffer!"};
+			}
+
+			return {image, image_info.format, {vma_allocator, allocation}};
 		}
 
 };

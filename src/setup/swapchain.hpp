@@ -6,7 +6,7 @@
 #include "queues.hpp"
 #include "present.hpp"
 #include "surface.hpp"
-#include "render/image.hpp"
+#include "buffer/image.hpp"
 #include "sync/semaphore.hpp"
 #include "render/framebuffer.hpp"
 
@@ -54,7 +54,7 @@ class Swapchain {
 			framebuffers.reserve(images.size());
 
 			for (Image& image : images) {
-				framebuffers.push_back(Framebuffer::build(device, pass, image.builder().build(device), vk_extent.width, vk_extent.height));
+				framebuffers.push_back(Framebuffer::build(device, pass, image.getViewBuilder().build(device), vk_extent.width, vk_extent.height));
 			}
 
 			return framebuffers;

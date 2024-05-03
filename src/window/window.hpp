@@ -40,5 +40,8 @@ class Window {
 			glfwDestroyWindow(glfw_window);
 		}
 
+		void setTitle(const std::string& title) const {
+			glfwSetWindowTitle(glfw_window, title.c_str());
+		}
 
 };

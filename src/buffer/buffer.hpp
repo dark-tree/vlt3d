@@ -22,4 +22,6 @@ class Buffer {
 			return memory;
 		}
 
+		// TODO close()
+
 };

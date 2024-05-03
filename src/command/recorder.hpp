@@ -87,6 +87,59 @@ class CommandRecorder {
 			return *this;
 		}
 
+		CommandRecorder& copyBufferToBuffer(Buffer dst, Buffer src, size_t size) {
+			VkBufferCopy region {};
+			region.size = size;
+
+			vkCmdCopyBuffer(vk_buffer, src.vk_buffer, dst.vk_buffer, 1, &region);
+			return *this;
+		}
+
+		CommandRecorder& copyBufferToImage(Image dst, Buffer src, size_t width, size_t height, size_t depth = 1) {
+
+			VkBufferImageCopy region {};
+			region.bufferOffset = 0;
+			region.bufferRowLength = 0;
+			region.bufferImageHeight = 0;
+
+			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.mipLevel = 0;
+			region.imageSubresource.baseArrayLayer = 0;
+			region.imageSubresource.layerCount = 1;
+
+			region.imageOffset = {0, 0, 0};
+			region.imageExtent.width = width;
+			region.imageExtent.height = height;
+			region.imageExtent.depth = depth;
+
+			vkCmdCopyBufferToImage(vk_buffer, src.vk_buffer, dst.vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+			return *this;
+		}
+
+		CommandRecorder& transitionLayout(Image image, VkImageLayout dst, VkImageLayout src) {
+
+			VkImageMemoryBarrier barrier {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.oldLayout = src;
+			barrier.newLayout = dst;
+
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+			barrier.image = image.vk_image;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = 1;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+
+			barrier.srcAccessMask = 0; // TODO
+			barrier.dstAccessMask = 0; // TODO
+
+			vkCmdPipelineBarrier(vk_buffer, 0 /* TODO */, 0 /* TODO */, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			return *this;
+		}
+
 		void done() {
 			if (vkEndCommandBuffer(vk_buffer) != VK_SUCCESS) {
 				throw std::runtime_error("vkEndCommandBuffer: Failed to record a command buffer!");
