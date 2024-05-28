@@ -49,12 +49,16 @@ class Swapchain {
 			return images;
 		}
 
-		std::vector<Framebuffer> getFramebuffers(RenderPass& pass) {
+		std::vector<Framebuffer> getFramebuffers(RenderPass& pass, ImageView& depth_image) {
 			std::vector<Framebuffer> framebuffers;
 			framebuffers.reserve(images.size());
 
 			for (Image& image : images) {
-				framebuffers.push_back(Framebuffer::build(device, pass, image.getViewBuilder().build(device), vk_extent.width, vk_extent.height));
+				FramebufferBuilder builder {pass, vk_extent.width, vk_extent.height};
+				builder.addAttachment(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT));
+				builder.addAttachment(depth_image);
+
+				framebuffers.push_back(builder.build(device));
 			}
 
 			return framebuffers;

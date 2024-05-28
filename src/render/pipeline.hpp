@@ -3,7 +3,7 @@
 
 #include "external.hpp"
 #include "util/format.hpp"
-#include "renderpass.hpp"
+#include "pass.hpp"
 #include "setup/features.hpp"
 #include "binding.hpp"
 #include "descriptor/layout.hpp"
@@ -55,6 +55,7 @@ class GraphicsPipelineBuilder {
 		VkPipelineMultisampleStateCreateInfo multisampling {};
 		VkPipelineColorBlendAttachmentState attachment {};
 		VkPipelineColorBlendStateCreateInfo blending {};
+		VkPipelineDepthStencilStateCreateInfo depth {};
 
 		VkViewport viewport {};
 		VkRect2D scissor {};
@@ -228,6 +229,21 @@ class GraphicsPipelineBuilder {
 
 	// depth configuration
 
+		void setDepthBound(float lower, float upper) {
+			depth.depthBoundsTestEnable = true;
+			depth.minDepthBounds = lower;
+			depth.maxDepthBounds = upper;
+		}
+
+		void setDepthTest(VkCompareOp function, bool read, bool write) {
+			depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+			depth.depthCompareOp = function;
+			depth.depthTestEnable = read;
+			depth.depthWriteEnable = write;
+		}
+
+	// blend configuration
+
 		void setBlendConstants(float r, float g, float b, float a) {
 			blending.blendConstants[0] = r;
 			blending.blendConstants[1] = g;
@@ -318,7 +334,7 @@ class GraphicsPipelineBuilder {
 			create_info.pViewportState = &view;
 			create_info.pRasterizationState = &rasterizer;
 			create_info.pMultisampleState = &multisampling;
-			create_info.pDepthStencilState = nullptr; // optional
+			create_info.pDepthStencilState = &depth;
 			create_info.pColorBlendState = &blending;
 			create_info.pDynamicState = &dynamic;
 			create_info.layout = pipeline_layout;
@@ -326,9 +342,14 @@ class GraphicsPipelineBuilder {
 			create_info.renderPass = pass;
 			create_info.subpass = subpass;
 
-			// optional inheritence
+			// optional inheritance
 			create_info.basePipelineHandle = VK_NULL_HANDLE;
 			create_info.basePipelineIndex = -1;
+
+			// init noop stencil
+			depth.stencilTestEnable = false;
+			depth.front = {}; // Optional
+			depth.back = {}; // Optional
 
 			VkPipeline pipeline;
 

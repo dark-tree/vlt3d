@@ -73,7 +73,7 @@ Swapchain createSwapchain(Device& device, WindowSurface& surface, Window& window
 
 }
 
-void recreateSwapchain(Device& device, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& presentation, RenderPass& pass, std::vector<Framebuffer>& framebuffers, Swapchain& swapchain) {
+void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& presentation, RenderPass& pass, std::vector<Framebuffer>& framebuffers, Swapchain& swapchain) {
 
 	device.wait();
 	swapchain.close();
@@ -82,8 +82,22 @@ void recreateSwapchain(Device& device, WindowSurface& surface, Window& window, Q
 		framebuffer.close();
 	}
 
+	// FIXME gpu resource leak
+	Image depth_image;
+	ImageView depth_image_view;
+
+	// create the depth buffer
+	{
+		ImageInfo image_builder{swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
+		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
+
+		depth_image = allocator.allocateImage(image_builder);
+		depth_image_view = depth_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_DEPTH_BIT);
+	}
+
 	swapchain = createSwapchain(device, surface, window, graphics, presentation);
-	framebuffers = swapchain.getFramebuffers(pass);
+	framebuffers = swapchain.getFramebuffers(pass, depth_image_view);
 
 	logger::info("Swapchain recreated!");
 
@@ -98,7 +112,7 @@ constexpr const char* vert_shader = R"(
 		mat4 proj;
 	} uObject;
 
-	layout(location = 0) in vec2 iPosition;
+	layout(location = 0) in vec3 iPosition;
 	layout(location = 1) in vec3 iColor;
 	layout(location = 2) in vec2 iTexture;
 
@@ -106,7 +120,7 @@ constexpr const char* vert_shader = R"(
 	layout(location = 1) out vec2 vTexture;
 
 	void main() {
-	    gl_Position = uObject.proj * uObject.view * uObject.model * vec4(iPosition, 0.0, 1.0);
+	    gl_Position = uObject.proj * uObject.view * uObject.model * vec4(iPosition, 1.0);
 	    vColor = iColor;
 		vTexture = iTexture;
 	}
@@ -127,17 +141,59 @@ constexpr const char* frag_shader = R"(
 	}
 )";
 
-float float_data[] = {
-	-0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-	 0.5,  0.5, 0.0, 1.0, 0.0, 1.0, 1.0,
-	-0.5,  0.5, 0.0, 0.0, 1.0, 0.0, 1.0,
-
-	-0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-	 0.5,  0.5, 0.0, 1.0, 0.0, 1.0, 1.0,
-	 0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 0.0,
+struct Vertex {
+	float x, y, z, r, g, b, u, v;
 };
 
+std::vector<Vertex> mesh;
+
+void cube(float x, float y, float z, float r, float g, float b) {
+	mesh.emplace_back(-0.5, -0.5,  0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back(-0.5,  0.5,  0.5,  r, g, b,  0.0,  1.0);
+	mesh.emplace_back(-0.5, -0.5,  0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back( 0.5, -0.5,  0.5,  r, g, b,  1.0,  0.0);
+
+	mesh.emplace_back(-0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5, -0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back(-0.5,  0.5, -0.5,  r, g, b,  0.0,  1.0);
+	mesh.emplace_back(-0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5, -0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back( 0.5, -0.5, -0.5,  r, g, b,  1.0,  0.0);
+
+	mesh.emplace_back( 0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back( 0.5, -0.5,  0.5,  r, g, b,  0.0,  1.0);
+	mesh.emplace_back( 0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back( 0.5,  0.5, -0.5,  r, g, b,  1.0,  0.0);
+
+	mesh.emplace_back(-0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back(-0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back(-0.5, -0.5,  0.5,  r, g, b,  0.0,  1.0);
+	mesh.emplace_back(-0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back(-0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back(-0.5,  0.5, -0.5,  r, g, b,  1.0,  0.0);
+
+	mesh.emplace_back(-0.5,  0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back(-0.5,  0.5,  0.5,  r, g, b,  0.0,  1.0);
+	mesh.emplace_back(-0.5,  0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5,  0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back( 0.5,  0.5, -0.5,  r, g, b,  1.0,  0.0);
+
+	mesh.emplace_back(-0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5, -0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back(-0.5, -0.5,  0.5,  r, g, b,  0.0,  1.0);
+	mesh.emplace_back(-0.5, -0.5, -0.5,  r, g, b,  0.0,  0.0);
+	mesh.emplace_back( 0.5, -0.5,  0.5,  r, g, b,  1.0,  1.0);
+	mesh.emplace_back( 0.5, -0.5, -0.5,  r, g, b,  1.0,  0.0);
+}
+
 int main() {
+
+	cube(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 
     glfwInit();
 	Window window {700, 700, "Funny Vulkan App"};
@@ -174,14 +230,14 @@ int main() {
 	Buffer vertices;
 
 	{
-		BufferInfo buffer_builder{sizeof(float) * 7 * 6, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		BufferInfo buffer_builder{mesh.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
 		vertices = allocator.allocateBuffer(buffer_builder);
 
 		MemoryMap map = vertices.access().map();
-		map.write(float_data, 7 * 6 * sizeof(float));
+		map.write(mesh.data(), mesh.size() * sizeof(Vertex));
 		map.flush();
 		map.unmap();
 	}
@@ -204,19 +260,38 @@ int main() {
 		.output(ColorOp::STORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 		.next();
 
+	pass_builder.addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
+		.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
+		.output(ColorOp::IGNORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+		.next();
+
 	pass_builder.addDependency()
-		.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0)
-		.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+		.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0)
+		.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
 		.next();
 
 	pass_builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS)
 		.addColor(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		.addDepth(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 		.next();
 
 	RenderPass pass = pass_builder.build(device);
 
+	Image depth_image;
+	ImageView depth_image_view;
+
+	// create the depth buffer for the first time
+	{
+		ImageInfo image_builder{swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
+		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
+
+		depth_image = allocator.allocateImage(image_builder);
+		depth_image_view = depth_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_DEPTH_BIT);
+	}
+
 	// create framebuffers
-	std::vector<Framebuffer> framebuffers = swapchain.getFramebuffers(pass);
+	std::vector<Framebuffer> framebuffers = swapchain.getFramebuffers(pass, depth_image_view);
 
 	// pipeline creation
 	GraphicsPipelineBuilder pipe_builder {device};
@@ -224,11 +299,12 @@ int main() {
 	pipe_builder.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder.setRenderPass(pass);
 	pipe_builder.setShaders(vert_mod, frag_mod);
+	pipe_builder.setDepthTest(VK_COMPARE_OP_LESS, true, true);
 	//pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
 	//pipe_builder.setLineWidth(3.0f);
 
 	pipe_builder.addBinding()
-		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
 		.attribute(1, VK_FORMAT_R32G32B32_SFLOAT)
 		.attribute(2, VK_FORMAT_R32G32_SFLOAT)
 		.done();
@@ -288,7 +364,7 @@ int main() {
 		buffer.close();
 		//staging.close();
 
-		image_view = image.getViewBuilder().build(device);
+		image_view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
 		image_sampler = image_view.getSamplerBuilder().build(device);
 	}
 
@@ -314,12 +390,8 @@ int main() {
 		camera.update();
 
 		Frame& ref = frames[frame];
-		float time = (sin(glfwGetTime() * 3) * 0.5) + 0.5;
-
-		ref.data.model = glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(4)), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		//ref.data.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		ref.data.model = glm::identity<glm::mat4>();
 		ref.data.proj = glm::perspective(glm::radians(45.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 100.0f);
-
 		ref.data.view = camera.getView();
 
 		ref.in_flight_fence.lock();
@@ -327,7 +399,7 @@ int main() {
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {
-			recreateSwapchain(device, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
+			recreateSwapchain(device, allocator, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
 			extent = swapchain.vk_extent;
 		}
 
@@ -339,7 +411,7 @@ int main() {
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)
-			.draw(6)
+			.draw(mesh.size())
 			.endRenderPass()
 			.done();
 
@@ -350,7 +422,7 @@ int main() {
 			.done(graphics);
 
 		if (swapchain.present(presentation, frames[frame].render_finished_semaphore, image_index).mustReplace()) {
-			recreateSwapchain(device, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
+			recreateSwapchain(device, allocator, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
 			extent = swapchain.vk_extent;
 		}
 

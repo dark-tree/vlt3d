@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "renderpass.hpp"
+#include "pass.hpp"
 #include "view.hpp"
 #include "setup/device.hpp"
 
@@ -21,16 +21,36 @@ class Framebuffer {
 			vkDestroyFramebuffer(vk_device, vk_buffer, nullptr);
 		}
 
-		static Framebuffer build(Device& device, RenderPass& pass, const ImageView& view, uint32_t width, uint32_t height) {
+};
+
+class FramebufferBuilder {
+
+	private:
+
+		VkRenderPass pass;
+		uint32_t width, height;
+		std::vector<VkImageView> attachments;
+
+	public:
+
+		FramebufferBuilder(RenderPass& pass, uint32_t width, uint32_t height) {
+			this->pass = pass.vk_pass;
+			this->width = width;
+			this->height = height;
+		}
+
+		void addAttachment(ImageView view) {
+			attachments.push_back(view.vk_view);
+		}
+
+		Framebuffer build(Device& device) {
 
 			VkFramebufferCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			create_info.renderPass = pass.vk_pass;
+			create_info.renderPass = pass;
 
-			// TODO if we ever want more than once image per frame buffer this will fail up
-			create_info.attachmentCount = 1;
-			create_info.pAttachments = &view.vk_view;
-
+			create_info.attachmentCount = attachments.size();
+			create_info.pAttachments = attachments.data();
 			create_info.width = width;
 			create_info.height = height;
 

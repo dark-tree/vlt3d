@@ -28,10 +28,13 @@ class CommandRecorder {
 			info.renderArea.offset = {0, 0};
 			info.renderArea.extent = extent;
 
-			// set clear color
-			VkClearValue clearColor = {{{r, g, b, a}}};
-			info.clearValueCount = 1;
-			info.pClearValues = &clearColor;
+			// TODO set clear color
+			VkClearValue clearColor[2] = {0};
+			clearColor[0].color = {r, g, b, a};
+			clearColor[1].depthStencil = {1.0f, 0};
+
+			info.clearValueCount = 2;
+			info.pClearValues = clearColor;
 
 			vkCmdBeginRenderPass(vk_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 			return *this;

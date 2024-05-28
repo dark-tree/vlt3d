@@ -7,7 +7,7 @@
 #include "setup/swapchain.hpp"
 #include "shader/compiler.hpp"
 #include "render/pipeline.hpp"
-#include "render/renderpass.hpp"
+#include "render/pass.hpp"
 #include "render/framebuffer.hpp"
 #include "command/pool.hpp"
 #include "sync/semaphore.hpp"
