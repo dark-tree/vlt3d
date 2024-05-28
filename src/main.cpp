@@ -1,8 +1,11 @@
 #include "glph.hpp"
 #include "context.hpp"
+#include "camera.hpp"
 
 struct UBO {
-	float value;
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
 };
 
 struct Frame {
@@ -12,6 +15,7 @@ struct Frame {
 	Semaphore render_finished_semaphore;
 	Fence in_flight_fence;
 
+	UBO data;
 	Buffer ubo;
 	MemoryMap map;
 	DescriptorSet set;
@@ -88,6 +92,12 @@ void recreateSwapchain(Device& device, WindowSurface& surface, Window& window, Q
 constexpr const char* vert_shader = R"(
 	#version 450
 
+	layout(binding = 0) uniform UniformBufferObject {
+		mat4 model;
+		mat4 view;
+		mat4 proj;
+	} uObject;
+
 	layout(location = 0) in vec2 iPosition;
 	layout(location = 1) in vec3 iColor;
 	layout(location = 2) in vec2 iTexture;
@@ -96,7 +106,7 @@ constexpr const char* vert_shader = R"(
 	layout(location = 1) out vec2 vTexture;
 
 	void main() {
-	    gl_Position = vec4(iPosition, 0.0, 1.0);
+	    gl_Position = uObject.proj * uObject.view * uObject.model * vec4(iPosition, 0.0, 1.0);
 	    vColor = iColor;
 		vTexture = iTexture;
 	}
@@ -105,9 +115,6 @@ constexpr const char* vert_shader = R"(
 constexpr const char* frag_shader = R"(
 	#version 450
 
-	layout(binding = 0) uniform UniformBufferObject {
-		float value;
-	} uObject;
 	layout(binding = 1) uniform sampler2D uSampler;
 
 	layout(location = 0) in vec3 vColor;
@@ -116,7 +123,7 @@ constexpr const char* frag_shader = R"(
 	layout(location = 0) out vec4 fColor;
 
 	void main() {
-		fColor = mix(texture(uSampler, vTexture).rgba, vec4(vColor, 1.0f), (uObject.value * 0.8) + 0.1);
+		fColor = mix(texture(uSampler, vTexture).rgba, vec4(vColor, 1.0f), 0.5);
 	}
 )";
 
@@ -227,7 +234,7 @@ int main() {
 		.done();
 
 	VkDescriptorSetLayout descriptor_layout = pipe_builder.addDescriptorSet()
-		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done();
 
@@ -300,13 +307,23 @@ int main() {
 		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(descriptor_layout), image_sampler);
 	}
 
+	Camera camera {window};
+
 	while (!window.shouldClose()) {
 		window.poll();
+		camera.update();
 
-		frames[frame].in_flight_fence.lock();
+		Frame& ref = frames[frame];
+		float time = (sin(glfwGetTime() * 3) * 0.5) + 0.5;
 
-		float value = (sin(glfwGetTime() * 3) * 0.5) + 0.5;
-		frames[frame].map.write(&value, sizeof(float));
+		ref.data.model = glm::rotate(glm::scale(glm::mat4(1.0f), glm::vec3(4)), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		//ref.data.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		ref.data.proj = glm::perspective(glm::radians(45.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 100.0f);
+
+		ref.data.view = camera.getView();
+
+		ref.in_flight_fence.lock();
+		ref.map.write(&ref.data, sizeof(UBO));
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {

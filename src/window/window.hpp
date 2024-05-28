@@ -19,6 +19,9 @@ class Window {
 				throw std::runtime_error("glfwCreateWindow: Failed to create a window!");
 			}
 
+			glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			glfwSetInputMode(glfw_window, GLFW_STICKY_KEYS, GL_TRUE);
+
 			if (!glfwVulkanSupported()) {
 				throw std::runtime_error("glfwVulkanSupported: Failed to find vulkan loader!");
 			}
@@ -42,6 +45,14 @@ class Window {
 
 		void setTitle(const std::string& title) const {
 			glfwSetWindowTitle(glfw_window, title.c_str());
+		}
+
+		bool isPressed(int key) const {
+			return glfwGetKey(glfw_window, key) == GLFW_PRESS;
+		}
+
+		void getCursor(double* x, double* y) const {
+			glfwGetCursorPos(glfw_window, x, y);
 		}
 
 };
