@@ -14,11 +14,7 @@ while [[ $# -gt 0 ]]; do
 			shift
 			;;
 		--run)
-			arg_target="$2"
-			shift 2
-			;;
-		--list)
-			arg_list=true
+			arg_run=true
 			shift
 			;;
 		--sync)
@@ -29,11 +25,10 @@ while [[ $# -gt 0 ]]; do
 			echo "GLPH Builder"
 			echo "Usage: script.sh [options]"
 			echo "Options:"
-			echo "  --clean           (re-)generate build system"
-			echo "  --run [target]    execute given target"
-			echo "  --list            list available targets"
-			echo "  --sync            download the required dependencies"
-			echo "  --help            display this help message"
+			echo "  --clean    (re-)generate build system"
+			echo "  --run      start program"
+			echo "  --sync     download the required dependencies"
+			echo "  --help     display this help message"
 			exit
 			;;
 		*)
@@ -45,19 +40,6 @@ done
 if $arg_sync; then
     echo "Synchronizing dependencies, this can take some time..."
     cd lib && ./git-sync-deps
-    exit
-fi
-
-if $arg_list; then
-    echo "Available targets:"
-    path="./test"
-
-    for file in $(ls $path | grep -v "/"); do
-        if [[ ! -f "$path/$file" ]]; then
-            echo " * --run $file"
-        fi
-    done
-
     exit
 fi
 
@@ -87,8 +69,8 @@ if [ $? -ne 0 ]; then
 	exit 2
 fi
 
-if [[ -n $arg_target ]]; then
-	cd "build/test/$arg_target/" || {
+if $arg_run; then
+	cd "build/" || {
 	  echo "Target directory not found! Aborting..." && exit
 	}
 

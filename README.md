@@ -1,5 +1,4 @@
-## GLPH
-GLPH is a Vulkan based rendering engine
+## VLT3D
 
 #### Setup
  - First make sure you have all development packages for vulkan installed, it can be done with those commands:

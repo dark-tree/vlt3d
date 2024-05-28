@@ -1,5 +1,5 @@
 
-project(GLPH)
+project(VLT3D)
 
 cmake_minimum_required(VERSION 3.10)
 
@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE, Debug)
 
 find_package(Threads REQUIRED)
-find_package(OpenGL REQUIRED)
 find_package(Vulkan REQUIRED)
 #find_package(X11 REQUIRED)
 #find_package(Wayland REQUIRED)
@@ -36,25 +35,22 @@ include_directories(
 	lib/glm/
 )
 
-file(GLOB_RECURSE GLPH_SOURCES RELATIVE
+file(GLOB_RECURSE VLT3D_SOURCES RELATIVE
 	${CMAKE_SOURCE_DIR}
 	"src/*.cpp"
 )
 
-add_library(GLPH STATIC
-    ${GLPH_SOURCES}
+add_executable(main
+	${VLT3D_SOURCES}
 )
 
-target_link_libraries(GLPH
+target_link_libraries(main
 	Threads::Threads
 	vulkan
 	glfw
 	shaderc
 )
 
-file(GLOB_RECURSE XENON_SOURCES RELATIVE
-	${CMAKE_SOURCE_DIR}
-	"src/*.cpp"
-)
-
-add_subdirectory (test)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+	file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()
