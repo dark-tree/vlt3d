@@ -16,6 +16,7 @@
 #include <functional>
 #include <set>
 #include <algorithm>
+#include <filesystem>
 
 // external libs
 #include "stb_image.h"

@@ -13,4 +13,5 @@
 #include "sync/semaphore.hpp"
 #include "sync/fence.hpp"
 #include "buffer/allocator.hpp"
+#include "buffer/atlas.hpp"
 #include "descriptor/pool.hpp"

@@ -171,63 +171,63 @@ struct Chunk {
 
 std::vector<Vertex> mesh;
 
-void drawCube(float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east) {
+void drawCube(float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite) {
 	if (west) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, 0.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, 1.0, 0.0);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v1);
 	}
 
 	if (east) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, 0.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, 1.0, 0.0);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
 	}
 
 	if (north) {
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, 0.0, 1.0);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, 1.0, 0.0);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
 	}
 
 	if (south) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, 0.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, 1.0, 0.0);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
 	}
 
 	if(up) {
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, 0.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, 1.0, 0.0);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
 	}
 
 	if (down) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, 0.0, 1.0);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, 0.0, 0.0);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, 1.0, 1.0);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, 1.0, 0.0);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
 	}
 }
 
-void drawBlock(int x, int y, int z, uint32_t block, bool up, bool down, bool north, bool south, bool west, bool east) {
+void drawBlock(int x, int y, int z, uint32_t block, bool up, bool down, bool north, bool south, bool west, bool east, Atlas& atlas) {
 	if (block == 0) {
 		return;
 	}
@@ -235,11 +235,12 @@ void drawBlock(int x, int y, int z, uint32_t block, bool up, bool down, bool nor
 	float r = (block & 0xFF) / 255.0f;
 	float g = (block >> 8 & 0xFF) / 255.0f;
 	float b = (block >> 16 & 0xFF) / 255.0f;
+	bool sprite = (block >> 24 & 0xFF) & 0b0010000;
 
-	drawCube(x, y, z, r, g, b, up, down, north, south, west, east);
+	drawCube(x, y, z, r, g, b, up, down, north, south, west, east, sprite ? atlas.getSprite("assets/vkblob.png") : atlas.getSprite("assets/digital.png"));
 }
 
-void drawChunk(Chunk& chunk) {
+void drawChunk(Chunk& chunk, Atlas& atlas) {
 	for (int x = 0; x < 32; x ++) {
 		for (int y = 0; y < 32; y ++) {
 			for (int z = 0; z < 32; z ++) {
@@ -258,7 +259,8 @@ void drawChunk(Chunk& chunk) {
 						  nx > 31 || (chunk.getBlock(nx, y, z) == 0), // TODO would be nice if those two were cached in
 						  px < 00 || (chunk.getBlock(px, y, z) == 0), //      the actual block being culled for performance
 						  nz > 31 || (chunk.getBlock(x, y, nz) == 0),
-						  pz < 00 || (chunk.getBlock(x, y, pz) == 0)
+						  pz < 00 || (chunk.getBlock(x, y, pz) == 0),
+						  atlas
 				);
 			}
 		}
@@ -266,10 +268,6 @@ void drawChunk(Chunk& chunk) {
 }
 
 int main() {
-
-	Chunk chunk {0, 0, 0};
-	chunk.random(10000);
-	drawChunk(chunk);
 
     glfwInit();
 	Window window {700, 700, "Funny Vulkan App"};
@@ -301,6 +299,12 @@ int main() {
 
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
+
+	Atlas atlas = AtlasBuilder::createSimpleAtlas("assets");
+
+	Chunk chunk {0, 0, 0};
+	chunk.random(10000);
+	drawChunk(chunk, atlas);
 
 	// vertex buffer
 	Buffer vertices;
@@ -403,7 +407,7 @@ int main() {
 
 	// load file and copy it through a staging buffer into a device local image
 	{
-		ImageFile image_file {"assets/vkblob.png", 4};
+		ImageData image_file = atlas.getImage();
 
 		BufferInfo buffer_builder {image_file.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -428,7 +432,7 @@ int main() {
 
 		buffer.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
 			.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED)
-			.copyBufferToImage(image, staging, 256, 256)
+			.copyBufferToImage(image, staging, image_file.width(), image_file.height())
 			.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 			.done();
 
