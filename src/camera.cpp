@@ -104,6 +104,15 @@ glm::vec3& Camera::getRotation() {
 	return this->rotation;
 }
 
+glm::vec3 Camera::getDirection() {
+	return this->direction;
+}
+
+glm::vec3 Camera::getUp() {
+	glm::vec3 sideways = glm::cross(this->direction, glm::vec3(0, 1, 0));
+	return glm::cross(this->direction, sideways);
+}
+
 glm::mat4 Camera::getView() {
 	glm::vec3 sign = {1, 1, 1};
 
@@ -112,4 +121,6 @@ glm::mat4 Camera::getView() {
 
 	return glm::lookAt(pos, pos + dir, glm::vec3(0.0f, 1.0f, 0.0f));
 }
+
+
 

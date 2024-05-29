@@ -35,4 +35,7 @@ class Camera {
 		glm::vec3& getRotation();
 		glm::mat4 getView();
 
+		glm::vec3 getUp();
+
+		glm::vec3 getDirection();
 };

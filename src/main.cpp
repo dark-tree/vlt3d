@@ -270,7 +270,7 @@ void drawChunk(Chunk& chunk, Atlas& atlas) {
 int main() {
 
 	SoundSystem sound_system;
-	SoundBuffer buffer {"assets/sounds/Project_1.ogg"};
+	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
 	sound_system.add(buffer).loop().play();
 
     glfwInit();
@@ -511,6 +511,9 @@ int main() {
 		}
 
 		frame = (frame + 1) % concurrent_frames;
+
+		// why does this look like this? not 100% sure, ask the linear algebra guy
+		sound_system.getListener().position(camera.getPosition()).facing(camera.getDirection() * glm::vec3(-1), camera.getUp());
 		sound_system.update();
 	}
 
