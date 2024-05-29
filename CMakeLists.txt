@@ -9,6 +9,7 @@ set(CMAKE_BUILD_TYPE, Debug)
 
 find_package(Threads REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(OpenAL REQUIRED)
 #find_package(X11 REQUIRED)
 #find_package(Wayland REQUIRED)
 
@@ -45,6 +46,7 @@ add_executable(main
 )
 
 target_link_libraries(main
+	OpenAL::OpenAL
 	Threads::Threads
 	vulkan
 	glfw

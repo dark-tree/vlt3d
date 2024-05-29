@@ -15,10 +15,15 @@
 #include <array>
 #include <functional>
 #include <set>
+#include <list>
 #include <algorithm>
 #include <filesystem>
 
 // external libs
+#define STB_VORBIS_HEADER_ONLY
+#include <AL/al.h>
+#include <AL/alc.h>
+#include "stb_vorbis.c"
 #include "stb_image.h"
 #include <shaderc/shaderc.hpp>
 
@@ -37,6 +42,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // usage hints
 #define READONLY

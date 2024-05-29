@@ -15,3 +15,4 @@
 #include "buffer/allocator.hpp"
 #include "buffer/atlas.hpp"
 #include "descriptor/pool.hpp"
+#include "sound/system.hpp"

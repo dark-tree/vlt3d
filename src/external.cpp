@@ -9,3 +9,6 @@
 
 #define VMA_IMPLEMENTATION
 #include "vma/include/vk_mem_alloc.h"
+
+#undef STB_VORBIS_HEADER_ONLY
+#include "stb_vorbis.c"

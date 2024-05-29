@@ -237,7 +237,7 @@ void drawBlock(int x, int y, int z, uint32_t block, bool up, bool down, bool nor
 	float b = (block >> 16 & 0xFF) / 255.0f;
 	bool sprite = (block >> 24 & 0xFF) & 0b0010000;
 
-	drawCube(x, y, z, r, g, b, up, down, north, south, west, east, sprite ? atlas.getSprite("assets/vkblob.png") : atlas.getSprite("assets/digital.png"));
+	drawCube(x, y, z, r, g, b, up, down, north, south, west, east, sprite ? atlas.getSprite("assets/sprites/vkblob.png") : atlas.getSprite("assets/sprites/digital.png"));
 }
 
 void drawChunk(Chunk& chunk, Atlas& atlas) {
@@ -268,6 +268,10 @@ void drawChunk(Chunk& chunk, Atlas& atlas) {
 }
 
 int main() {
+
+	SoundSystem sound_system;
+	SoundBuffer buffer {"assets/sounds/Project_1.ogg"};
+	sound_system.add(buffer).loop().play();
 
     glfwInit();
 	Window window {700, 700, "Funny Vulkan App"};
@@ -300,7 +304,7 @@ int main() {
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
 
-	Atlas atlas = AtlasBuilder::createSimpleAtlas("assets");
+	Atlas atlas = AtlasBuilder::createSimpleAtlas("assets/sprites");
 
 	Chunk chunk {0, 0, 0};
 	chunk.random(10000);
@@ -507,7 +511,7 @@ int main() {
 		}
 
 		frame = (frame + 1) % concurrent_frames;
-
+		sound_system.update();
 	}
 
 	device.wait();
