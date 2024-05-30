@@ -1,4 +1,3 @@
-#include "glph.hpp"
 #include "context.hpp"
 #include "camera.hpp"
 

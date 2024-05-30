@@ -85,11 +85,11 @@ class AtlasBuilder {
 		}
 
 		bool canPlaceAt(int x, int y, int w, int h) {
-			if (x + w > atlas.width() ) {
+			if (x + w > (int) atlas.width()) {
 				return false;
 			}
 
-			if (y + h > atlas.height()) {
+			if (y + h > (int) atlas.height()) {
 				return false;
 			}
 
@@ -103,8 +103,8 @@ class AtlasBuilder {
 		}
 
 		UnbakedSprite packUnbakedSprite(ImageData image) {
-			for (int x = 0; x < atlas.width(); x ++) {
-				for (int y = 0; y < atlas.height(); y ++) {
+			for (int x = 0; x < (int) atlas.width(); x ++) {
+				for (int y = 0; y < (int) atlas.height(); y ++) {
 					int w = image.width();
 					int h = image.height();
 

@@ -30,28 +30,36 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -g")
 add_subdirectory (lib)
 
 include_directories(
-	lib/
-	src/
-	lib/stb/
-	lib/glm/
+		lib/
+		src/
+		lib/stb/
+		lib/glm/
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES RELATIVE
-	${CMAKE_SOURCE_DIR}
-	"src/*.cpp"
+		${CMAKE_SOURCE_DIR}
+		"src/*.cpp"
+)
+
+add_library(external
+		lib/implementation.cpp
 )
 
 add_executable(main
-	${VLT3D_SOURCES}
+		${VLT3D_SOURCES}
 )
 
 target_link_libraries(main
-	OpenAL::OpenAL
-	Threads::Threads
-	vulkan
-	glfw
-	shaderc
+		OpenAL::OpenAL
+		Threads::Threads
+		vulkan
+		glfw
+		shaderc
+		external
 )
+
+target_compile_options(external PRIVATE -Wno-volatile)
+target_compile_options(main PRIVATE -Wno-volatile -Wall)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
 	file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

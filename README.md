@@ -12,6 +12,8 @@ for more info see https://vulkan.lunarg.com/sdk/home#linux (see the "Ubuntu Pack
  - Now run `./compile --sync` to download the required dependencies, this process can take some time.
 
 #### Running
-* Use `./compile --run main` to run the "main" example
-* Use `./compile --list` to list avaible example programs
-* Use `./compile --help` for aditional info
+To run VLT3D execute the `main` cmake target,
+or use the compile helper script:
+
+* Use `./compile --run` to run the main target
+* Use `./compile --help` for additional info

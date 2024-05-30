@@ -1,4 +1,3 @@
-
 #include "external.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION

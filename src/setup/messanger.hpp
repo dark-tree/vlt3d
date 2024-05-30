@@ -3,9 +3,9 @@ class DebugMessanger {
 
 	private:
 
-		VkInstance instance;
-		VkDebugUtilsMessengerEXT messenger;
-		bool attached;
+		READONLY VkInstance instance;
+		READONLY VkDebugUtilsMessengerEXT messenger;
+		READONLY bool attached;
 
 	public:
 
@@ -13,7 +13,7 @@ class DebugMessanger {
 		: instance(instance), messenger(messenger), attached(true) {}
 
 		DebugMessanger()
-		: messenger(messenger), attached(false) {}
+		: messenger(nullptr), attached(false) {}
 
 		void close() {
 			if (attached) {

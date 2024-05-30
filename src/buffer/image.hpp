@@ -15,7 +15,7 @@ class ImageData {
 
 		READONLY Type type;
 		READONLY void* pixels;
-		READONLY int w, h, c;
+		READONLY size_t w, h, c;
 
 	public:
 
@@ -40,7 +40,7 @@ class ImageData {
 			this->h = h;
 		}
 
-		void blit(uint32_t ox, uint32_t oy, ImageData image) {
+		void blit(int ox, int oy, ImageData image) {
 			if (ox + image.width() > w || oy + image.height() > h) {
 				throw std::runtime_error("Can't blit-in the given image, invalid placement!");
 			}
@@ -49,7 +49,7 @@ class ImageData {
 				throw std::runtime_error("Can't blit-in the given image, invalid channel count!");
 			}
 
-			for (int y = 0; y < image.height(); y ++) {
+			for (int y = 0; y < (int) image.height(); y ++) {
 				memcpy(pixel(ox, oy + y), image.pixel(0, y), image.width() * image.channels());
 			}
 		}

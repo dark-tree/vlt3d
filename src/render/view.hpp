@@ -28,11 +28,9 @@ class ImageSamplerBuilder {
 
 	public:
 
-		ImageSamplerBuilder()
-		: vk_view() {}
-
+		ImageSamplerBuilder() {}
 		ImageSamplerBuilder(VkImageView view)
-		: create_info({}), vk_view(view) {
+		: vk_view(view), create_info({}) {
 			create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 			setFilter(VK_FILTER_LINEAR);
 			setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT);
