@@ -65,6 +65,10 @@ class ImageData {
 			}
 		}
 
+		void save(const std::string& path) {
+			stbi_write_png(path.c_str(), w, h, c, pixels, w * c);
+		}
+
 		/**
 		 * Returns an image data buffer for the image pointer to by the
 		 * given file path and of the given number of channels

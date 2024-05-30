@@ -272,6 +272,9 @@ int main() {
 	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
 	sound_system.add(buffer).loop().play();
 
+	stbi_flip_vertically_on_write(true);
+	stbi_set_flip_vertically_on_load(true);
+
     glfwInit();
 	Window window {700, 700, "Funny Vulkan App"};
 
@@ -308,6 +311,8 @@ int main() {
 	Chunk chunk {0, 0, 0};
 	chunk.random(10000);
 	drawChunk(chunk, atlas);
+
+	atlas.getImage().save("atlas.png");
 
 	// vertex buffer
 	Buffer vertices;

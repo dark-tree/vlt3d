@@ -25,6 +25,7 @@
 #include <AL/alc.h>
 #include "stb_vorbis.c"
 #include "stb_image.h"
+#include "stb_image_write.h"
 #include <shaderc/shaderc.hpp>
 
 #define GLFW_INCLUDE_VULKAN

@@ -9,6 +9,10 @@ struct BakedSprite {
 	BakedSprite() {}
 	BakedSprite(float u1, float v1, float u2, float v2)
 	: u1(u1), v1(v1), u2(u2), v2(v2) {}
+
+	inline static BakedSprite identity() {
+		return {0, 0, 1, 1};
+	}
 };
 
 struct UnbakedSprite {
@@ -38,7 +42,6 @@ struct UnbakedSprite {
 			(y1 + 0.5f) / (float) height
 		};
 	}
-
 };
 
 class Atlas {
@@ -46,11 +49,12 @@ class Atlas {
 	private:
 
 		ImageData atlas;
+		BakedSprite fallback;
 		std::unordered_map<std::string, BakedSprite> sprites;
 		friend class AtlasBuilder;
 
-		Atlas(ImageData atlas, const std::unordered_map<std::string, UnbakedSprite>& unbaked)
-		: atlas(atlas) {
+		Atlas(ImageData atlas, const std::unordered_map<std::string, UnbakedSprite>& unbaked, BakedSprite fallback)
+		: atlas(atlas), fallback(fallback) {
 			for (const auto& [key, value] : unbaked) {
 				sprites[key] = value.bake(atlas.width(), atlas.height());
 			}
@@ -59,7 +63,7 @@ class Atlas {
 	public:
 
 		BakedSprite getSprite(const std::string& identifier) const {
-			return sprites.at(identifier);
+			return util::fallback_get(sprites, identifier, fallback);
 		}
 
 		ImageData& getImage() {
@@ -77,12 +81,9 @@ class AtlasBuilder {
 
 	private:
 
+		UnbakedSprite* fallback = nullptr;
 		ImageData atlas;
 		std::unordered_map<std::string, UnbakedSprite> sprites;
-
-		AtlasBuilder() {
-			atlas = ImageData::allocate(512, 512);
-		}
 
 		bool canPlaceAt(int x, int y, int w, int h) {
 			if (x + w > (int) atlas.width()) {
@@ -120,7 +121,19 @@ class AtlasBuilder {
 			return packUnbakedSprite(image);
 		}
 
+		BakedSprite getBakedFallback() const {
+			if (fallback == nullptr) {
+				return BakedSprite::identity();
+			}
+
+			return fallback->bake(atlas.width(), atlas.height());
+		}
+
 	public:
+
+		AtlasBuilder() {
+			atlas = ImageData::allocate(512, 512);
+		}
 
 		void submitDirectory(const std::string& identifier) {
 			for (const auto& entry : std::filesystem::recursive_directory_iterator(identifier)) {
@@ -136,8 +149,12 @@ class AtlasBuilder {
 			sprites[identifier] = packUnbakedSprite(image);
 		}
 
+		void submitFallback(const std::string& identifier) {
+			fallback = &sprites.at(identifier);
+		}
+
 		Atlas build() {
-			return {atlas, sprites};
+			return {atlas, sprites, getBakedFallback()};
 		}
 
 	public:
@@ -146,6 +163,10 @@ class AtlasBuilder {
 			AtlasBuilder builder;
 			builder.submitDirectory(identifier);
 			return builder.build();
+		}
+
+		static Atlas createIdentityAtlas(ImageData atlas) {
+			return {atlas, {}, BakedSprite::identity()};
 		}
 
 };
