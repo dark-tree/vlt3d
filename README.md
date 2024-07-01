@@ -19,10 +19,6 @@ or use the compile helper script:
 * Use `./compile --help` for additional info
 
 #### Code Style
-Here is your text with corrections for errors and improved readability:
-
----
-
 VLT3D uses a quite unique code style that focuses on clarity and simplicity. As such, prefer short
 and unique names in place of long and overly descriptive ones, and try to limit the number of words:
  - Favor `data()` in place of `getData()`, `dataPtr()`, or `ptr()`.
