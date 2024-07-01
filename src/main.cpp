@@ -370,7 +370,7 @@ int main() {
 
 	// create the depth buffer for the first time
 	{
-		ImageInfo image_builder{swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
+		ImageInfo image_builder {swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
 		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
 
