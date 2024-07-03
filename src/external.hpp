@@ -16,6 +16,11 @@
 #include <functional>
 #include <set>
 #include <list>
+#include <queue>
+#include <thread>
+#include <mutex>
+#include <future>
+#include <condition_variable>
 #include <algorithm>
 #include <filesystem>
 

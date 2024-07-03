@@ -268,6 +268,8 @@ void drawChunk(Chunk& chunk, Atlas& atlas) {
 
 int main() {
 
+	TaskPool pool;
+
 	SoundSystem sound_system;
 	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
 	sound_system.add(buffer).loop().play();
@@ -303,6 +305,12 @@ int main() {
 	VkQueue graphics = device.get(graphics_ref, 0);
 	VkQueue presentation = device.get(presentation_ref, 0);
 
+	// create a compiler and compile the glsl into spirv
+	Compiler compiler;
+	compiler.setOptimization(shaderc_optimization_level_performance);
+	std::future<ShaderModule> vert_mod = pool.defer<ShaderModule>([&] () { return compiler.compile("string_vert", vert_shader, Kind::VERTEX).create(device); });
+	std::future<ShaderModule> frag_mod = pool.defer<ShaderModule>([&] () { return compiler.compile("string_frag", frag_shader, Kind::FRAGMENT).create(device); });
+
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
 
@@ -333,12 +341,6 @@ int main() {
 	// swapchain creation
 	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
 	auto extent = swapchain.vk_extent;
-
-	// create a compiler and compile the glsl into spirv
-	Compiler compiler;
-	compiler.setOptimization(shaderc_optimization_level_performance);
-	ShaderModule vert_mod = compiler.compile("string_vert", vert_shader, Kind::VERTEX).create(device);
-	ShaderModule frag_mod = compiler.compile("string_frag", frag_shader, Kind::FRAGMENT).create(device);
 
 	// render pass creation
 	RenderPassBuilder pass_builder;
@@ -386,7 +388,12 @@ int main() {
 	pipe_builder.setDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
 	pipe_builder.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder.setRenderPass(pass);
-	pipe_builder.setShaders(vert_mod, frag_mod);
+
+	if (Timer timer; timer) {
+		pipe_builder.setShaders(vert_mod.get(), frag_mod.get());
+		logger::info("Shader compilation took: ", timer.milliseconds(), "ms");
+	}
+
 	pipe_builder.setDepthTest(VK_COMPARE_OP_LESS, true, true);
 	//pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
 	//pipe_builder.setLineWidth(3.0f);

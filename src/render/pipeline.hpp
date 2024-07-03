@@ -302,7 +302,7 @@ class GraphicsPipelineBuilder {
 	// shader stage configuration
 
 		template<typename... Shaders>
-		void setShaders(Shaders&... shaders) {
+		void setShaders(Shaders... shaders) {
 			stages = { (shaders.getStageConfig())... };
 		}
 
