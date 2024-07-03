@@ -25,6 +25,8 @@ class Window {
 			if (!glfwVulkanSupported()) {
 				throw std::runtime_error("glfwVulkanSupported: Failed to find vulkan loader!");
 			}
+
+			//glfwSwapInterval(0);
 		}
 
 		void poll() const {

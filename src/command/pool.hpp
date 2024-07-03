@@ -21,12 +21,28 @@ class CommandPool {
 			vkDestroyCommandPool(vk_device, vk_pool, nullptr);
 		}
 
-		CommandBuffer allocate(VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const {
+		/**
+		 * Resets all primary buffers created from this pool.
+		 *
+		 * @param release whether to free all of the resources from the command pool back to the system
+		 * @see https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkResetCommandPool.html
+		 */
+		void reset(bool release) const {
+			vkResetCommandPool(vk_device, vk_pool, release ? VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT : 0);
+		}
+
+		/**
+		 * Allocates a new CommandBuffer that can be used for recording,
+		 * only one thread can use CommandBuffer allocated from one CommandPool, use multiple pools.
+		 *
+		 * @param level primary (directly send to the queue) or secondary (attached to another buffer)
+		 */
+		CommandBuffer allocate(CommandBuffer::Level level = CommandBuffer::PRIMARY) const {
 
 			VkCommandBufferAllocateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			create_info.commandPool = vk_pool;
-			create_info.level = level;
+			create_info.level = (VkCommandBufferLevel) level;
 			create_info.commandBufferCount = 1;
 
 			VkCommandBuffer buffer;

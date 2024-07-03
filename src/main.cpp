@@ -38,7 +38,7 @@ struct Frame {
 /// Pick a device that has all the features that we need
 DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
 	for (DeviceInfo& device : instance.getDevices()) {
-		if (device.getQueueFamily(VK_QUEUE_GRAPHICS_BIT) && device.getQueueFamily(surface) && device.hasSwapchain(surface)) {
+		if (device.getQueueFamily(QueueType::GRAPHICS) && device.getQueueFamily(surface) && device.hasSwapchain(surface)) {
 			logger::info("Selected device: ", device.getProperties().deviceName);
 			return device.builder();
 		}
@@ -144,127 +144,8 @@ struct Vertex {
 	float x, y, z, r, g, b, u, v;
 };
 
-struct Chunk {
-
-	int x, y, z;
-	uint32_t blocks[32 * 32 * 32] = {0};
-
-	Chunk(int x, int y, int z)
-	: x(x), y(y), z(z) {}
-
-	void random(int count) {
-		while (count --> 0) {
-			int x = rand() % 32;
-			int y = rand() % 32;
-			int z = rand() % 32;
-
-			getBlock(x, y, z) = rand();
-		}
-	}
-
-	inline uint32_t& getBlock(int x, int y, int z) {
-		return blocks[(x * 32 * 32) + (y * 32) + (z)];
-	}
-
-};
-
-std::vector<Vertex> mesh;
-
-void drawCube(float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite) {
-	if (west) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if (east) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if (north) {
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if (south) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if(up) {
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if (down) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-}
-
-void drawBlock(int x, int y, int z, uint32_t block, bool up, bool down, bool north, bool south, bool west, bool east, Atlas& atlas) {
-	if (block == 0) {
-		return;
-	}
-
-	float r = (block & 0xFF) / 255.0f;
-	float g = (block >> 8 & 0xFF) / 255.0f;
-	float b = (block >> 16 & 0xFF) / 255.0f;
-	bool sprite = (block >> 24 & 0xFF) & 0b0010000;
-
-	drawCube(x, y, z, r, g, b, up, down, north, south, west, east, sprite ? atlas.getSprite("assets/sprites/vkblob.png") : atlas.getSprite("assets/sprites/digital.png"));
-}
-
-void drawChunk(Chunk& chunk, Atlas& atlas) {
-	for (int x = 0; x < 32; x ++) {
-		for (int y = 0; y < 32; y ++) {
-			for (int z = 0; z < 32; z ++) {
-				uint32_t block = chunk.getBlock(x, y, z);
-
-				const int px = x - 1;
-				const int nx = x + 1;
-				const int py = y - 1;
-				const int ny = y + 1;
-				const int pz = z - 1;
-				const int nz = z + 1;
-
-				drawBlock(chunk.x * 32 + x, chunk.y * 32 + y, chunk.z * 32 + z, block,
-						  ny > 31 || (chunk.getBlock(x, ny, z) == 0),
-						  py < 00 || (chunk.getBlock(x, py, z) == 0),
-						  nx > 31 || (chunk.getBlock(nx, y, z) == 0), // TODO would be nice if those two were cached in
-						  px < 00 || (chunk.getBlock(px, y, z) == 0), //      the actual block being culled for performance
-						  nz > 31 || (chunk.getBlock(x, y, nz) == 0),
-						  pz < 00 || (chunk.getBlock(x, y, pz) == 0),
-						  atlas
-				);
-			}
-		}
-	}
-}
+// for now
+#include "world.hpp"
 
 int main() {
 
@@ -292,7 +173,7 @@ int main() {
 	DeviceBuilder device_builder = pickDevice(instance, surface);
 
 	// device configuration
-	QueueInfo graphics_ref = device_builder.addQueue(VK_QUEUE_GRAPHICS_BIT, 1);
+	QueueInfo graphics_ref = device_builder.addQueue(QueueType::GRAPHICS, 1);
 	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
 	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
 
@@ -389,10 +270,9 @@ int main() {
 	pipe_builder.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder.setRenderPass(pass);
 
-	if (Timer timer; timer) {
+	logger::info("Shader compilation took: ", Timer::of([&] {
 		pipe_builder.setShaders(vert_mod.get(), frag_mod.get());
-		logger::info("Shader compilation took: ", timer.milliseconds(), "ms");
-	}
+	}).milliseconds(), "ms");
 
 	pipe_builder.setDepthTest(VK_COMPARE_OP_LESS, true, true);
 	//pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
@@ -452,7 +332,7 @@ int main() {
 			.done();
 
 		buffer.submit()
-			.onFinished(copy_fence)
+			.unlocks(copy_fence)
 			.done(graphics);
 
 		copy_fence.wait();
@@ -513,7 +393,7 @@ int main() {
 		frames[frame].buffer.submit()
 			.awaits(frames[frame].image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
 			.unlocks(frames[frame].render_finished_semaphore)
-			.onFinished(frames[frame].in_flight_fence)
+			.unlocks(frames[frame].in_flight_fence)
 			.done(graphics);
 
 		if (swapchain.present(presentation, frames[frame].render_finished_semaphore, image_index).mustReplace()) {

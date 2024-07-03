@@ -33,7 +33,7 @@ class CommandSubmiter {
 			return *this;
 		}
 
-		CommandSubmiter& onFinished(Fence& fence) {
+		CommandSubmiter& unlocks(Fence& fence) {
 			finished_fence = fence.vk_fence;
 			return *this;
 		}

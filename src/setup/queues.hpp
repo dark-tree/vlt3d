@@ -73,7 +73,7 @@ class QueueFamily {
 		QueueFamily(VkQueueFamilyProperties& properties, uint32_t index)
 		: properties(properties), index(index) {}
 
-		size_t getFlags() const {
+		VkQueueFlags getFlags() const {
 			return properties.queueFlags;
 		}
 
@@ -101,6 +101,14 @@ class QueueFamily {
 
 };
 
+enum struct QueueType {
+	GRAPHICS = VK_QUEUE_GRAPHICS_BIT,
+	COMPUTE = VK_QUEUE_COMPUTE_BIT,
+	TRANSFER = VK_QUEUE_TRANSFER_BIT,
+	SPARSE_BINDING = VK_QUEUE_SPARSE_BINDING_BIT,
+	PROTECTED = VK_QUEUE_PROTECTED_BIT
+};
+
 class QueueFamilyPredicate {
 
 	private:
@@ -109,8 +117,8 @@ class QueueFamilyPredicate {
 
 	public:
 
-		QueueFamilyPredicate(size_t flags)
-		: tester([flags] (QueueFamily& family) { return (family.getFlags() & flags); }) {}
+		QueueFamilyPredicate(QueueType flags)
+		: tester([flags] (QueueFamily& family) { return (family.getFlags() & (VkQueryControlFlagBits) flags); }) {}
 
 		QueueFamilyPredicate(WindowSurface& surface)
 		: tester([&] (QueueFamily& family) { return family.canPresentTo(surface); }) {}

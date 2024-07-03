@@ -9,6 +9,11 @@ class CommandBuffer {
 
 	public:
 
+		enum Level {
+			PRIMARY   = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			SECONDARY = VK_COMMAND_BUFFER_LEVEL_SECONDARY
+		};
+
 		READONLY VkCommandPool vk_pool;
 		READONLY VkCommandBuffer vk_buffer;
 		READONLY VkDevice vk_device;
