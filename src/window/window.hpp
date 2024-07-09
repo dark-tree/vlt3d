@@ -12,6 +12,19 @@ class Window {
 	public:
 
 		Window(uint32_t w, uint32_t h, const char* title) {
+
+			// one-of init
+			static auto init = [] {
+				stbi_flip_vertically_on_write(true);
+				stbi_set_flip_vertically_on_load(true);
+
+				return glfwInit();
+			} ();
+
+			if (!init) {
+				throw std::runtime_error {"glfwInit: Failed to initialize!"};
+			}
+
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 			glfw_window = glfwCreateWindow(w, h, title, nullptr, nullptr);

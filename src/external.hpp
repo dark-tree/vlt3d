@@ -24,24 +24,31 @@
 #include <algorithm>
 #include <filesystem>
 
-// external libs
+// STB
 #define STB_VORBIS_HEADER_ONLY
-#include <AL/al.h>
-#include <AL/alc.h>
 #include "stb_vorbis.c"
 #include "stb_image.h"
 #include "stb_image_write.h"
+
+// ShaderC
 #include <shaderc/shaderc.hpp>
 
-#define GLFW_INCLUDE_VULKAN
-#include "GLFW/glfw3.h"
-#include "GLFW/glfw3native.h"
+// OpenAL
+#include <AL/al.h>
+#include <AL/alc.h>
 
+// GLFW
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
+// VMA
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #define VMA_VULKAN_VERSION 1000000
-#include "vma/include/vk_mem_alloc.h"
+#include "vk_mem_alloc.h"
 
+// GLM
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/vec4.hpp>

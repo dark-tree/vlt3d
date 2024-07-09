@@ -1,6 +1,6 @@
 ## VLT3D
 
-#### Setup
+### Setup
  - First make sure you have all development packages for vulkan installed, it can be done with those commands:
    - On Ubuntu: `sudo apt install vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools`
    - On Fedora: `sudo dnf install vulkan-tools vulkan-loader-devel mesa-vulkan-devel vulkan-validation-layers-devel`
@@ -9,16 +9,21 @@
  - You will also need the LUNARG Vulkan SDK, try running `sudo apt install vulkan-sdk` if that failes you will need to add the LUNARG PPA,
 for more info see https://vulkan.lunarg.com/sdk/home#linux (see the "Ubuntu Packages" section under Linux)
 
- - Now run `./compile --sync` to download the required dependencies, this process can take some time.
+### Running
+To run VLT3D execute the `main` cmake target, 
+like so:
 
-#### Running
-To run VLT3D execute the `main` cmake target,
-or use the compile helper script:
+```bash
+# Build
+mkdir build
+cmake . -B build
+cmake --build build/ --target main -j $(($(nproc --all) + 1))
 
-* Use `./compile --run` to run the main target
-* Use `./compile --help` for additional info
+# Execute
+cd build && ./main
+```
 
-#### Code Style
+### Code Style
 VLT3D uses a quite unique code style that focuses on clarity and simplicity. As such, prefer short
 and unique names in place of long and overly descriptive ones, and try to limit the number of words:
  - Favor `data()` in place of `getData()`, `dataPtr()`, or `ptr()`.
@@ -33,7 +38,7 @@ Prefix external library state with the library namespace:
  - Favor `al_source` in place of `audioSource` or `source`.
 
 Avoid using namespaces; prefer static methods or possibly global functions for stateless procedures.
-Classes should use **PascalCase**, while class methods and fields should use **camelCase**, following
+Classes should use **PascalCase**, methods **camelCase** and fields **snake_case**, following
 the previously mentioned guidelines and exceptions. Classes should indent the `private/public` keywords like so:
 
 ```C++
@@ -43,7 +48,7 @@ class SimulationState {
 
 		// Field with library prefix 'glfw',
 		// never use 'const' before fields; you can use
-		// the macro hint 'READONLY' in its place
+		// the macro hint 'READONLY' in its place or c++ keyword 'mutable'
 		READONLY int glfw_window;
 
 	public:
@@ -66,4 +71,5 @@ Try to...
  - Avoid using destructors, move constructors, and copy constructors; prefer explicit methods like `.close()`, especially when resources are managed.
  - Provide parameter-less constructors when applicable for compatibility with standard collections.
 
-And above all, prefer readability over dogmas.
+And above all, prefer readability over dogmas.  
+When using CLion refer to the `clion-config.xml` style file.

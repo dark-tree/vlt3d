@@ -87,7 +87,7 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 
 	// create the depth buffer
 	{
-		ImageInfo image_builder{swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
+		ImageInfo image_builder {swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
 		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
 
@@ -155,10 +155,6 @@ int main() {
 	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
 	sound_system.add(buffer).loop().play();
 
-	stbi_flip_vertically_on_write(true);
-	stbi_set_flip_vertically_on_load(true);
-
-    glfwInit();
 	Window window {700, 700, "Funny Vulkan App"};
 
 	// instance configuration
