@@ -23,6 +23,7 @@
 #include <condition_variable>
 #include <algorithm>
 #include <filesystem>
+#include <random>
 
 // STB
 #define STB_VORBIS_HEADER_ONLY
