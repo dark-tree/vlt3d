@@ -20,12 +20,12 @@ class DescriptorPool {
 			vkDestroyDescriptorPool(vk_device, vk_pool, nullptr);
 		}
 
-		DescriptorSet allocate(VkDescriptorSetLayout layout) const {
+		DescriptorSet allocate(DescriptorSetLayout layout) const {
 			VkDescriptorSet set;
 
 			VkDescriptorSetAllocateInfo alloc_info {};
 			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			alloc_info.pSetLayouts = &layout;
+			alloc_info.pSetLayouts = &layout.vk_layout;
 			alloc_info.descriptorSetCount = 1;
 			alloc_info.descriptorPool = vk_pool;
 
@@ -55,7 +55,7 @@ class DescriptorPoolBuilder {
 			return *this;
 		}
 
-		DescriptorPool build(Device& device, uint32_t sets) const {
+		DescriptorPool build(Device device, uint32_t sets) const {
 			VkDescriptorPoolCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			create_info.poolSizeCount = sizes.size();

@@ -182,12 +182,8 @@ class GraphicsPipelineBuilder {
 
 		// TODO https://registry.khronos.org/vulkan/site/guide/latest/push_constants.html
 
-		DescriptorSetBuilder addDescriptorSet(VkDescriptorSetLayoutCreateFlags flags = 0) {
-			return {device.vk_device, flags, sets};
-		}
-
-		void addDescriptorSet(VkDescriptorSetLayout layout) {
-			sets.push_back(layout);
+		void addDescriptorSet(DescriptorSetLayout layout) {
+			sets.push_back(layout.vk_layout);
 		}
 
 	// assembly configuration

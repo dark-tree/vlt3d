@@ -133,8 +133,8 @@ class TaskPool {
 			this->enqueue(std::bind(func, arg, args...));
 		}
 
-		template <typename T>
-		std::future<T> defer(const std::function<T()>& task) {
+		template <typename F, typename T = typename std::result_of<F()>::type>
+		std::future<T> defer(const F& task) {
 			auto* raw_promise = new std::promise<T>();
 			std::future<T> future = raw_promise->get_future();
 

@@ -11,11 +11,12 @@ class CommandRecorder {
 	private:
 
 		VkCommandBuffer vk_buffer;
+		VkPipelineLayout vk_layout;
 
 	public:
 
 		CommandRecorder(VkCommandBuffer vk_buffer)
-		: vk_buffer(vk_buffer) {}
+		: vk_buffer(vk_buffer), vk_layout(nullptr) {}
 
 		// TODO clean this one
 		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent, float r, float g, float b, float a) {
@@ -41,12 +42,13 @@ class CommandRecorder {
 		}
 
 		CommandRecorder& bindPipeline(GraphicsPipeline& pipeline) {
+			this->vk_layout = pipeline.vk_layout;
 			vkCmdBindPipeline(vk_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk_pipeline);
 			return *this;
 		}
 
-		CommandRecorder& bindDescriptorSet(GraphicsPipeline& pipeline, DescriptorSet& set) {
-			vkCmdBindDescriptorSets(vk_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk_layout, 0, 1, &set.vk_set, 0, nullptr);
+		CommandRecorder& bindDescriptorSet(DescriptorSet& set) {
+			vkCmdBindDescriptorSets(vk_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_layout, 0, 1, &set.vk_set, 0, nullptr);
 			return *this;
 		}
 

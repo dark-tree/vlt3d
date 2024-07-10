@@ -208,9 +208,9 @@ int main() {
 	// create a compiler and compile the glsl into spirv
 	Compiler compiler;
 	compiler.setOptimization(shaderc_optimization_level_performance);
-	std::future<ShaderModule> vert_mod_2d = pool.defer<ShaderModule>([&] () { return compiler.compile("vert_2d", vert_shader_2d, Kind::VERTEX).create(device); });
-	std::future<ShaderModule> vert_mod_3d = pool.defer<ShaderModule>([&] () { return compiler.compile("vert_3d", vert_shader_3d, Kind::VERTEX).create(device); });
-	std::future<ShaderModule> frag_mod_uv = pool.defer<ShaderModule>([&] () { return compiler.compile("frag_uv", frag_shader_uv, Kind::FRAGMENT).create(device); });
+	std::future<ShaderModule> vert_mod_2d = pool.defer([&] () { return compiler.compile("vert_2d", vert_shader_2d, Kind::VERTEX).create(device); });
+	std::future<ShaderModule> vert_mod_3d = pool.defer([&] () { return compiler.compile("vert_3d", vert_shader_3d, Kind::VERTEX).create(device); });
+	std::shared_future<ShaderModule> frag_mod_uv = pool.defer([&] () { return compiler.compile("frag_uv", frag_shader_uv, Kind::FRAGMENT).create(device); }).share();
 
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
@@ -285,11 +285,10 @@ int main() {
 	std::vector<Framebuffer> framebuffers = swapchain.getFramebuffers(pass, depth_image_view);
 
 	// Create this thing
-	std::vector<VkDescriptorSetLayout> unused_layouts; // TODO get rid of this mess, this API is horrible
-	VkDescriptorSetLayout layout = DescriptorSetBuilder {device.vk_device, 0, unused_layouts}
-		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.done();
+	DescriptorSetLayoutBuilder dsl_builder;
+	dsl_builder.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	dsl_builder.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	DescriptorSetLayout layout = dsl_builder.build(device);
 
 	// pipeline creation
 	GraphicsPipelineBuilder pipe_builder_3d {device};
@@ -297,11 +296,8 @@ int main() {
 	pipe_builder_3d.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder_3d.setRenderPass(pass);
 
-	ShaderModule frag_uv;
-
-	logger::info("Shader compilation 3D pipeline took: ", Timer::of([&] {
-		frag_uv = frag_mod_uv.get();
-		pipe_builder_3d.setShaders(vert_mod_3d.get(), frag_uv);
+	logger::info("Shader compilation for the 3D pipeline took: ", Timer::of([&] {
+		pipe_builder_3d.setShaders(vert_mod_3d.get(), frag_mod_uv.get());
 	}).milliseconds(), "ms");
 
 	pipe_builder_3d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
@@ -320,8 +316,8 @@ int main() {
 	pipe_builder_2d.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	pipe_builder_2d.setRenderPass(pass);
 
-	logger::info("Shader compilation for 2D pipeline took: ", Timer::of([&] {
-		pipe_builder_2d.setShaders(vert_mod_2d.get(), frag_uv);
+	logger::info("Shader compilation for the 2D pipeline took: ", Timer::of([&] {
+		pipe_builder_2d.setShaders(vert_mod_2d.get(), frag_mod_uv.get());
 	}).milliseconds(), "ms");
 
 	pipe_builder_2d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
@@ -432,7 +428,7 @@ int main() {
 		frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(pipeline_3d)
-			.bindDescriptorSet(pipeline_3d, frames[frame].set)
+			.bindDescriptorSet(frames[frame].set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)

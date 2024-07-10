@@ -8,7 +8,7 @@ struct Layout {
 	enum XyUvRgba { XY_UV_RGBA };
 };
 
-struct Vertex3D { // TODO Rename to Vertex3D
+struct Vertex3D {
 	float x, y, z;
 	float u, v;
 	uint8_t r, g, b, a;
@@ -22,7 +22,6 @@ struct Vertex3D { // TODO Rename to Vertex3D
 	Vertex3D(float x, float y, float z, float u, float v, uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 	: x(x), y(y), z(z), u(u), v(v), r(r), g(g), b(b), a(a) {}
 };
-
 
 struct Vertex2D {
 	float x, y;

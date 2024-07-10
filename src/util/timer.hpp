@@ -43,7 +43,6 @@ class Timer {
 			return true;
 		}
 
-		// experimental helper
 		static inline Timer of(const std::function<void()>& thing) {
 			Timer timer;
 			thing();
