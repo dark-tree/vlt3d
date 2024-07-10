@@ -8,22 +8,21 @@ struct Layout {
 	enum XyUvRgba { XY_UV_RGBA };
 };
 
-struct Vertex { // TODO Rename to Vertex3D
+struct Vertex3D { // TODO Rename to Vertex3D
 	float x, y, z;
 	float u, v;
 	uint8_t r, g, b, a;
 
-	Vertex() = default;
+	Vertex3D() = default;
 
 	[[deprecated("use explicit RGB bytes")]]
-	Vertex(float x, float y, float z, float rf, float gf, float bf, float u, float v)
+	Vertex3D(float x, float y, float z, float rf, float gf, float bf, float u, float v)
 	: x(x), y(y), z(z), u(u), v(v), r(rf * 255), g(gf * 255), b(bf * 255), a(255) {}
 
-	Vertex(float x, float y, float z, float u, float v, uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+	Vertex3D(float x, float y, float z, float u, float v, uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 	: x(x), y(y), z(z), u(u), v(v), r(r), g(g), b(b), a(a) {}
 };
 
-using Vertex3D = Vertex;
 
 struct Vertex2D {
 	float x, y;
@@ -37,5 +36,5 @@ struct Vertex2D {
 };
 
 // make sure our Vertices have the correct size
-static_assert(sizeof(Vertex) <= sizeof(float) * 6);
+static_assert(sizeof(Vertex3D) <= sizeof(float) * 6);
 static_assert(sizeof(Vertex2D) <= sizeof(float) * 5);

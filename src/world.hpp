@@ -24,7 +24,7 @@ struct Chunk {
 
 };
 
-std::vector<Vertex> mesh;
+std::vector<Vertex3D> mesh;
 
 void drawCube(float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite) {
 	if (west) {

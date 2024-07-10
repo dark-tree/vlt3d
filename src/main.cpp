@@ -227,14 +227,14 @@ int main() {
 	Buffer vertices;
 
 	{
-		BufferInfo buffer_builder {mesh.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		BufferInfo buffer_builder {mesh.size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
 		vertices = allocator.allocateBuffer(buffer_builder);
 
 		MemoryMap map = vertices.access().map();
-		map.write(mesh.data(), mesh.size() * sizeof(Vertex));
+		map.write(mesh.data(), mesh.size() * sizeof(Vertex3D));
 		map.flush();
 		map.unmap();
 	}
