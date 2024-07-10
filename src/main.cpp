@@ -1,5 +1,9 @@
+
+#include "external.hpp"
 #include "context.hpp"
-#include "camera.hpp"
+#include "client/camera.hpp"
+#include "client/renderer.hpp"
+#include "client/vertices.hpp"
 
 struct UBO {
 	glm::mat4 model;
@@ -112,15 +116,15 @@ constexpr const char* vert_shader = R"(
 	} uObject;
 
 	layout(location = 0) in vec3 iPosition;
-	layout(location = 1) in vec3 iColor;
-	layout(location = 2) in vec2 iTexture;
+	layout(location = 1) in vec2 iTexture;
+	layout(location = 2) in uint iColor;
 
 	layout(location = 0) out vec3 vColor;
 	layout(location = 1) out vec2 vTexture;
 
 	void main() {
 	    gl_Position = uObject.proj * uObject.view * uObject.model * vec4(iPosition, 1.0);
-	    vColor = iColor;
+	    vColor = unpackUnorm4x8(iColor).rgb;
 		vTexture = iTexture;
 	}
 )";
@@ -139,10 +143,6 @@ constexpr const char* frag_shader = R"(
 		fColor = mix(texture(uSampler, vTexture).rgba, vec4(vColor, 1.0f), 0.5);
 	}
 )";
-
-struct Vertex {
-	float x, y, z, r, g, b, u, v;
-};
 
 // for now
 #include "world.hpp"
@@ -203,7 +203,7 @@ int main() {
 	Buffer vertices;
 
 	{
-		BufferInfo buffer_builder{mesh.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		BufferInfo buffer_builder {mesh.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
@@ -276,8 +276,8 @@ int main() {
 
 	pipe_builder.addBinding()
 		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
-		.attribute(1, VK_FORMAT_R32G32B32_SFLOAT)
-		.attribute(2, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(2, VK_FORMAT_R32_UINT)
 		.done();
 
 	VkDescriptorSetLayout descriptor_layout = pipe_builder.addDescriptorSet()
@@ -339,7 +339,7 @@ int main() {
 		image_sampler = image_view.getSamplerBuilder().build(device);
 	}
 
-	int concurrent_frames = 2;
+	int concurrent_frames = 1;
 	int frame = 0;
 
 	DescriptorPoolBuilder descriptor_pool_builder;
@@ -354,7 +354,11 @@ int main() {
 		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(descriptor_layout), image_sampler);
 	}
 
+	ScreenRenderer renderer;
 	Camera camera {window};
+
+	Buffer ui_3d, ui_2d;
+	int ui_3d_len = -1, ui_2d_len = -1;
 
 	while (!window.shouldClose()) {
 		window.poll();
@@ -367,6 +371,8 @@ int main() {
 
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
+
+		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len);
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {
@@ -383,6 +389,8 @@ int main() {
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)
 			.draw(mesh.size())
+			.bindBuffer(ui_3d)
+			.draw(ui_3d_len)
 			.endRenderPass()
 			.done();
 

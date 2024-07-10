@@ -65,6 +65,14 @@ class MemoryAccess {
 			return {vma_allocator, vma_allocation, pointer};
 		}
 
+		void closeBuffer(VkBuffer buffer) {
+			vmaDestroyBuffer(vma_allocator, buffer, vma_allocation);
+		}
+
+		void closeImage(VkImage image) {
+			vmaDestroyImage(vma_allocator, image, vma_allocation);
+		}
+
 };
 
 class MemoryInfo {

@@ -22,6 +22,8 @@ class Buffer {
 			return memory;
 		}
 
-		// TODO close()
+		void close() {
+			memory.closeBuffer(vk_buffer);
+		}
 
 };

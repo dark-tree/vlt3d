@@ -2,6 +2,7 @@
 
 #include "external.hpp"
 #include "window/window.hpp"
+#include "util/logger.hpp"
 
 class WindowSurface {
 

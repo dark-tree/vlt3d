@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external.hpp"
+#include "setup/result.hpp"
 
 class FeatureSetView {
 

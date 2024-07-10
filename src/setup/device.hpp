@@ -6,6 +6,7 @@
 #include "sync/fence.hpp"
 #include "sync/semaphore.hpp"
 #include "buffer/memory.hpp"
+#include "setup/picker.hpp"
 
 /**
  * A Vulkan Logical Device, a configured connection to a physical device

@@ -1,8 +1,9 @@
 #pragma once
 
 #include "external.hpp"
-#include "buffer.hpp"
-#include "image.hpp"
+#include "buffer/buffer.hpp"
+#include "buffer/image.hpp"
+#include "setup/instance.hpp"
 
 template <typename S>
 class AllocationInfo {
