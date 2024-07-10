@@ -21,12 +21,18 @@ void ScreenRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3
 	mesh_3d.emplace_back( ox + 1, oy + 1,  -1,   1,   1,   0,   0, 255, 255);
 	mesh_3d.emplace_back( ox + 0, oy + 1,  -1,   0,   1,   0, 255,   0, 255);
 
-	mesh_2d.emplace_back(0.0, 0.1, 0, 0, 255, 0, 0, 255);
-	mesh_2d.emplace_back(0.0, 0.0, 0, 0, 255, 0, 0, 255);
-	mesh_2d.emplace_back(0.1, 0.0, 0, 0, 255, 0, 0, 255);
+	BakedSprite sprite = BakedSprite::identity();
+
+	mesh_2d.emplace_back( 0.2, 0.2, sprite.u1, sprite.v1, 255,   0,   0, 255);
+	mesh_2d.emplace_back( 0.8, 0.8, sprite.u2, sprite.v2,   0, 255,   0, 255);
+	mesh_2d.emplace_back( 0.2, 0.8, sprite.u1, sprite.v2,   0,   0, 255, 255);
+
+	mesh_2d.emplace_back( 0.2, 0.2, sprite.u1, sprite.v1, 255,   0,   0, 255);
+	mesh_2d.emplace_back( 0.8, 0.2, sprite.u2, sprite.v1,   0,   0, 255, 255);
+	mesh_2d.emplace_back( 0.8, 0.8, sprite.u2, sprite.v2,   0, 255,   0, 255);
 
 	if ((int) mesh_3d.size() > *len_3d) {
-		BufferInfo buffer_builder {mesh_3d.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		BufferInfo buffer_builder {mesh_3d.size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
@@ -35,12 +41,12 @@ void ScreenRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3
 		}
 
 		*buf_3d = allocator.allocateBuffer(buffer_builder);
-		*len_3d = mesh_3d.size() * sizeof(Vertex);
+		*len_3d = mesh_3d.size();
 		logger::info("Reallocated 3D immediate buffer");
 	}
 
 	MemoryMap map_3d = buf_3d->access().map();
-	map_3d.write(mesh_3d.data(), mesh_3d.size() * sizeof(Vertex));
+	map_3d.write(mesh_3d.data(), mesh_3d.size() * sizeof(Vertex3D));
 	map_3d.flush();
 	map_3d.unmap();
 
@@ -54,12 +60,12 @@ void ScreenRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3
 		}
 
 		*buf_2d = allocator.allocateBuffer(buffer_builder);
-		*len_2d = mesh_2d.size() * sizeof(Vertex);
+		*len_2d = mesh_2d.size();
 		logger::info("Reallocated 2D immediate buffer");
 	}
 
 	MemoryMap map_2d = buf_2d->access().map();
-	map_2d.write(mesh_2d.data(), mesh_2d.size() * sizeof(Vertex));
+	map_2d.write(mesh_2d.data(), mesh_2d.size() * sizeof(Vertex2D));
 	map_2d.flush();
 	map_2d.unmap();
 

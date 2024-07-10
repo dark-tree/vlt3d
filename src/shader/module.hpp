@@ -15,6 +15,8 @@ class ShaderModule {
 
 	public:
 
+		ShaderModule() = default;
+
 		ShaderModule(Device& device, const uint32_t* data, uint32_t size, Kind kind)
 		: vk_stage(kind.vulkan) {
 

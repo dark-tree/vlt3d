@@ -106,7 +106,7 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 
 }
 
-constexpr const char* vert_shader = R"(
+constexpr const char* vert_shader_3d = R"(
 	#version 450
 
 	layout(binding = 0) uniform UniformBufferObject {
@@ -129,7 +129,30 @@ constexpr const char* vert_shader = R"(
 	}
 )";
 
-constexpr const char* frag_shader = R"(
+constexpr const char* vert_shader_2d = R"(
+	#version 450
+
+	layout(binding = 0) uniform UniformBufferObject {
+		mat4 model;
+		mat4 view;
+		mat4 proj;
+	} uObject;
+
+	layout(location = 0) in vec2 iPosition;
+	layout(location = 1) in vec2 iTexture;
+	layout(location = 2) in uint iColor;
+
+	layout(location = 0) out vec3 vColor;
+	layout(location = 1) out vec2 vTexture;
+
+	void main() {
+	    gl_Position = vec4(iPosition, 0.0, 1.0);
+	    vColor = unpackUnorm4x8(iColor).rgb;
+		vTexture = iTexture;
+	}
+)";
+
+constexpr const char* frag_shader_uv = R"(
 	#version 450
 
 	layout(binding = 1) uniform sampler2D uSampler;
@@ -185,8 +208,9 @@ int main() {
 	// create a compiler and compile the glsl into spirv
 	Compiler compiler;
 	compiler.setOptimization(shaderc_optimization_level_performance);
-	std::future<ShaderModule> vert_mod = pool.defer<ShaderModule>([&] () { return compiler.compile("string_vert", vert_shader, Kind::VERTEX).create(device); });
-	std::future<ShaderModule> frag_mod = pool.defer<ShaderModule>([&] () { return compiler.compile("string_frag", frag_shader, Kind::FRAGMENT).create(device); });
+	std::future<ShaderModule> vert_mod_2d = pool.defer<ShaderModule>([&] () { return compiler.compile("vert_2d", vert_shader_2d, Kind::VERTEX).create(device); });
+	std::future<ShaderModule> vert_mod_3d = pool.defer<ShaderModule>([&] () { return compiler.compile("vert_3d", vert_shader_3d, Kind::VERTEX).create(device); });
+	std::future<ShaderModule> frag_mod_uv = pool.defer<ShaderModule>([&] () { return compiler.compile("frag_uv", frag_shader_uv, Kind::FRAGMENT).create(device); });
 
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
@@ -260,32 +284,56 @@ int main() {
 	// create framebuffers
 	std::vector<Framebuffer> framebuffers = swapchain.getFramebuffers(pass, depth_image_view);
 
-	// pipeline creation
-	GraphicsPipelineBuilder pipe_builder {device};
-	pipe_builder.setDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
-	pipe_builder.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	pipe_builder.setRenderPass(pass);
+	// Create this thing
+	std::vector<VkDescriptorSetLayout> unused_layouts; // TODO get rid of this mess, this API is horrible
+	VkDescriptorSetLayout layout = DescriptorSetBuilder {device.vk_device, 0, unused_layouts}
+		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.done();
 
-	logger::info("Shader compilation took: ", Timer::of([&] {
-		pipe_builder.setShaders(vert_mod.get(), frag_mod.get());
+	// pipeline creation
+	GraphicsPipelineBuilder pipe_builder_3d {device};
+	pipe_builder_3d.setDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
+	pipe_builder_3d.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipe_builder_3d.setRenderPass(pass);
+
+	ShaderModule frag_uv;
+
+	logger::info("Shader compilation 3D pipeline took: ", Timer::of([&] {
+		frag_uv = frag_mod_uv.get();
+		pipe_builder_3d.setShaders(vert_mod_3d.get(), frag_uv);
 	}).milliseconds(), "ms");
 
-	pipe_builder.setDepthTest(VK_COMPARE_OP_LESS, true, true);
-	//pipe_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
-	//pipe_builder.setLineWidth(3.0f);
+	pipe_builder_3d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
 
-	pipe_builder.addBinding()
+	pipe_builder_3d.addBinding()
 		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
 		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
 		.attribute(2, VK_FORMAT_R32_UINT)
 		.done();
 
-	VkDescriptorSetLayout descriptor_layout = pipe_builder.addDescriptorSet()
-		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+	pipe_builder_3d.addDescriptorSet(layout);
+	GraphicsPipeline pipeline_3d = pipe_builder_3d.build();
+
+	GraphicsPipelineBuilder pipe_builder_2d {device};
+	pipe_builder_2d.setDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
+	pipe_builder_2d.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipe_builder_2d.setRenderPass(pass);
+
+	logger::info("Shader compilation for 2D pipeline took: ", Timer::of([&] {
+		pipe_builder_2d.setShaders(vert_mod_2d.get(), frag_uv);
+	}).milliseconds(), "ms");
+
+	pipe_builder_2d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
+
+	pipe_builder_2d.addBinding()
+		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(2, VK_FORMAT_R32_UINT)
 		.done();
 
-	GraphicsPipeline pipeline = pipe_builder.build();
+	pipe_builder_2d.addDescriptorSet(layout);
+	GraphicsPipeline pipeline_2d = pipe_builder_2d.build();
 
 	// create command pools
 	CommandPool main_pool = CommandPool::build(device, graphics_ref, false);
@@ -351,7 +399,7 @@ int main() {
 	std::vector<VkDescriptorSet> sets;
 
 	for (int i = 0; i < concurrent_frames; i ++) {
-		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(descriptor_layout), image_sampler);
+		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(layout), image_sampler);
 	}
 
 	ScreenRenderer renderer;
@@ -383,14 +431,17 @@ int main() {
 		// record commands
 		frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
-			.bindPipeline(pipeline)
-			.bindDescriptorSet(pipeline, frames[frame].set)
+			.bindPipeline(pipeline_3d)
+			.bindDescriptorSet(pipeline_3d, frames[frame].set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)
 			.draw(mesh.size())
 			.bindBuffer(ui_3d)
 			.draw(ui_3d_len)
+			.bindPipeline(pipeline_2d)
+			.bindBuffer(ui_2d)
+			.draw(ui_2d_len)
 			.endRenderPass()
 			.done();
 

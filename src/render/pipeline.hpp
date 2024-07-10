@@ -186,6 +186,10 @@ class GraphicsPipelineBuilder {
 			return {device.vk_device, flags, sets};
 		}
 
+		void addDescriptorSet(VkDescriptorSetLayout layout) {
+			sets.push_back(layout);
+		}
+
 	// assembly configuration
 
 		void setPrimitive(VkPrimitiveTopology topology, bool enable_restart = false) {
