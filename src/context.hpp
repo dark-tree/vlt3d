@@ -20,3 +20,4 @@
 #include "util/inline.hpp"
 #include "util/threads.hpp"
 #include "util/timer.hpp"
+#include "util/exception.hpp"
