@@ -5,20 +5,29 @@ include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE Debug)
 set(FETCHCONTENT_QUIET OFF)
 
 find_package(Threads REQUIRED)
 find_package(Vulkan REQUIRED)
-find_package(OpenAL REQUIRED)
+find_package(OpenAL)
 
 # Try: cmake . -B build && cmake --build build/
 if (CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
 	message(FATAL_ERROR "In source building is deprecated, select another build directory!")
 endif()
 
-# Temporary debugging doodads
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -g")
+if (NOT OpenAL_FOUND)
+	message(NOTICE "OpenAL was NOT found, falling back to OpenAL-Soft!")
+
+	FetchContent_Declare(
+			openal-soft
+			GIT_REPOSITORY https://github.com/kcat/openal-soft
+			GIT_TAG 1.23.1
+			GIT_PROGRESS TRUE
+	)
+
+	FetchContent_MakeAvailable(openal-soft)
+endif()
 
 FetchContent_Declare(
 		glfw
@@ -61,7 +70,7 @@ message("Fetching external dependencies for target 'shaderc'...")
 
 # Invoke their very special dependency python script
 execute_process(
-		COMMAND ${shaderc_SOURCE_DIR}/utils/git-sync-deps
+		COMMAND python3 ${shaderc_SOURCE_DIR}/utils/git-sync-deps
 		COMMAND_ECHO STDOUT # TODO this doesn't work (no real-time output)
 		WORKING_DIRECTORY ${shaderc_SOURCE_DIR}
 		RESULT_VARIABLE GIT_SYNC_DEPS_RESULT
@@ -88,6 +97,8 @@ include_directories(
 		${stb_SOURCE_DIR}                        # Headers in ./
 		${glm_SOURCE_DIR}                        # Headers in ./glm
 		${shaderc_SOURCE_DIR}/libshaderc/include # Headers in ./shaderc
+		${Vulkan_INCLUDE_DIRS}                   # Headers in ./vulcan
+		${OpenAL_INCLUDE_DIRS}                   # Headers in ./AL
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES
@@ -108,14 +119,23 @@ add_executable(main
 target_link_libraries(main
 		OpenAL::OpenAL
 		Threads::Threads
-		vulkan
+		Vulkan::Vulkan
 		glfw
 		shaderc
 		external
 )
 
-target_compile_options(external PRIVATE -Wno-volatile)
-target_compile_options(main PRIVATE -Wno-volatile -Wall)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+
+	# GCC debugging doodads
+	if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+		message(STATUS "Compiling with debugging symbols")
+		target_compile_options(main PRIVATE -g)
+	endif()
+
+	target_compile_options(external PRIVATE -Wno-volatile)
+	target_compile_options(main PRIVATE -Wno-volatile -Wall)
+endif()
 
 # Copy assets if any exist
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
