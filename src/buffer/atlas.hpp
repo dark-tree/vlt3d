@@ -6,7 +6,7 @@
 struct BakedSprite {
 	READONLY float u1, v1, u2, v2;
 
-	BakedSprite() {}
+	BakedSprite() = default;
 	BakedSprite(float u1, float v1, float u2, float v2)
 	: u1(u1), v1(v1), u2(u2), v2(v2) {}
 
@@ -18,7 +18,7 @@ struct BakedSprite {
 struct UnbakedSprite {
 	READONLY int x, y, w, h;
 
-	UnbakedSprite() {}
+	UnbakedSprite() = default;
 	UnbakedSprite(int x, int y, int w, int h)
 	: x(x), y(y), w(w), h(h) {}
 
@@ -29,19 +29,56 @@ struct UnbakedSprite {
 		return true;
 	}
 
+	UnbakedSprite combine(UnbakedSprite other) {
+		return {x + other.x, y + other.y, other.w, other.h};
+	}
+
 	BakedSprite bake(int width, int height) const {
 		const int x1 = x + 0;
 		const int y1 = y + 0;
 		const int x2 = x + w;
 		const int y2 = y + h;
 
+		const float margin = 0.0f;
+
 		return {
-			(x1 + 0.5f) / (float) width,
-			(y2 + 0.5f) / (float) height,
-			(x2 + 0.5f) / (float) width,
-			(y1 + 0.5f) / (float) height
+			(x1 + margin) / (float) width,
+			(y1 + margin) / (float) height,
+			(x2 - margin) / (float) width,
+			(y2 - margin) / (float) height
 		};
 	}
+
+	inline static UnbakedSprite identity(const ImageData& image) {
+		return {0, 0, (int) image.width(), (int) image.height()};
+	}
+};
+
+class PairedSprite {
+
+	private:
+
+		READONLY UnbakedSprite unbaked;
+		READONLY BakedSprite baked;
+
+	public:
+
+		PairedSprite() = default;
+		PairedSprite(UnbakedSprite unbaked, BakedSprite baked)
+		: unbaked(unbaked), baked(baked) {}
+
+		UnbakedSprite getUnbaked() const {
+			return unbaked;
+		}
+
+		BakedSprite getBaked() const {
+			return baked;
+		}
+
+		inline static PairedSprite identity(const ImageData& image) {
+			return {UnbakedSprite::identity(image), BakedSprite::identity()};
+		}
+
 };
 
 class Atlas {
@@ -49,21 +86,34 @@ class Atlas {
 	private:
 
 		ImageData atlas;
-		BakedSprite fallback;
-		std::unordered_map<std::string, BakedSprite> sprites;
+		PairedSprite fallback;
+		std::unordered_map<std::string, PairedSprite> sprites;
 		friend class AtlasBuilder;
 
-		Atlas(ImageData atlas, const std::unordered_map<std::string, UnbakedSprite>& unbaked, BakedSprite fallback)
+		Atlas(ImageData atlas, const std::unordered_map<std::string, UnbakedSprite>& unbaked, PairedSprite fallback)
 		: atlas(atlas), fallback(fallback) {
 			for (const auto& [key, value] : unbaked) {
-				sprites[key] = value.bake(atlas.width(), atlas.height());
+				sprites.try_emplace(key, value, value.bake(atlas.width(), atlas.height()));
 			}
+		}
+
+		const PairedSprite& getSpritePair(const std::string& identifier) const {
+			return util::fallback_get(sprites, identifier, fallback);
 		}
 
 	public:
 
+		[[deprecated("Use Atlas::getBakedSprite")]]
 		BakedSprite getSprite(const std::string& identifier) const {
-			return util::fallback_get(sprites, identifier, fallback);
+			return getBakedSprite(identifier);
+		}
+
+		BakedSprite getBakedSprite(const std::string& identifier) const {
+			return getSpritePair(identifier).getBaked();
+		}
+
+		UnbakedSprite getUnbakedSprite(const std::string& identifier) const {
+			return getSpritePair(identifier).getUnbaked();
 		}
 
 		ImageData& getImage() {
@@ -81,7 +131,8 @@ class AtlasBuilder {
 
 	private:
 
-		UnbakedSprite* fallback = nullptr;
+		static constexpr const char* fallback_key = "@fallback";
+
 		ImageData atlas;
 		std::unordered_map<std::string, UnbakedSprite> sprites;
 
@@ -121,12 +172,13 @@ class AtlasBuilder {
 			return packUnbakedSprite(image);
 		}
 
-		BakedSprite getBakedFallback() const {
-			if (fallback == nullptr) {
-				return BakedSprite::identity();
+		PairedSprite getFallback() const {
+			try {
+				UnbakedSprite fallback = sprites.at(fallback_key);
+				return {fallback, fallback.bake(atlas.width(), atlas.height())};
+			} catch (...) {
+				return PairedSprite::identity(atlas);
 			}
-
-			return fallback->bake(atlas.width(), atlas.height());
 		}
 
 	public:
@@ -149,12 +201,12 @@ class AtlasBuilder {
 			sprites[identifier] = packUnbakedSprite(image);
 		}
 
-		void submitFallback(const std::string& identifier) {
-			fallback = &sprites.at(identifier);
+		void submitFallback(ImageData image) {
+			submitImage(fallback_key, image);
 		}
 
 		Atlas build() {
-			return {atlas, sprites, getBakedFallback()};
+			return {atlas, sprites, getFallback()};
 		}
 
 	public:
@@ -166,7 +218,7 @@ class AtlasBuilder {
 		}
 
 		static Atlas createIdentityAtlas(ImageData atlas) {
-			return {atlas, {}, BakedSprite::identity()};
+			return {atlas, {}, PairedSprite::identity(atlas)};
 		}
 
 };

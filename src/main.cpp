@@ -169,6 +169,7 @@ constexpr const char* frag_shader_uv = R"(
 
 // for now
 #include "world.hpp"
+#include "buffer/font.hpp"
 
 int main() {
 
@@ -220,6 +221,9 @@ int main() {
 	Chunk chunk {0, 0, 0};
 	chunk.random(10000);
 	drawChunk(chunk, atlas);
+
+	Font font;
+	font.addCodePage(atlas, "assets/sprites/8x8font.png", 8, 0);
 
 	atlas.getImage().save("atlas.png");
 
@@ -380,7 +384,7 @@ int main() {
 		//staging.close();
 
 		image_view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
-		image_sampler = image_view.getSamplerBuilder().build(device);
+		image_sampler = image_view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
 	}
 
 	int concurrent_frames = 1;
@@ -416,7 +420,7 @@ int main() {
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
 
-		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len);
+		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, font);
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {

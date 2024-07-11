@@ -3,9 +3,10 @@
 
 #ifdef __cpp_lib_stacktrace
 std::string StackCollector::filterPath(std::string path) {
-	#ifdef _MSC_VER
-	return std::filesystem::path(path).lexically_relative("C:/Windows/TEMP/").generic_string();
-	#endif
+	//TODO
+	//#ifdef _MSC_VER
+	//return std::filesystem::path(path).lexically_relative("").generic_string();
+	//#endif
 
 	return path;
 }
@@ -66,6 +67,10 @@ void StackCollector::print(const std::stacktrace& stack, bool cull) {
 	}
 }
 #endif
+
+////////////////////////
+/// TracePoint class ///
+////////////////////////
 
 #if defined(__cpp_lib_stacktrace)
 TracePoint::TracePoint(const std::source_location source, const std::stacktrace trace)
