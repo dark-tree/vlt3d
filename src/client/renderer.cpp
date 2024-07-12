@@ -4,17 +4,19 @@
 #include "buffer/allocator.hpp"
 #include "buffer/atlas.hpp"
 
-void drawText(std::vector<Vertex2D>& mesh, Font& font, const std::string& text, double scale) {
+void drawText(std::vector<Vertex2D>& mesh, Font& font, const std::string& text, double scale, VkExtent2D extent) {
 
 	float offset = 0;
+	double xs = scale / extent.width; // horizontal scale
+	double ys = scale / extent.height; // vertical scale
 
 	for (int i = 0; i < (int) text.size(); i ++) {
 
 		Glyph glyph = font.getGlyph(text[i]);
 		BakedSprite sprite = glyph.getSprite();
 
-		double w = glyph.getWidth() * scale;
-		double h = glyph.getHeight() * scale;
+		double w = glyph.getWidth() * xs;
+		double h = glyph.getHeight() * ys;
 
 		float sx = offset;
 		float ex = offset + w;
@@ -27,13 +29,13 @@ void drawText(std::vector<Vertex2D>& mesh, Font& font, const std::string& text, 
 		mesh.emplace_back(ex, 0, sprite.u2, sprite.v1, 255, 255, 255, 255);
 		mesh.emplace_back(ex, h, sprite.u2, sprite.v2, 255, 255, 255, 255);
 
-		offset += w + scale;
+		offset += w + xs;
 
 	}
 
 }
 
-void ScreenRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3d, Buffer* buf_2d, int* len_2d, Font& font) {
+void ScreenRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3d, Buffer* buf_2d, int* len_2d, Font& font, VkExtent2D extent) {
 
 	std::vector<Vertex3D> mesh_3d;
 	std::vector<Vertex2D> mesh_2d;
@@ -50,7 +52,7 @@ void ScreenRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3
 	mesh_3d.emplace_back( ox + 1, oy + 1,  -1,   1,   1,   0,   0, 255, 255);
 	mesh_3d.emplace_back( ox + 0, oy + 1,  -1,   0,   1,   0, 255,   0, 255);
 
-	drawText(mesh_2d, font, "Hello Bitmap Font!", 7 / 700.0);
+	drawText(mesh_2d, font, "Hello Bitmap Font!", 7, extent);
 
 	if ((int) mesh_3d.size() > *len_3d) {
 		BufferInfo buffer_builder {mesh_3d.size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};

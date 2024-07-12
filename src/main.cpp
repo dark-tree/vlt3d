@@ -89,6 +89,8 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 	Image depth_image;
 	ImageView depth_image_view;
 
+	swapchain = createSwapchain(device, surface, window, graphics, presentation);
+
 	// create the depth buffer
 	{
 		ImageInfo image_builder {swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
@@ -99,7 +101,6 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 		depth_image_view = depth_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_DEPTH_BIT);
 	}
 
-	swapchain = createSwapchain(device, surface, window, graphics, presentation);
 	framebuffers = swapchain.getFramebuffers(pass, depth_image_view);
 
 	logger::info("Swapchain recreated!");
@@ -118,7 +119,7 @@ int main() {
 	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
 	sound_system.add(buffer).loop().play();
 
-	Window window {700, 700, "Funny Vulkan App"};
+	Window window {1000, 700, "Funny Vulkan App"};
 
 	// instance configuration
 	InstanceBuilder builder;
@@ -147,11 +148,10 @@ int main() {
 
 	// create a compiler and compile the glsl into spirv
 	Compiler compiler;
-	compiler.setOptimization(shaderc_optimization_level_performance);
-	std::future<ShaderModule> vert_2d = pool.defer([&] () { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); });
-	std::future<ShaderModule> vert_3d = pool.defer([&] () { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); });
-	std::future<ShaderModule> frag_mix = pool.defer([&] () { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); });
-	std::future<ShaderModule> frag_tint = pool.defer([&] () { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); });
+	std::future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); });
+	std::future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); });
+	std::future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); });
+	std::future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); });
 
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
@@ -365,7 +365,7 @@ int main() {
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
 
-		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, font);
+		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, font, swapchain.vk_extent);
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {

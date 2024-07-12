@@ -87,13 +87,8 @@ class Compiler {
 
 	public:
 
-		Compiler() {
-			setOptimization(shaderc_optimization_level_size);
-		}
-
-		// shaderc_optimization_level_zero, shaderc_optimization_level_size, shaderc_optimization_level_performance
-		void setOptimization(shaderc_optimization_level value) {
-			options.SetOptimizationLevel(value);
+		Compiler(bool optimize = true) {
+			options.SetOptimizationLevel(optimize ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
 		}
 
 		// simmilar to adding -Dkey=value

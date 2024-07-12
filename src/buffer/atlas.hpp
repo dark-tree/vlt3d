@@ -189,7 +189,7 @@ class AtlasBuilder {
 
 		void submitDirectory(const std::string& identifier) {
 			for (const auto& entry : std::filesystem::recursive_directory_iterator(identifier)) {
-				if (entry.is_regular_file()) submitFile(entry.path().string());
+				if (entry.is_regular_file()) submitFile(entry.path().generic_string());
 			}
 		}
 

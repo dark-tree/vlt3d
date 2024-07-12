@@ -9,6 +9,6 @@ class ScreenRenderer {
 
 	public:
 
-		void getBuffers(Allocator& allocator, Buffer* buf1, int* len1, Buffer* buf2, int* len2, Font& font);
+		void getBuffers(Allocator& allocator, Buffer* buf1, int* len1, Buffer* buf2, int* len2, Font& font, VkExtent2D extend);
 
 };
