@@ -10,10 +10,10 @@
 
 #define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw std::runtime_error("feature '" #feature "' not enabled on this device!"); }
 
-enum GlphBlendMode {
-	GLPH_BLEND_BITWISE = 1,
-	GLPH_BLEND_ENABLED = 2,
-	GLPH_BLEND_DISABLED = 3
+enum struct BlendMode {
+	BITWISE = 1,
+	ENABLED = 2,
+	DISABLED = 3
 };
 
 class GraphicsPipeline {
@@ -134,7 +134,7 @@ class GraphicsPipelineBuilder {
 			setBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
 			setBlendAlphaFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO);
 			setBlendBitwiseFunc(VK_LOGIC_OP_COPY);
-			setBlendMode(GLPH_BLEND_DISABLED);
+			setBlendMode(BlendMode::DISABLED);
 
 		}
 
@@ -263,10 +263,10 @@ class GraphicsPipelineBuilder {
 			attachment.colorBlendOp = op;
 		}
 
-		// finalColor.a = (src * newColor.a) <op> (dst * oldColor.a);
+		// finalColor.a = (<src> * newColor.a) <op> (<dst> * oldColor.a);
 		void setBlendAlphaFunc(VkBlendFactor src, VkBlendOp op, VkBlendFactor dst) {
-			attachment.srcColorBlendFactor = src;
-			attachment.dstColorBlendFactor = dst;
+			attachment.srcAlphaBlendFactor = src;
+			attachment.dstAlphaBlendFactor = dst;
 			attachment.colorBlendOp = op;
 		}
 
@@ -274,18 +274,18 @@ class GraphicsPipelineBuilder {
 			blending.logicOp = op;
 		}
 
-		void setBlendMode(GlphBlendMode mode) {
-			if (mode == GLPH_BLEND_DISABLED) {
+		void setBlendMode(BlendMode mode) {
+			if (mode == BlendMode::DISABLED) {
 				blending.logicOpEnable = false;
 				attachment.blendEnable = false;
 			}
 
-			if (mode == GLPH_BLEND_ENABLED) {
+			if (mode == BlendMode::ENABLED) {
 				blending.logicOpEnable = false;
 				attachment.blendEnable = true;
 			}
 
-			if (mode == GLPH_BLEND_BITWISE) {
+			if (mode == BlendMode::BITWISE) {
 				ASSERT_FEATURE(true, device, LogicOp);
 				blending.logicOpEnable = true;
 				attachment.blendEnable = false;

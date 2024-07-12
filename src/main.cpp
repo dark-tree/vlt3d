@@ -106,67 +106,6 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 
 }
 
-constexpr const char* vert_shader_3d = R"(
-	#version 450
-
-	layout(binding = 0) uniform UniformBufferObject {
-		mat4 model;
-		mat4 view;
-		mat4 proj;
-	} uObject;
-
-	layout(location = 0) in vec3 iPosition;
-	layout(location = 1) in vec2 iTexture;
-	layout(location = 2) in uint iColor;
-
-	layout(location = 0) out vec3 vColor;
-	layout(location = 1) out vec2 vTexture;
-
-	void main() {
-	    gl_Position = uObject.proj * uObject.view * uObject.model * vec4(iPosition, 1.0);
-	    vColor = unpackUnorm4x8(iColor).rgb;
-		vTexture = iTexture;
-	}
-)";
-
-constexpr const char* vert_shader_2d = R"(
-	#version 450
-
-	layout(binding = 0) uniform UniformBufferObject {
-		mat4 model;
-		mat4 view;
-		mat4 proj;
-	} uObject;
-
-	layout(location = 0) in vec2 iPosition;
-	layout(location = 1) in vec2 iTexture;
-	layout(location = 2) in uint iColor;
-
-	layout(location = 0) out vec3 vColor;
-	layout(location = 1) out vec2 vTexture;
-
-	void main() {
-	    gl_Position = vec4(iPosition, 0.0, 1.0);
-	    vColor = unpackUnorm4x8(iColor).rgb;
-		vTexture = iTexture;
-	}
-)";
-
-constexpr const char* frag_shader_uv = R"(
-	#version 450
-
-	layout(binding = 1) uniform sampler2D uSampler;
-
-	layout(location = 0) in vec3 vColor;
-	layout(location = 1) in vec2 vTexture;
-
-	layout(location = 0) out vec4 fColor;
-
-	void main() {
-		fColor = mix(texture(uSampler, vTexture).rgba, vec4(vColor, 1.0f), 0.5);
-	}
-)";
-
 // for now
 #include "world.hpp"
 #include "buffer/font.hpp"
@@ -209,9 +148,10 @@ int main() {
 	// create a compiler and compile the glsl into spirv
 	Compiler compiler;
 	compiler.setOptimization(shaderc_optimization_level_performance);
-	std::future<ShaderModule> vert_mod_2d = pool.defer([&] () { return compiler.compile("vert_2d", vert_shader_2d, Kind::VERTEX).create(device); });
-	std::future<ShaderModule> vert_mod_3d = pool.defer([&] () { return compiler.compile("vert_3d", vert_shader_3d, Kind::VERTEX).create(device); });
-	std::shared_future<ShaderModule> frag_mod_uv = pool.defer([&] () { return compiler.compile("frag_uv", frag_shader_uv, Kind::FRAGMENT).create(device); }).share();
+	std::future<ShaderModule> vert_2d = pool.defer([&] () { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); });
+	std::future<ShaderModule> vert_3d = pool.defer([&] () { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); });
+	std::future<ShaderModule> frag_mix = pool.defer([&] () { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); });
+	std::future<ShaderModule> frag_tint = pool.defer([&] () { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); });
 
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
@@ -301,7 +241,7 @@ int main() {
 	pipe_builder_3d.setRenderPass(pass);
 
 	logger::info("Shader compilation for the 3D pipeline took: ", Timer::of([&] {
-		pipe_builder_3d.setShaders(vert_mod_3d.get(), frag_mod_uv.get());
+		pipe_builder_3d.setShaders(vert_3d.get(), frag_mix.get());
 	}).milliseconds(), "ms");
 
 	pipe_builder_3d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
@@ -321,10 +261,15 @@ int main() {
 	pipe_builder_2d.setRenderPass(pass);
 
 	logger::info("Shader compilation for the 2D pipeline took: ", Timer::of([&] {
-		pipe_builder_2d.setShaders(vert_mod_2d.get(), frag_mod_uv.get());
+		pipe_builder_2d.setShaders(vert_2d.get(), frag_tint.get());
 	}).milliseconds(), "ms");
 
 	pipe_builder_2d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
+
+	// blending
+	pipe_builder_2d.setBlendMode(BlendMode::ENABLED);
+	pipe_builder_2d.setBlendAlphaFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_SUBTRACT, VK_BLEND_FACTOR_ONE);
+	pipe_builder_2d.setBlendColorFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE);
 
 	pipe_builder_2d.addBinding()
 		.attribute(0, VK_FORMAT_R32G32_SFLOAT)

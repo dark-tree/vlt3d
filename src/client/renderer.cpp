@@ -13,21 +13,19 @@ void drawText(std::vector<Vertex2D>& mesh, Font& font, const std::string& text, 
 		Glyph glyph = font.getGlyph(text[i]);
 		BakedSprite sprite = glyph.getSprite();
 
-		float w = glyph.getWidth() * scale;
-		float h = glyph.getHeight() * scale;
+		double w = glyph.getWidth() * scale;
+		double h = glyph.getHeight() * scale;
 
 		float sx = offset;
 		float ex = offset + w;
-		float sy = 0;
-		float ey = 0 + h;
 
-		mesh.emplace_back(sx, sy, sprite.u1, sprite.v1, 0, 0, 0, 255);
-		mesh.emplace_back(ex, ey, sprite.u2, sprite.v2, 0, 0, 0, 255);
-		mesh.emplace_back(sx, ey, sprite.u1, sprite.v2, 0, 0, 0, 255);
+		mesh.emplace_back(sx, 0, sprite.u1, sprite.v1, 255, 255, 255, 255);
+		mesh.emplace_back(ex, h, sprite.u2, sprite.v2, 255, 255, 255, 255);
+		mesh.emplace_back(sx, h, sprite.u1, sprite.v2, 255, 255, 255, 255);
 
-		mesh.emplace_back(sx, sy, sprite.u1, sprite.v1, 0, 0, 0, 255);
-		mesh.emplace_back(ex, sy, sprite.u2, sprite.v1, 0, 0, 0, 255);
-		mesh.emplace_back(ex, ey, sprite.u2, sprite.v2, 0, 0, 0, 255);
+		mesh.emplace_back(sx, 0, sprite.u1, sprite.v1, 255, 255, 255, 255);
+		mesh.emplace_back(ex, 0, sprite.u2, sprite.v1, 255, 255, 255, 255);
+		mesh.emplace_back(ex, h, sprite.u2, sprite.v2, 255, 255, 255, 255);
 
 		offset += w + scale;
 
