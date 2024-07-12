@@ -264,12 +264,12 @@ int main() {
 		pipe_builder_2d.setShaders(vert_2d.get(), frag_tint.get());
 	}).milliseconds(), "ms");
 
-	pipe_builder_2d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
+	pipe_builder_2d.setDepthTest(VK_COMPARE_OP_LESS, false, false);
 
 	// blending
 	pipe_builder_2d.setBlendMode(BlendMode::ENABLED);
-	pipe_builder_2d.setBlendAlphaFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_SUBTRACT, VK_BLEND_FACTOR_ONE);
-	pipe_builder_2d.setBlendColorFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE);
+	pipe_builder_2d.setBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
+	pipe_builder_2d.setBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
 
 	pipe_builder_2d.addBinding()
 		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
@@ -347,7 +347,7 @@ int main() {
 		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(layout), image_sampler);
 	}
 
-	ScreenRenderer renderer;
+	ImmediateRenderer renderer {atlas, font};
 	Camera camera {window};
 
 	Buffer ui_3d, ui_2d;
@@ -365,7 +365,7 @@ int main() {
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
 
-		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, font, swapchain.vk_extent);
+		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, swapchain.vk_extent);
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {

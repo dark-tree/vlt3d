@@ -39,7 +39,7 @@ struct UnbakedSprite {
 		const int x2 = x + w;
 		const int y2 = y + h;
 
-		const float margin = 0.0f;
+		const float margin = 0.001f;
 
 		return {
 			(x1 + margin) / (float) width,
