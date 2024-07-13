@@ -4,6 +4,7 @@
 #include "external.hpp"
 #include "module.hpp"
 #include "kind.hpp"
+#include "util/exception.hpp"
 
 class CompilerResult {
 
@@ -86,13 +87,8 @@ class Compiler {
 
 	public:
 
-		Compiler() {
-			setOptimization(shaderc_optimization_level_size);
-		}
-
-		// shaderc_optimization_level_zero, shaderc_optimization_level_size, shaderc_optimization_level_performance
-		void setOptimization(shaderc_optimization_level value) {
-			options.SetOptimizationLevel(value);
+		Compiler(bool optimize = true) {
+			options.SetOptimizationLevel(optimize ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
 		}
 
 		// simmilar to adding -Dkey=value
@@ -100,8 +96,20 @@ class Compiler {
 			options.AddMacroDefinition(key, value);
 		}
 
-		CompilerResult compile(const std::string& unit, const std::string& source, Kind kind) {
+		CompilerResult compileFile(const std::string& identifier, Kind kind) {
+			std::ifstream stream {identifier};
 
+			if (stream.fail()) {
+				throw Exception {"Failed to open shader file '" + identifier + "'"};
+			}
+
+			std::stringstream buffer;
+			buffer << stream.rdbuf();
+
+			return compileString(identifier, buffer.str(), kind);
+		}
+
+		CompilerResult compileString(const std::string& unit, const std::string& source, Kind kind) {
 			CompilerResultBuilder builder {kind};
 
 			// preprocessor
@@ -125,7 +133,6 @@ class Compiler {
 
 			builder.copyOutput(cresult);
 			return builder.build(true);
-
 		}
 
 };

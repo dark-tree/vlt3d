@@ -7,13 +7,14 @@
 #include "setup/features.hpp"
 #include "binding.hpp"
 #include "descriptor/layout.hpp"
+#include "util/timer.hpp"
 
-#define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw std::runtime_error("feature '" #feature "' not enabled on this device!"); }
+#define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw Exception {"Feature '" #feature "' not enabled on this device!"}; }
 
-enum GlphBlendMode {
-	GLPH_BLEND_BITWISE = 1,
-	GLPH_BLEND_ENABLED = 2,
-	GLPH_BLEND_DISABLED = 3
+enum struct BlendMode {
+	BITWISE = 1,
+	ENABLED = 2,
+	DISABLED = 3
 };
 
 class GraphicsPipeline {
@@ -44,7 +45,7 @@ class GraphicsPipelineBuilder {
 		std::vector<VkDynamicState> dynamics;
 		std::vector<VkVertexInputBindingDescription> bindings;
 		std::vector<VkVertexInputAttributeDescription> attributes;
-		std::vector<VkPipelineShaderStageCreateInfo> stages;
+		std::vector<std::shared_future<ShaderModule>> stages;
 
 		VkPipelineViewportStateCreateInfo view {};
 		VkPipelineDynamicStateCreateInfo dynamic {};
@@ -57,9 +58,9 @@ class GraphicsPipelineBuilder {
 		VkPipelineColorBlendStateCreateInfo blending {};
 		VkPipelineDepthStencilStateCreateInfo depth {};
 
-		VkViewport viewport {};
-		VkRect2D scissor {};
-		VkRenderPass pass;
+		VkViewport vk_viewport {};
+		VkRect2D vk_scissor {};
+		VkRenderPass vk_pass;
 		int subpass = -1;
 		Device& device;
 
@@ -77,6 +78,11 @@ class GraphicsPipelineBuilder {
 			layout.setLayoutCount = (uint32_t) sets.size();
 			layout.pSetLayouts = sets.data();
 
+			view.viewportCount = 1;
+			view.pViewports = &vk_viewport;
+			view.scissorCount = 1;
+			view.pScissors = &vk_scissor;
+
 		}
 
 	public:
@@ -84,13 +90,9 @@ class GraphicsPipelineBuilder {
 		GraphicsPipelineBuilder(Device& device)
 		: device(device) {
 
-			view.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+			depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
-			// TODO because of this section GraphicsPipelineBuilder is not safe to copy
-			view.viewportCount = 1;
-			view.pViewports = &viewport;
-			view.scissorCount = 1;
-			view.pScissors = &scissor;
+			view.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineColorBlendStateCreateInfo.html
 			dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -108,16 +110,16 @@ class GraphicsPipelineBuilder {
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineInputAssemblyStateCreateInfo.html
 			assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+			withPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineRasterizationStateCreateInfo.html
 			rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			rasterizer.rasterizerDiscardEnable = VK_FALSE;
-			setDepthClamp(false);
-			setDepthBias(false);
-			setPolygonMode(VK_POLYGON_MODE_FILL);
-			setLineWidth(1.0f);
-			setCulling(false);
+			withDepthClamp(false);
+			withDepthBias(false);
+			withPolygonMode(VK_POLYGON_MODE_FILL);
+			withLineWidth(1.0f);
+			withCulling(false);
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineMultisampleStateCreateInfo.html
 			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -129,98 +131,116 @@ class GraphicsPipelineBuilder {
 			blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 			blending.attachmentCount = 1;
 			blending.pAttachments = &attachment;
-			setBlendConstants(0.0f, 0.0f, 0.0f, 0.0f);
-			setWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
-			setBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
-			setBlendAlphaFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO);
-			setBlendBitwiseFunc(VK_LOGIC_OP_COPY);
-			setBlendMode(GLPH_BLEND_DISABLED);
+			withBlendConstants(0.0f, 0.0f, 0.0f, 0.0f);
+			withBlendWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
+			withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
+			withBlendAlphaFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO);
+			withBlendBitwiseFunc(VK_LOGIC_OP_COPY);
+			withBlendMode(BlendMode::DISABLED);
 
+		}
+
+		inline static GraphicsPipelineBuilder of(Device& device) {
+			return {device};
 		}
 
 	// dynamic configuration
 
-		template<typename... DynamicState>
-		void setDynamics(DynamicState... states) {
+		template <typename... DynamicState>
+		GraphicsPipelineBuilder& withDynamics(DynamicState... states) {
 			dynamics = { states... };
+			return *this;
 		}
 
 	// view configuration
 
-		void setViewport(int x, int y, uint32_t width, uint32_t height, float min_depth = 0.0f, float max_depth = 1.0f) {
-			viewport.x = (float) x;
-			viewport.y = (float) y;
-			viewport.width = (float) width;
-			viewport.height = (float) height;
-			viewport.minDepth = min_depth;
-			viewport.maxDepth = max_depth;
+		GraphicsPipelineBuilder& withViewport(int x, int y, uint32_t width, uint32_t height, float min_depth = 0.0f, float max_depth = 1.0f) {
+			vk_viewport.x = (float) x;
+			vk_viewport.y = (float) y;
+			vk_viewport.width = (float) width;
+			vk_viewport.height = (float) height;
+			vk_viewport.minDepth = min_depth;
+			vk_viewport.maxDepth = max_depth;
+			return *this;
 		}
 
-		void setScissors(int x, int y, uint32_t width, uint32_t height) {
-			scissor.offset = {x, y};
-			scissor.extent = {width, height};
+		GraphicsPipelineBuilder& withScissors(int x, int y, uint32_t width, uint32_t height) {
+			vk_scissor.offset = {x, y};
+			vk_scissor.extent = {width, height};
+			return *this;
 		}
 
 	// vertex configuration
 
-		BindingBuilder addBinding(VkVertexInputRate rate = VK_VERTEX_INPUT_RATE_VERTEX) {
-
-			uint32_t binding = (uint32_t) bindings.size();
+		GraphicsPipelineBuilder& withBindingLayout(BindingLayout& layout) {
+			const uint32_t binding = (uint32_t) bindings.size();
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkVertexInputBindingDescription.html
 			VkVertexInputBindingDescription description {};
 			description.binding = binding;
-			description.stride = 0;
-			description.inputRate = rate;
+			description.stride = layout.getStride();
+			description.inputRate = layout.getRate();
 
 			bindings.push_back(description);
-			return {bindings.back(), attributes};
 
+			for (VkVertexInputAttributeDescription& attribute : layout.getAttributes()) {
+				attribute.binding = binding;
+				this->attributes.push_back(attribute);
+			}
+
+			return *this;
 		}
 
 	// layout configuration
 
 		// TODO https://registry.khronos.org/vulkan/site/guide/latest/push_constants.html
 
-		void addDescriptorSet(DescriptorSetLayout layout) {
+		GraphicsPipelineBuilder& withDescriptorSetLayout(DescriptorSetLayout layout) {
 			sets.push_back(layout.vk_layout);
+			return *this;
 		}
 
 	// assembly configuration
 
-		void setPrimitive(VkPrimitiveTopology topology, bool enable_restart = false) {
+		GraphicsPipelineBuilder& withPrimitive(VkPrimitiveTopology topology, bool enable_restart = false) {
 			assembly.topology = topology;
 			assembly.primitiveRestartEnable = enable_restart;
+			return *this;
 		}
 
 	// rasterizer configuration
 
-		void setDepthClamp(bool enable) {
+		GraphicsPipelineBuilder& withDepthClamp(bool enable) {
 			ASSERT_FEATURE(enable, device, DepthClamp);
 			rasterizer.depthClampEnable = enable;
+			return *this;
 		}
 
-		void setDepthBias(bool enable, float constant = 0.0f, float clamp = 0.0f, float slope = 0.0f) {
+		GraphicsPipelineBuilder& withDepthBias(bool enable, float constant = 0.0f, float clamp = 0.0f, float slope = 0.0f) {
 			ASSERT_FEATURE(clamp != 0.0f, device, DepthBiasClamp);
 			rasterizer.depthBiasEnable = enable;
 			rasterizer.depthBiasConstantFactor = constant;
 			rasterizer.depthBiasClamp = clamp;
 			rasterizer.depthBiasSlopeFactor = slope;
+			return *this;
 		}
 
-		void setPolygonMode(VkPolygonMode mode) {
+		GraphicsPipelineBuilder& withPolygonMode(VkPolygonMode mode) {
 			ASSERT_FEATURE(mode != VK_POLYGON_MODE_FILL, device, FillModeNonSolid);
 			rasterizer.polygonMode = mode;
+			return *this;
 		}
 
-		void setLineWidth(float width) {
+		GraphicsPipelineBuilder& withLineWidth(float width) {
 			ASSERT_FEATURE(width > 1.0f, device, WideLines);
 			rasterizer.lineWidth = width;
+			return *this;
 		}
 
-		void setCulling(bool enable, VkFrontFace face = VK_FRONT_FACE_CLOCKWISE, VkCullModeFlags mode = VK_CULL_MODE_BACK_BIT) {
+		GraphicsPipelineBuilder& withCulling(bool enable, VkFrontFace face = VK_FRONT_FACE_CLOCKWISE, VkCullModeFlags mode = VK_CULL_MODE_BACK_BIT) {
 			rasterizer.cullMode = enable ? mode : VK_CULL_MODE_NONE;
 			rasterizer.frontFace = face;
+			return *this;
 		}
 
 	// multisampling configuration
@@ -229,89 +249,103 @@ class GraphicsPipelineBuilder {
 
 	// depth configuration
 
-		void setDepthBound(float lower, float upper) {
+		GraphicsPipelineBuilder& withDepthBound(float lower, float upper) {
 			depth.depthBoundsTestEnable = true;
 			depth.minDepthBounds = lower;
 			depth.maxDepthBounds = upper;
+			return *this;
 		}
 
-		void setDepthTest(VkCompareOp function, bool read, bool write) {
+		GraphicsPipelineBuilder& withDepthTest(VkCompareOp function, bool read, bool write) {
 			depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 			depth.depthCompareOp = function;
 			depth.depthTestEnable = read;
 			depth.depthWriteEnable = write;
+			return *this;
 		}
 
 	// blend configuration
 
-		void setBlendConstants(float r, float g, float b, float a) {
+		GraphicsPipelineBuilder& withBlendConstants(float r, float g, float b, float a) {
 			blending.blendConstants[0] = r;
 			blending.blendConstants[1] = g;
 			blending.blendConstants[2] = b;
 			blending.blendConstants[3] = a;
+			return *this;
 		}
 
 		// finalColor = finalColor & writeMask;
-		void setWriteMask(VkColorComponentFlags flags) {
+		GraphicsPipelineBuilder& withBlendWriteMask(VkColorComponentFlags flags) {
 			attachment.colorWriteMask = flags;
+			return *this;
+
 		}
 
 		// finalColor.rgb = (src * newColor.rgb) <op> (dst * oldColor.rgb);
-		void setBlendColorFunc(VkBlendFactor src, VkBlendOp op, VkBlendFactor dst) {
+		GraphicsPipelineBuilder& withBlendColorFunc(VkBlendFactor src, VkBlendOp op, VkBlendFactor dst) {
 			attachment.srcColorBlendFactor = src;
 			attachment.dstColorBlendFactor = dst;
 			attachment.colorBlendOp = op;
+			return *this;
 		}
 
-		// finalColor.a = (src * newColor.a) <op> (dst * oldColor.a);
-		void setBlendAlphaFunc(VkBlendFactor src, VkBlendOp op, VkBlendFactor dst) {
-			attachment.srcColorBlendFactor = src;
-			attachment.dstColorBlendFactor = dst;
+		// finalColor.a = (<src> * newColor.a) <op> (<dst> * oldColor.a);
+		GraphicsPipelineBuilder& withBlendAlphaFunc(VkBlendFactor src, VkBlendOp op, VkBlendFactor dst) {
+			attachment.srcAlphaBlendFactor = src;
+			attachment.dstAlphaBlendFactor = dst;
 			attachment.colorBlendOp = op;
+			return *this;
 		}
 
-		void setBlendBitwiseFunc(VkLogicOp op) {
+		GraphicsPipelineBuilder& withBlendBitwiseFunc(VkLogicOp op) {
 			blending.logicOp = op;
+			return *this;
 		}
 
-		void setBlendMode(GlphBlendMode mode) {
-			if (mode == GLPH_BLEND_DISABLED) {
+		GraphicsPipelineBuilder& withBlendMode(BlendMode mode) {
+			if (mode == BlendMode::DISABLED) {
 				blending.logicOpEnable = false;
 				attachment.blendEnable = false;
 			}
 
-			if (mode == GLPH_BLEND_ENABLED) {
+			if (mode == BlendMode::ENABLED) {
 				blending.logicOpEnable = false;
 				attachment.blendEnable = true;
 			}
 
-			if (mode == GLPH_BLEND_BITWISE) {
+			if (mode == BlendMode::BITWISE) {
 				ASSERT_FEATURE(true, device, LogicOp);
 				blending.logicOpEnable = true;
 				attachment.blendEnable = false;
 			}
+
+			return *this;
 		}
 
 	// renderpass configuration
 
-		void setRenderPass(RenderPass& render_pass, uint32_t index = 0) {
-			pass = render_pass.vk_pass;
+		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, uint32_t index = 0) {
+			vk_pass = render_pass.vk_pass;
 			subpass = (int) index;
+			return *this;
 		}
 
 	// shader stage configuration
 
 		template<typename... Shaders>
-		void setShaders(Shaders... shaders) {
-			stages = { (shaders.getStageConfig())... };
+		GraphicsPipelineBuilder& withShaders(Shaders... shaders) {
+			stages = { shaders... };
+			return *this;
 		}
 
 	public:
 
-		GraphicsPipeline build() {
+		GraphicsPipeline build(const char* name = "Untitled") {
+
+			Timer timer;
 
 			if (subpass == -1) {
-				throw std::runtime_error("vkCreatePipelineLayout: Render pass needs to be specified!");
+				throw Exception {"Render pass needs to be specified!"};
 			}
 
 			// update vector pointers in structures
@@ -321,13 +355,19 @@ class GraphicsPipelineBuilder {
 			VkPipelineLayout pipeline_layout;
 
 			if (vkCreatePipelineLayout(device.vk_device, &layout, nullptr, &pipeline_layout) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreatePipelineLayout: Failed to create graphics pipeline layout!");
+				throw Exception {"Failed to create graphics pipeline layout!"};
+			}
+
+			std::vector<VkPipelineShaderStageCreateInfo> shaders;
+
+			for (std::shared_future<ShaderModule>& future : stages) {
+				shaders.push_back(future.get().getStageConfig());
 			}
 
 			VkGraphicsPipelineCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			create_info.stageCount = (uint32_t) stages.size();
-			create_info.pStages = stages.data();
+			create_info.stageCount = (uint32_t) shaders.size();
+			create_info.pStages = shaders.data();
 
 			create_info.pVertexInputState = &input;
 			create_info.pInputAssemblyState = &assembly;
@@ -339,7 +379,7 @@ class GraphicsPipelineBuilder {
 			create_info.pDynamicState = &dynamic;
 			create_info.layout = pipeline_layout;
 
-			create_info.renderPass = pass;
+			create_info.renderPass = vk_pass;
 			create_info.subpass = subpass;
 
 			// optional inheritance
@@ -354,9 +394,10 @@ class GraphicsPipelineBuilder {
 			VkPipeline pipeline;
 
 			if (vkCreateGraphicsPipelines(device.vk_device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateGraphicsPipelines: Failed to create graphics pipeline!");
+				throw Exception {"Failed to create graphics pipeline!"};
 			}
 
+			logger::info("Pipeline '", name, "' creation took: ", timer.milliseconds(), "ms");
 			return {pipeline, pipeline_layout, device.vk_device};
 
 		}

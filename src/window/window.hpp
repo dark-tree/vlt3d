@@ -15,9 +15,6 @@ class Window {
 
 			// one-of init
 			static auto init = [] {
-				stbi_flip_vertically_on_write(true);
-				stbi_set_flip_vertically_on_load(true);
-
 				return glfwInit();
 			} ();
 
