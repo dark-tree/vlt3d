@@ -312,7 +312,7 @@ void ImmediateRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* le
 	drawLine(150, 650, 900, 650);
 	drawLine(300, 300, 300 + ox * 150, 300 + oy * 150);
 
-	setTint(0, 0, 255);
+	setTint(255, 255, 255);
 	setFontSize(0.05);
 	setLineSize(0.05);
 	drawSprite(10 * ox + 10, -3, 10 * oy + 10, 1, 1, getSprite("assets/sprites/vkblob.png"));

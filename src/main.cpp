@@ -257,6 +257,18 @@ int main() {
 		.withDescriptorSetLayout(layout)
 		.build("3D Mixed");
 
+	GraphicsPipeline pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
+		.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
+		.withRenderPass(pass)
+		.withShaders(vert_3d, frag_tint)
+		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
+		.withBlendMode(BlendMode::ENABLED)
+		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBindingLayout(binding_3d)
+		.withDescriptorSetLayout(layout)
+		.build("3D Tinted");
+
 	GraphicsPipeline pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
 		.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
 		.withRenderPass(pass)
@@ -370,6 +382,7 @@ int main() {
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)
 			.draw(mesh.size())
+			.bindPipeline(pipeline_3d_tint)
 			.bindBuffer(ui_3d)
 			.draw(ui_3d_len)
 			.bindPipeline(pipeline_2d_tint)

@@ -90,6 +90,8 @@ class GraphicsPipelineBuilder {
 		GraphicsPipelineBuilder(Device& device)
 		: device(device) {
 
+			depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
 			view.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineColorBlendStateCreateInfo.html
