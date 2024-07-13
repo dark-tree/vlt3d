@@ -1,9 +1,10 @@
 #pragma once
 
 #include "external.hpp"
+#include "object.hpp"
 #include "window/window.hpp"
 
-class Camera {
+class Camera : public WorldObject {
 
 	private:
 
@@ -26,15 +27,14 @@ class Camera {
 
 	public:
 
-		Camera(Window& window, float sensivity = 0.2f, float speed = 15.0f);
+		Camera(Window& window, float sensitivity = 0.2f, float speed = 15.0f);
 
 		void move(const glm::vec3&	pos);
 		void update();
 
-		glm::vec3& getPosition();
-		glm::vec3& getRotation();
-		glm::vec3 getDirection();
-		glm::vec3 getUp();
-		glm::mat4 getView();
+		glm::vec3 getPosition() const override;
+		glm::vec3 getDirection() const override;
+		glm::vec3 getUp() const;
+		glm::mat4 getView() const;
 
 };

@@ -71,14 +71,14 @@ void Camera::getCursorPos(float* x, float* y) {
 	*y = (float) cy;
 }
 
-Camera::Camera(Window& window, float sensivity, float speed)
+Camera::Camera(Window& window, float sensitivity, float speed)
 : window(window) {
 
 	this->angle = glm::vec2(0);
 	this->rotation = glm::vec3(0);
 	this->pos = glm::vec3(2, 2, -2);
 
-	this->sensivity = sensivity;
+	this->sensivity = sensitivity;
 	this->speed = speed;
 
 	getCursorPos(&cursor.x, &cursor.y);
@@ -96,24 +96,20 @@ void Camera::updateTime() {
 	this->last_frame = now;
 }
 
-glm::vec3& Camera::getPosition() {
+glm::vec3 Camera::getPosition() const {
 	return this->pos;
 }
 
-glm::vec3& Camera::getRotation() {
-	return this->rotation;
-}
-
-glm::vec3 Camera::getDirection() {
+glm::vec3 Camera::getDirection() const {
 	return this->direction;
 }
 
-glm::vec3 Camera::getUp() {
+glm::vec3 Camera::getUp() const {
 	glm::vec3 sideways = glm::cross(this->direction, glm::vec3(0, 1, 0));
 	return glm::cross(this->direction, sideways);
 }
 
-glm::mat4 Camera::getView() {
+glm::mat4 Camera::getView() const {
 	glm::vec3 sign = {1, 1, 1};
 
 	glm::vec3 pos = this->pos * sign;

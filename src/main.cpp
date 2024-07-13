@@ -365,7 +365,7 @@ int main() {
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
 
-		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, swapchain.vk_extent);
+		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, swapchain.vk_extent, camera);
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {
