@@ -148,10 +148,10 @@ int main() {
 
 	// create a compiler and compile the glsl into spirv
 	Compiler compiler;
-	std::future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); });
-	std::future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); });
-	std::future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); });
-	std::future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); });
+	std::shared_future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); }).share();
+	std::shared_future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); }).share();
+	std::shared_future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); }).share();
+	std::shared_future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); }).share();
 
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
@@ -234,51 +234,39 @@ int main() {
 	dsl_builder.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	DescriptorSetLayout layout = dsl_builder.build(device);
 
-	// pipeline creation
-	GraphicsPipelineBuilder pipe_builder_3d {device};
-	pipe_builder_3d.setDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
-	pipe_builder_3d.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	pipe_builder_3d.setRenderPass(pass);
-
-	logger::info("Shader compilation for the 3D pipeline took: ", Timer::of([&] {
-		pipe_builder_3d.setShaders(vert_3d.get(), frag_mix.get());
-	}).milliseconds(), "ms");
-
-	pipe_builder_3d.setDepthTest(VK_COMPARE_OP_LESS, true, true);
-
-	pipe_builder_3d.addBinding()
+	// 3D binding layout
+	BindingLayout binding_3d = BindingLayoutBuilder::begin()
 		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
 		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
 		.attribute(2, VK_FORMAT_R32_UINT)
 		.done();
 
-	pipe_builder_3d.addDescriptorSet(layout);
-	GraphicsPipeline pipeline_3d = pipe_builder_3d.build();
-
-	GraphicsPipelineBuilder pipe_builder_2d {device};
-	pipe_builder_2d.setDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR);
-	pipe_builder_2d.setPrimitive(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	pipe_builder_2d.setRenderPass(pass);
-
-	logger::info("Shader compilation for the 2D pipeline took: ", Timer::of([&] {
-		pipe_builder_2d.setShaders(vert_2d.get(), frag_tint.get());
-	}).milliseconds(), "ms");
-
-	pipe_builder_2d.setDepthTest(VK_COMPARE_OP_LESS, false, false);
-
-	// blending
-	pipe_builder_2d.setBlendMode(BlendMode::ENABLED);
-	pipe_builder_2d.setBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
-	pipe_builder_2d.setBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
-
-	pipe_builder_2d.addBinding()
+	// 2D binding layout
+	BindingLayout binding_2d = BindingLayoutBuilder::begin()
 		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
 		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
 		.attribute(2, VK_FORMAT_R32_UINT)
 		.done();
 
-	pipe_builder_2d.addDescriptorSet(layout);
-	GraphicsPipeline pipeline_2d = pipe_builder_2d.build();
+	GraphicsPipeline pipeline_3d_mix = GraphicsPipelineBuilder::of(device)
+		.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
+		.withRenderPass(pass)
+		.withShaders(vert_3d, frag_mix)
+		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
+		.withBindingLayout(binding_3d)
+		.withDescriptorSetLayout(layout)
+		.build("3D Mixed");
+
+	GraphicsPipeline pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
+		.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
+		.withRenderPass(pass)
+		.withShaders(vert_2d, frag_tint)
+		.withBlendMode(BlendMode::ENABLED)
+		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBindingLayout(binding_2d)
+		.withDescriptorSetLayout(layout)
+		.build("2D Tinted");
 
 	// create command pools
 	CommandPool main_pool = CommandPool::build(device, graphics_ref, false);
@@ -376,7 +364,7 @@ int main() {
 		// record commands
 		frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
-			.bindPipeline(pipeline_3d)
+			.bindPipeline(pipeline_3d_mix)
 			.bindDescriptorSet(frames[frame].set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
@@ -384,7 +372,7 @@ int main() {
 			.draw(mesh.size())
 			.bindBuffer(ui_3d)
 			.draw(ui_3d_len)
-			.bindPipeline(pipeline_2d)
+			.bindPipeline(pipeline_2d_tint)
 			.bindBuffer(ui_2d)
 			.draw(ui_2d_len)
 			.endRenderPass()
