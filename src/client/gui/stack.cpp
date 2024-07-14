@@ -2,68 +2,34 @@
 #include "stack.hpp"
 
 InputResult ScreenStack::onKey(InputContext& context, InputEvent key) {
-	std::unique_lock lock {mutex};
-
-	for (auto& screen : screens) {
-		if (screen->removed) {
-			continue;
-		}
-
-		InputResult result = screen->onKey(context, key);
-
-		if (result != InputResult::PASS) {
-			return result;
-		}
-	}
-
-	return InputResult::PASS;
+	return forEach([&] (Screen* screen) { return screen->onKey(*this, context, key); });
 }
 
 InputResult ScreenStack::onMouse(InputContext& context, InputEvent button) {
-	std::unique_lock lock {mutex};
-
-	for (auto& screen : screens) {
-		if (screen->removed) {
-			continue;
-		}
-
-		InputResult result = screen->onMouse(context, button);
-
-		if (result != InputResult::PASS) {
-			return result;
-		}
-	}
-
-	return InputResult::PASS;
+	return forEach([&] (Screen* screen) { return screen->onMouse(*this, context, button); });
 }
 
 InputResult ScreenStack::onScroll(InputContext& context, float scroll) {
-	std::unique_lock lock {mutex};
-
-	for (auto& screen : screens) {
-		if (screen->removed) {
-			continue;
-		}
-
-		InputResult result = screen->onScroll(context, scroll);
-
-		if (result != InputResult::PASS) {
-			return result;
-		}
-	}
-
-	return InputResult::PASS;
+	return forEach([&] (Screen* screen) { return screen->onScroll(*this, context, scroll); });
 }
 
 void ScreenStack::draw(ImmediateRenderer& renderer, Camera& camera) {
-	std::unique_lock lock {mutex};
+	std::lock_guard lock {mutex};
 
 	for (auto it = screens.rbegin(); it != screens.rend();) {
 		auto& screen = *it;
 
-		if (screen->removed) {
+		if (screen->state == Screen::REMOVED) {
 			logger::info("Removed screen ", screen.get());
+			opened --;
 			it = decltype(it) {screens.erase(std::next(it).base())};
+			continue;
+		}
+
+		if (screen->state == Screen::REPLACED) {
+			logger::info("Replaced screen ", screen.get(), " with ", screen->replacement);
+			screen.reset(screen->replacement);
+			std::advance(it, 1);
 			continue;
 		}
 
@@ -73,13 +39,19 @@ void ScreenStack::draw(ImmediateRenderer& renderer, Camera& camera) {
 }
 
 void ScreenStack::open(Screen* screen) {
-	std::unique_lock lock {mutex};
+	std::lock_guard lock {mutex};
 	screens.emplace_front(screen);
+	opened ++;
 }
 
 void ScreenStack::close() {
-	std::unique_lock lock {mutex};
-	screens.clear();
+	std::lock_guard lock {mutex};
+
+	for (auto const& screen : screens) {
+		screen->remove();
+	}
 }
 
-
+int ScreenStack::count() const {
+	return opened;
+}

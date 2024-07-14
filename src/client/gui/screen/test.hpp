@@ -13,7 +13,7 @@ class TestScreen : public Screen {
 
 		~TestScreen() override;
 
-		InputResult onKey(InputContext &context, InputEvent key) override;
+		InputResult onKey(ScreenStack& stack, InputContext& input, InputEvent key) override;
 		void draw(ImmediateRenderer &renderer, Camera& camera) override;
 
 };

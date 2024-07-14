@@ -3,8 +3,9 @@
 
 TestScreen::~TestScreen() = default;
 
-InputResult TestScreen::onKey(InputContext &context, InputEvent key) {
+InputResult TestScreen::onKey(ScreenStack& stack, InputContext& input, InputEvent key) {
 	if (key.isReleased(GLFW_KEY_SPACE)) {
+		logger::info("Toggled test screen visibility");
 		test = !test;
 		return InputResult::CONSUME;
 	}

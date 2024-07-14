@@ -112,6 +112,7 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 #include "buffer/font.hpp"
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
+#include "client/gui/screen/group.hpp"
 
 int main() {
 

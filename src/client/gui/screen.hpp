@@ -4,20 +4,46 @@
 #include "window/input.hpp"
 #include "client/renderer.hpp"
 
-class Screen : public InputConsumer {
+class ScreenStack;
+
+class Screen {
+
+	public:
+
+		enum State {
+			OPEN,
+			REMOVED,
+			REPLACED
+		};
 
 	private:
 
-		bool removed;
+		State state;
+		Screen* replacement;
 
 		friend class ScreenStack;
+		friend class GroupScreen;
 
 	public:
 
 		Screen();
-		~Screen() override = default;
+		virtual ~Screen() = default;
 
-		void remove();
+		virtual InputResult onKey(ScreenStack& stack, InputContext& input, InputEvent key);
+		virtual InputResult onMouse(ScreenStack& stack, InputContext& input, InputEvent button);
+		virtual InputResult onScroll(ScreenStack& stack, InputContext& input, float scroll);
 		virtual void draw(ImmediateRenderer& renderer, Camera& camera);
+
+		/**
+		 * Close this screen, no more events and draw calls
+		 * will be issued to this screen after this method is called
+		 */
+		void remove();
+
+		/**
+		 * Removes this screen and replaces it with a different one, the
+		 * effect of calling this method for this screen is the same as remove()
+		 */
+		void replace(Screen* screen);
 
 };

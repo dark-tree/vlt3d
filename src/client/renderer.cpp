@@ -20,6 +20,14 @@ BakedSprite ImmediateRenderer::getSprite(const std::string& identifier) {
 	return atlas.getBakedSprite(identifier);
 }
 
+int ImmediateRenderer::getWidth() const {
+	return width;
+}
+
+int ImmediateRenderer::getHeight() const {
+	return height;
+}
+
 void ImmediateRenderer::setFontSize(float size) {
 	this->font_size = size;
 }

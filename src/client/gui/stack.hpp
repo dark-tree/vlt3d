@@ -9,13 +9,39 @@ class ScreenStack : public InputConsumer {
 
 	private:
 
-		std::mutex mutex;
+		std::recursive_mutex mutex;
+		size_t opened = 0;
 		std::list<std::unique_ptr<Screen>> screens;
+
+		template <typename F>
+		InputResult forEach(F function) {
+			std::lock_guard lock {mutex};
+
+			for (auto it = screens.begin(); it != screens.end();) {
+				std::unique_ptr<Screen>& screen = *it;
+
+				// move the iterator before calling the callback so that
+				// calling replace() in it will not invalidate our iterator
+				std::advance(it, 1);
+
+				if (screen->state != Screen::OPEN) {
+					continue;
+				}
+
+				InputResult result = function(screen.get());
+
+				if (result != InputResult::PASS) {
+					return result;
+				}
+			}
+
+			return InputResult::PASS;
+		}
 
 	public:
 
 		/**
-		 * Pass the events to all open screens, from top to bottom (FILO)
+		 * Pass the events to all open screens, from top to bottom (LIFO)
 		 * if any screen along the ways consumes or blocks the event it is not
 		 * send further down the chain
 		 */
@@ -38,5 +64,11 @@ class ScreenStack : public InputConsumer {
 		 * and deallocates their memory
 		 */
 		void close();
+
+		/**
+		 * Get the number of open screens in this
+		 * stack
+		 */
+		 int count() const;
 
 };
