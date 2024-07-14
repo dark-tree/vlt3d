@@ -12,6 +12,18 @@ enum struct BillboardMode {
 	TWO_AXIS,
 };
 
+enum struct VerticalAlignment {
+	TOP    = 0,
+	CENTER = 1,
+	BOTTOM = 2
+};
+
+enum struct HorizontalAlignment {
+	LEFT   = 0,
+	CENTER = 1,
+	RIGHT  = 2
+};
+
 class ImmediateRenderer {
 
 	private:
@@ -22,6 +34,8 @@ class ImmediateRenderer {
 		BillboardMode mode;
 		uint8_t r, g, b, a;
 		glm::vec3 target;
+		VerticalAlignment vertical;
+		HorizontalAlignment horizontal;
 		float font_size, line_size;
 		uint32_t width, height;
 		Atlas& atlas;
@@ -30,6 +44,7 @@ class ImmediateRenderer {
 		void drawBillboardVertex(glm::quat rotation, glm::vec3 offset, float x, float y, float u, float v);
 		glm::quat getBillboardRotation(glm::vec3 center) const;
 		glm::vec3 getPerpendicular(glm::vec3 normal, float angle) const;
+		glm::vec2 getTextAlignment(const std::string& text) const;
 
 	public:
 
@@ -46,6 +61,8 @@ class ImmediateRenderer {
 		void setFacing(glm::vec3 target);
 		void setFacing(const WorldObject& object);
 		void setBillboardMode(BillboardMode mode);
+		void setAlignment(VerticalAlignment alignment);
+		void setAlignment(HorizontalAlignment alignment);
 
 		// 2D
 		void drawVertex(float x, float y, float u, float v);

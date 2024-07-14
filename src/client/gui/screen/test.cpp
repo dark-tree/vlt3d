@@ -21,6 +21,8 @@ InputResult TestScreen::onKey(ScreenStack& stack, InputContext& input, InputEven
 void TestScreen::draw(ImmediateRenderer& renderer, Camera& camera) {
 
 	if (!test) {
+		renderer.setAlignment(HorizontalAlignment::LEFT);
+		renderer.setAlignment(VerticalAlignment::TOP);
 		renderer.setTint(255, 255, 0);
 		renderer.setFontSize(2);
 		renderer.drawText(10, 10, "Press [SPACE] to show");
@@ -32,6 +34,25 @@ void TestScreen::draw(ImmediateRenderer& renderer, Camera& camera) {
 	float ox = sin(t);
 	float oy = cos(t);
 
+	renderer.setTint(50, 255, 50);
+	renderer.setFontSize(2);
+
+	renderer.setAlignment(HorizontalAlignment::LEFT);
+	renderer.setAlignment(VerticalAlignment::TOP);
+	renderer.drawText(500, 500, "LEFT TOP");
+
+	renderer.setAlignment(HorizontalAlignment::RIGHT);
+	renderer.setAlignment(VerticalAlignment::TOP);
+	renderer.drawText(500, 500, "RIGHT TOP");
+
+	renderer.setAlignment(HorizontalAlignment::LEFT);
+	renderer.setAlignment(VerticalAlignment::BOTTOM);
+	renderer.drawText(500, 500, "LEFT BOTTOM");
+
+	renderer.setAlignment(HorizontalAlignment::RIGHT);
+	renderer.setAlignment(VerticalAlignment::BOTTOM);
+	renderer.drawText(500, 500, "RIGHT BOTTOM");
+
 	renderer.setFacing(camera);
 
 	renderer.setTint(255, 255, 255);
@@ -39,6 +60,8 @@ void TestScreen::draw(ImmediateRenderer& renderer, Camera& camera) {
 	renderer.setLineSize(4);
 	renderer.drawSprite(10, 10, 100, 100, renderer.getSprite("assets/sprites/vkblob.png"));
 
+	renderer.setAlignment(HorizontalAlignment::LEFT);
+	renderer.setAlignment(VerticalAlignment::TOP);
 	renderer.setTint(255, 255, 0);
 	renderer.drawText(10, 10, "Press [SPACE] to hide");
 	renderer.drawText(10, 10 + 9 * 2, "Press [ESCAPE] to close");
@@ -53,7 +76,10 @@ void TestScreen::draw(ImmediateRenderer& renderer, Camera& camera) {
 	renderer.setFontSize(0.05);
 	renderer.setLineSize(0.05);
 	renderer.drawSprite(10 * ox + 10, -3, 10 * oy + 10, 1, 1, renderer.getSprite("assets/sprites/vkblob.png"));
-	renderer.drawText(0, 0, 0, "Hello!");
+
+	renderer.setAlignment(VerticalAlignment::CENTER);
+	renderer.setAlignment(HorizontalAlignment::CENTER);
+	renderer.drawText(-0.5, -0.5, -0.5, "Hello!");
 	renderer.drawLine(0, -3, 0, 10 * ox + 10, -3, 10 * oy + 10);
 
 	renderer.setTint(255, 255, 0);

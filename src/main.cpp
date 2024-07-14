@@ -165,8 +165,8 @@ int main() {
 	chunk.random(10000);
 	drawChunk(chunk, atlas);
 
-	Font font;
-	font.addCodePage(atlas, "assets/sprites/8x8font.png", 8, 0);
+	Font font {8};
+	font.addCodePage(atlas, "assets/sprites/8x8font.png", 0);
 
 	atlas.getImage().save("atlas.png");
 

@@ -38,9 +38,10 @@ class Font {
 
 	private:
 
+		int size;
 		std::unordered_map<int, Glyph> glyphs;
 
-		UnbakedSprite scanBlock(int bx, int by, int ix, int iy, int size, ImageData image) {
+		UnbakedSprite scanBlock(int bx, int by, int ix, int iy, ImageData image) {
 			int min = size;
 			int max = 0;
 
@@ -71,7 +72,10 @@ class Font {
 
 	public:
 
-		void addCodePage(Atlas& atlas, const std::string& identifier, int size, int base) {
+		Font(int size)
+		: size(size) {}
+
+		void addCodePage(Atlas& atlas, const std::string& identifier, int base) {
 			ImageData image = atlas.getImage();
 			UnbakedSprite page = atlas.getUnbakedSprite(identifier);
 
@@ -83,13 +87,17 @@ class Font {
 			int line = page.w / size;
 			for (int x = 0; x < page.w / size; x ++) {
 				for (int y = 0; y < page.h / size; y ++) {
-					glyphs.try_emplace(x + y * line + base, page.combine(scanBlock(x, y, page.x, page.y, size, image)), image, size);
+					glyphs.try_emplace(x + y * line + base, page.combine(scanBlock(x, y, page.x, page.y, image)), image, size);
 				}
 			}
 		}
 
-		Glyph getGlyph(int unicode) {
-			return glyphs[unicode];
+		Glyph getGlyph(int unicode) const {
+			return glyphs.at(unicode);
+		}
+
+		int getSize() const {
+			return size;
 		}
 
 };
