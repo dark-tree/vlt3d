@@ -110,6 +110,8 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 // for now
 #include "world.hpp"
 #include "buffer/font.hpp"
+#include "client/gui/stack.hpp"
+#include "client/gui/screen/test.hpp"
 
 int main() {
 
@@ -347,8 +349,13 @@ int main() {
 		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(layout), image_sampler);
 	}
 
+	ScreenStack stack;
 	ImmediateRenderer renderer {atlas, font};
 	Camera camera {window};
+	window.setRootInputConsumer(&stack);
+
+	// Open the cluster-fuck screen :D
+	stack.open(new TestScreen {});
 
 	Buffer ui_3d, ui_2d;
 	int ui_3d_len = -1, ui_2d_len = -1;
@@ -365,7 +372,13 @@ int main() {
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
 
-		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, swapchain.vk_extent, camera);
+		// Render the screens into immediate buffers, this is obviously WIP
+		// * Horribly inefficient
+		// * Incompatible with threading and concurrent frames
+		// * Ugly
+		renderer.prepare(swapchain.vk_extent);
+		stack.draw(renderer, camera);
+		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len);
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {

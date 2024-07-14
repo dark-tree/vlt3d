@@ -2,6 +2,8 @@
 
 #include "external.hpp"
 #include "platform.hpp"
+#include "input.hpp"
+#include "util/exception.hpp"
 
 class Window {
 
@@ -9,62 +11,30 @@ class Window {
 
 		READONLY GLFWwindow* glfw_window;
 
+	private:
+
+		READONLY InputContext input;
+		InputConsumer* root;
+
+		static void glfwKeyCallback(GLFWwindow* glfw_window, int key, int scancode, int action, int mods);
+		static void glfwButtonCallback(GLFWwindow* glfw_window, int button, int action, int mods);
+		static void glfwScrollCallback(GLFWwindow* glfw_window, double x_scroll, double y_scroll);
+
 	public:
 
-		Window(uint32_t w, uint32_t h, const char* title) {
+		Window(uint32_t w, uint32_t h, const char* title);
 
-			// one-of init
-			static auto init = [] {
-				return glfwInit();
-			} ();
+		[[deprecated("Use isKeyPressed")]]
+		bool isPressed(int key) const;
 
-			if (!init) {
-				throw std::runtime_error {"glfwInit: Failed to initialize!"};
-			}
-
-			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-			glfw_window = glfwCreateWindow(w, h, title, nullptr, nullptr);
-			if (glfw_window == nullptr) {
-				throw std::runtime_error("glfwCreateWindow: Failed to create a window!");
-			}
-
-			glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			glfwSetInputMode(glfw_window, GLFW_STICKY_KEYS, GL_TRUE);
-
-			if (!glfwVulkanSupported()) {
-				throw std::runtime_error("glfwVulkanSupported: Failed to find vulkan loader!");
-			}
-
-			//glfwSwapInterval(0);
-		}
-
-		void poll() const {
-			glfwPollEvents();
-		}
-
-		bool shouldClose() const {
-			return glfwWindowShouldClose(glfw_window);
-		}
-
-		void getFramebufferSize(int* width, int* height) {
-			glfwGetFramebufferSize(glfw_window, width, height);
-		}
-
-		void close() const {
-			glfwDestroyWindow(glfw_window);
-		}
-
-		void setTitle(const std::string& title) const {
-			glfwSetWindowTitle(glfw_window, title.c_str());
-		}
-
-		bool isPressed(int key) const {
-			return glfwGetKey(glfw_window, key) == GLFW_PRESS;
-		}
-
-		void getCursor(double* x, double* y) const {
-			glfwGetCursorPos(glfw_window, x, y);
-		}
+		void poll() const;
+		bool shouldClose() const;
+		void getFramebufferSize(int* width, int* height) const;
+		void close() const;
+		void setTitle(const std::string& title) const;
+		bool isKeyPressed(int key) const;
+		bool isButtonPressed(int button) const;
+		void getCursor(double* x, double* y) const;
+		void setRootInputConsumer(NULLABLE InputConsumer* root);
 
 };

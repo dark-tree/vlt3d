@@ -64,6 +64,7 @@ class ImmediateRenderer {
 		void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
 		void drawLine(glm::vec3 pa, glm::vec3 pb);
 
-		void getBuffers(Allocator& allocator, Buffer* buf1, int* len1, Buffer* buf2, int* len2, VkExtent2D extend, Camera& camera);
+		void prepare(VkExtent2D extend);
+		void getBuffers(Allocator& allocator, Buffer* buf1, int* len1, Buffer* buf2, int* len2);
 
 };

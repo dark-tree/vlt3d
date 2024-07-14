@@ -7,6 +7,13 @@
 ImmediateRenderer::ImmediateRenderer(Atlas& atlas, Font& font)
 : mode(BillboardMode::TWO_AXIS), atlas(atlas), font(font) {
 	this->blank = getSprite("assets/sprites/blank.png");
+
+	// initiate settings to some default values
+	setTint(255, 255, 255, 255);
+	setFontSize(2);
+	setLineSize(2);
+	setFacing(1, 0, 0);
+	setBillboardMode(BillboardMode::TWO_AXIS);
 }
 
 BakedSprite ImmediateRenderer::getSprite(const std::string& identifier) {
@@ -287,55 +294,28 @@ void ImmediateRenderer::drawLine(glm::vec3 pa, glm::vec3 pb) {
 
 }
 
-void ImmediateRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3d, Buffer* buf_2d, int* len_2d, VkExtent2D extent, Camera& camera) {
-
-	float t = glfwGetTime() * 1.33;
-	float ox = sin(t);
-	float oy = cos(t);
+void ImmediateRenderer::prepare(VkExtent2D extent) {
 
 	this->width = extent.width / 2;
 	this->height = extent.height / 2;
 	mesh_2d.clear();
 	mesh_3d.clear();
 
-	setFacing(camera);
+}
 
-	setTint(255, 255, 255);
-	setFontSize(2);
-	setLineSize(4);
-	drawSprite(10, 10, 100, 100, getSprite("assets/sprites/vkblob.png"));
-	drawText(10, 10, "Hello Bitmap Font!");
+void ImmediateRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* len_3d, Buffer* buf_2d, int* len_2d) {
 
-	setTint(10, 100, 220);
-	drawLine(50, 200, 50, 550);
-	drawLine(50, 550, 150, 650);
-	drawLine(150, 650, 900, 650);
-	drawLine(300, 300, 300 + ox * 150, 300 + oy * 150);
+	size_t alloc_3d = mesh_3d.size() * sizeof(Vertex3D);
+	size_t alloc_2d = mesh_2d.size() * sizeof(Vertex2D);
 
-	setTint(255, 255, 255);
-	setFontSize(0.05);
-	setLineSize(0.05);
-	drawSprite(10 * ox + 10, -3, 10 * oy + 10, 1, 1, getSprite("assets/sprites/vkblob.png"));
-	drawText(0, 0, 0, "Hello!");
-	drawLine(0, -3, 0, 10 * ox + 10, -3, 10 * oy + 10);
-
-	setTint(255, 255, 0);
-	setLineSize(0.08);
-	drawLine(0 - 0.5, 0 - 0.5, 0 - 0.5, 0 - 0.5, -32 - 0.5, 0 - 0.5);
-	drawLine(32 - 0.5, 0 - 0.5, 0 - 0.5, 32 - 0.5, -32 - 0.5, 0 - 0.5);
-	drawLine(0 - 0.5, 0 - 0.5, 32 - 0.5, 0 - 0.5, -32 - 0.5, 32 - 0.5);
-	drawLine(32 - 0.5, 0 - 0.5, 32 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
-	drawLine(0 - 0.5, 0 - 0.5, 0 - 0.5, 32 - 0.5, 0 - 0.5, 0 - 0.5);
-	drawLine(0 - 0.5, 0 - 0.5, 0 - 0.5, 0 - 0.5, 0 - 0.5, 32 - 0.5);
-	drawLine(0 - 0.5, -32 - 0.5, 0 - 0.5, 32 - 0.5, -32 - 0.5, 0 - 0.5);
-	drawLine(0 - 0.5, -32 - 0.5, 0 - 0.5, 0 - 0.5, -32 - 0.5, 32 - 0.5);
-	drawLine(32 - 0.5, 0 - 0.5, 0 - 0.5, 32 - 0.5, 0 - 0.5, 32 - 0.5);
-	drawLine(0 - 0.5, 0 - 0.5, 32 - 0.5, 32 - 0.5, 0 - 0.5, 32 - 0.5);
-	drawLine(32 - 0.5, -32 - 0.5, 0 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
-	drawLine(0 - 0.5, -32 - 0.5, 32 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
+	// TODO FOR THE LOVE OF GOD ALMIGHTY GET RID OF THIS HACK! FOR NOW
+	// TODO IT IS NEEDED TO STOP VALIDATION CRASHES WHEN BUFFER IS EMPTY.
+	// TODO WELL, THIS WHOLE METHOD IS TRASH ACTUALLY
+	if (alloc_3d == 0) alloc_3d ++;
+	if (alloc_2d == 0) alloc_2d ++;
 
 	if ((int) mesh_3d.size() > *len_3d) {
-		BufferInfo buffer_builder {mesh_3d.size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		BufferInfo buffer_builder {alloc_3d, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
@@ -344,17 +324,17 @@ void ImmediateRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* le
 		}
 
 		*buf_3d = allocator.allocateBuffer(buffer_builder);
-		*len_3d = mesh_3d.size();
-		logger::info("Reallocated 3D immediate buffer");
+		logger::info("Reallocated 3D immediate buffer ", mesh_3d.size());
 	}
 
 	MemoryMap map_3d = buf_3d->access().map();
 	map_3d.write(mesh_3d.data(), mesh_3d.size() * sizeof(Vertex3D));
 	map_3d.flush();
 	map_3d.unmap();
+	*len_3d = mesh_3d.size();
 
 	if ((int) mesh_2d.size() > *len_2d) {
-		BufferInfo buffer_builder {mesh_2d.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		BufferInfo buffer_builder {alloc_2d, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
@@ -363,12 +343,13 @@ void ImmediateRenderer::getBuffers(Allocator& allocator, Buffer* buf_3d, int* le
 		}
 
 		*buf_2d = allocator.allocateBuffer(buffer_builder);
-		*len_2d = mesh_2d.size();
-		logger::info("Reallocated 2D immediate buffer");
+		logger::info("Reallocated 2D immediate buffer ", mesh_2d.size());
 	}
 
 	MemoryMap map_2d = buf_2d->access().map();
 	map_2d.write(mesh_2d.data(), mesh_2d.size() * sizeof(Vertex2D));
 	map_2d.flush();
 	map_2d.unmap();
+	*len_2d = mesh_2d.size();
+
 }
