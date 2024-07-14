@@ -158,9 +158,15 @@ int main() {
 
 	Atlas atlas = AtlasBuilder::createSimpleAtlas("assets/sprites");
 
-	Chunk chunk {0, 0, 0};
-	chunk.random(10000);
-	drawChunk(chunk, atlas);
+	World world(8888);
+
+	logger::info("World::generateAround took ", Timer::of([&]() {
+		world.generateAround({ 0, 0, 0 }, 3);
+	}).milliseconds(), "ms");
+
+	logger::info("World::draw took ", Timer::of([&]() {
+		world.draw(atlas, pool);
+	}).milliseconds(), "ms");
 
 	Font font;
 	font.addCodePage(atlas, "assets/sprites/8x8font.png", 8, 0);
@@ -171,14 +177,14 @@ int main() {
 	Buffer vertices;
 
 	{
-		BufferInfo buffer_builder {mesh.size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
+		BufferInfo buffer_builder { world.getMesh().size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
 		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
 		vertices = allocator.allocateBuffer(buffer_builder);
 
 		MemoryMap map = vertices.access().map();
-		map.write(mesh.data(), mesh.size() * sizeof(Vertex3D));
+		map.write(world.getMesh().data(), world.getMesh().size() * sizeof(Vertex3D));
 		map.flush();
 		map.unmap();
 	}
@@ -349,6 +355,7 @@ int main() {
 
 	ImmediateRenderer renderer {atlas, font};
 	Camera camera {window};
+	camera.move({0, 5, 0});
 
 	Buffer ui_3d, ui_2d;
 	int ui_3d_len = -1, ui_2d_len = -1;
@@ -359,7 +366,7 @@ int main() {
 
 		Frame& ref = frames[frame];
 		ref.data.model = glm::identity<glm::mat4>();
-		ref.data.proj = glm::perspective(glm::radians(45.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 100.0f);
+		ref.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 		ref.data.view = camera.getView();
 
 		ref.in_flight_fence.lock();
@@ -381,7 +388,7 @@ int main() {
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height)
 			.bindBuffer(vertices)
-			.draw(mesh.size())
+			.draw(world.getMesh().size())
 			.bindPipeline(pipeline_3d_tint)
 			.bindBuffer(ui_3d)
 			.draw(ui_3d_len)
