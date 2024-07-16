@@ -23,11 +23,11 @@ BakedSprite ImmediateRenderer::getSprite(const std::string& identifier) {
 }
 
 int ImmediateRenderer::getWidth() const {
-	return width;
+	return width * 2;
 }
 
 int ImmediateRenderer::getHeight() const {
-	return height;
+	return height * 2;
 }
 
 void ImmediateRenderer::setFontSize(float size) {

@@ -113,6 +113,7 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
+#include "client/gui/screen/grid.hpp"
 
 int main() {
 
@@ -356,7 +357,7 @@ int main() {
 	window.setRootInputConsumer(&stack);
 
 	// Open the cluster-fuck screen :D
-	stack.open(new TestScreen {});
+	stack.open(new GridScreen {});
 
 	Buffer ui_3d, ui_2d;
 	int ui_3d_len = -1, ui_2d_len = -1;
@@ -378,7 +379,7 @@ int main() {
 		// * Incompatible with threading and concurrent frames
 		// * Ugly
 		renderer.prepare(swapchain.vk_extent);
-		stack.draw(renderer, camera);
+		stack.draw(renderer, window.getInputContext(), camera);
 		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len);
 
 		uint32_t image_index;

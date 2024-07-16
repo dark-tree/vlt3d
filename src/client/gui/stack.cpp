@@ -1,19 +1,31 @@
 
 #include "stack.hpp"
 
-InputResult ScreenStack::onKey(InputContext& context, InputEvent key) {
-	return forEach([&] (Screen* screen) { return screen->onKey(*this, context, key); });
+InputResult ScreenStack::onEvent(InputContext& input, const InputEvent& event) {
+	std::lock_guard lock {mutex};
+
+	for (auto it = screens.begin(); it != screens.end();) {
+		std::unique_ptr<Screen>& screen = *it;
+
+		// move the iterator before calling the callback so that
+		// calling replace() in it will not invalidate our iterator
+		std::advance(it, 1);
+
+		if (screen->state != Screen::OPEN) {
+			continue;
+		}
+
+		InputResult result = screen->onEvent(*this, input, event);
+
+		if (result != InputResult::PASS) {
+			return result;
+		}
+	}
+
+	return InputResult::PASS;
 }
 
-InputResult ScreenStack::onMouse(InputContext& context, InputEvent button) {
-	return forEach([&] (Screen* screen) { return screen->onMouse(*this, context, button); });
-}
-
-InputResult ScreenStack::onScroll(InputContext& context, float scroll) {
-	return forEach([&] (Screen* screen) { return screen->onScroll(*this, context, scroll); });
-}
-
-void ScreenStack::draw(ImmediateRenderer& renderer, Camera& camera) {
+void ScreenStack::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
 	std::lock_guard lock {mutex};
 
 	for (auto it = screens.rbegin(); it != screens.rend();) {
@@ -33,7 +45,7 @@ void ScreenStack::draw(ImmediateRenderer& renderer, Camera& camera) {
 			continue;
 		}
 
-		screen->draw(renderer, camera);
+		screen->draw(renderer, input, camera);
 		std::advance(it, 1);
 	}
 }

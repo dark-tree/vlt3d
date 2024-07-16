@@ -10,31 +10,6 @@ class GroupScreen : public Screen {
 
 		std::list<std::unique_ptr<Screen>> screens;
 
-		template <typename F>
-		InputResult forEach(F function) {
-			bool pass = true;
-
-			for (auto it = screens.begin(); it != screens.end();) {
-				std::unique_ptr<Screen>& screen = *it;
-
-				// move the iterator before calling the callback so that
-				// calling replace() in it will not invalidate our iterator
-				std::advance(it, 1);
-
-				if (screen->state != Screen::OPEN) {
-					continue;
-				}
-
-				InputResult result = function(screen.get());
-
-				if (result != InputResult::PASS) {
-					pass = false;
-				}
-			}
-
-			return pass ? InputResult::PASS : InputResult::BLOCK;
-		}
-
 	public:
 
 		template <typename... Screens> requires trait::All<Screen*, Screens...>
@@ -42,9 +17,7 @@ class GroupScreen : public Screen {
 			( this->screens.emplace_back(screens), ... );
 		}
 
-		InputResult onKey(ScreenStack& stack, InputContext& input, InputEvent key);
-		InputResult onMouse(ScreenStack& stack, InputContext& input, InputEvent button);
-		InputResult onScroll(ScreenStack& stack, InputContext& input, float scroll);
-		void draw(ImmediateRenderer& renderer, Camera& camera);
+		InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& key);
+		void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera);
 
 };

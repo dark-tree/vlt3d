@@ -29,10 +29,8 @@ class Screen {
 		Screen();
 		virtual ~Screen() = default;
 
-		virtual InputResult onKey(ScreenStack& stack, InputContext& input, InputEvent key);
-		virtual InputResult onMouse(ScreenStack& stack, InputContext& input, InputEvent button);
-		virtual InputResult onScroll(ScreenStack& stack, InputContext& input, float scroll);
-		virtual void draw(ImmediateRenderer& renderer, Camera& camera);
+		virtual InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event);
+		virtual void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera);
 
 		/**
 		 * Close this screen, no more events and draw calls

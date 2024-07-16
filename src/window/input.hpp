@@ -2,6 +2,7 @@
 
 #include "external.hpp"
 #include "event.hpp"
+#include "util/box.hpp"
 
 class Window;
 
@@ -22,6 +23,7 @@ class InputContext {
 		InputContext(Window& window);
 
 		glm::vec2 getMouse();
+		bool isMouseWithin(Box2D);
 		bool isKeyPressed(int key);
 		bool isButtonPressed(int button);
 
@@ -33,9 +35,6 @@ class InputConsumer {
 
 		virtual ~InputConsumer() = default;
 
-		virtual InputResult onKey(InputContext& context, InputEvent key);
-		virtual InputResult onMouse(InputContext& context, InputEvent button);
-		virtual InputResult onScroll(InputContext& context, float scroll);
-
+		virtual InputResult onEvent(InputContext& context, const InputEvent& key);
 
 };

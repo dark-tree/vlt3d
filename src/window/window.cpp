@@ -5,7 +5,7 @@ void Window::glfwKeyCallback(GLFWwindow* glfw_window, int key, int scancode, int
 	Window* window = (Window*) glfwGetWindowUserPointer(glfw_window);
 
 	if (window && window->root) {
-		window->root->onKey(window->input, {key, mods, action});
+		window->root->onEvent(window->input, KeyboardEvent {key, mods, action});
 	}
 }
 
@@ -13,7 +13,7 @@ void Window::glfwButtonCallback(GLFWwindow* glfw_window, int button, int action,
 	Window* window = (Window*) glfwGetWindowUserPointer(glfw_window);
 
 	if (window && window->root) {
-		window->root->onMouse(window->input, {button, mods, action});
+		window->root->onEvent(window->input, MouseEvent {button, mods, action});
 	}
 }
 
@@ -21,7 +21,7 @@ void Window::glfwScrollCallback(GLFWwindow* glfw_window, double x_scroll, double
 	Window* window = (Window*) glfwGetWindowUserPointer(glfw_window);
 
 	if (window && window->root) {
-		window->root->onScroll(window->input, (float) y_scroll);
+		window->root->onEvent(window->input, ScrollEvent {(float) y_scroll});
 	}
 }
 
@@ -44,7 +44,7 @@ Window::Window(uint32_t w, uint32_t h, const char* title)
 	}
 
 	glfwSetWindowUserPointer(glfw_window, this);
-	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+//	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetInputMode(glfw_window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	if (!glfwVulkanSupported()) {
@@ -97,4 +97,8 @@ void Window::getCursor(double* x, double* y) const {
 
 void Window::setRootInputConsumer(NULLABLE InputConsumer* root) {
 	this->root = root;
+}
+
+InputContext& Window::getInputContext() {
+	return input;
 }

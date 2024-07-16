@@ -19,18 +19,10 @@ void Screen::replace(Screen* screen) {
 	}
 }
 
-InputResult Screen::onKey(ScreenStack& stack, InputContext& input, InputEvent key) {
+InputResult Screen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
 	return InputResult::PASS; // override to implement custom behavior
 }
 
-InputResult Screen::onMouse(ScreenStack& stack, InputContext& input, InputEvent button) {
-	return InputResult::PASS; // override to implement custom behavior
-}
-
-InputResult Screen::onScroll(ScreenStack& stack, InputContext& input, float scroll) {
-	return InputResult::PASS; // override to implement custom behavior
-}
-
-void Screen::draw(ImmediateRenderer& renderer, Camera& camera) {
+void Screen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
 	// override to implement custom behavior
 }

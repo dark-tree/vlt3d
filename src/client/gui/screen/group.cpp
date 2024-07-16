@@ -1,19 +1,31 @@
 
 #include "group.hpp"
 
-InputResult GroupScreen::onKey(ScreenStack& stack, InputContext& input, InputEvent key) {
-	return forEach([&] (Screen* screen) { return screen->onKey(stack, input, key); });
+InputResult GroupScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
+	bool pass = true;
+
+	for (auto it = screens.begin(); it != screens.end();) {
+		std::unique_ptr<Screen>& screen = *it;
+
+		// move the iterator before calling the callback so that
+		// calling replace() in it will not invalidate our iterator
+		std::advance(it, 1);
+
+		if (screen->state != Screen::OPEN) {
+			continue;
+		}
+
+		InputResult result = screen->onEvent(stack, input, event);
+
+		if (result != InputResult::PASS) {
+			pass = false;
+		}
+	}
+
+	return pass ? InputResult::PASS : InputResult::BLOCK;
 }
 
-InputResult GroupScreen::onMouse(ScreenStack& stack, InputContext& input, InputEvent button) {
-	return forEach([&] (Screen* screen) { return screen->onMouse(stack, input, button); });
-}
-
-InputResult GroupScreen::onScroll(ScreenStack& stack, InputContext& input, float scroll) {
-	return forEach([&] (Screen* screen) { return screen->onScroll(stack, input, scroll); });
-}
-
-void GroupScreen::draw(ImmediateRenderer& renderer, Camera& camera) {
+void GroupScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
 	bool closed = false;
 
 	for (auto& screen : screens) {
@@ -27,7 +39,7 @@ void GroupScreen::draw(ImmediateRenderer& renderer, Camera& camera) {
 			break;
 		}
 
-		screen->draw(renderer, camera);
+		screen->draw(renderer, input, camera);
 	}
 
 	if (closed) {

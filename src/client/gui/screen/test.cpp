@@ -1,24 +1,26 @@
 
 #include "test.hpp"
 
-TestScreen::~TestScreen() = default;
+InputResult TestScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
+	if (auto* key = event.as<KeyboardEvent>()) {
 
-InputResult TestScreen::onKey(ScreenStack& stack, InputContext& input, InputEvent key) {
-	if (key.isReleased(GLFW_KEY_SPACE)) {
-		logger::info("Toggled test screen visibility");
-		test = !test;
-		return InputResult::CONSUME;
-	}
+		if (key->isKeyReleased(GLFW_KEY_SPACE)) {
+			logger::info("Toggled test screen visibility");
+			test = !test;
+			return InputResult::CONSUME;
+		}
 
-	if (key.isReleased(GLFW_KEY_ESCAPE)) {
-		remove();
-		return InputResult::CONSUME;
+		if (key->isKeyReleased(GLFW_KEY_ESCAPE)) {
+			remove();
+			return InputResult::CONSUME;
+		}
+
 	}
 
 	return InputResult::PASS;
 }
 
-void TestScreen::draw(ImmediateRenderer& renderer, Camera& camera) {
+void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
 
 	if (!test) {
 		renderer.setAlignment(HorizontalAlignment::LEFT);

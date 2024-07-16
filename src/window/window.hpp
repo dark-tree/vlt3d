@@ -36,5 +36,6 @@ class Window {
 		bool isButtonPressed(int button) const;
 		void getCursor(double* x, double* y) const;
 		void setRootInputConsumer(NULLABLE InputConsumer* root);
+		InputContext& getInputContext();
 
 };

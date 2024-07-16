@@ -2,16 +2,18 @@
 
 #include "external.hpp"
 #include "client/gui/screen.hpp"
+#include "client/gui/grid/context.hpp"
 
-class TestScreen : public Screen {
+class GridScreen : public Screen {
 
 	private:
 
-		bool test = true;
+		GridContext context {10, 10, 32};
 
 	public:
 
-		~TestScreen() override = default;
+		GridScreen();
+		~GridScreen() = default;
 
 		InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) override;
 		void draw(ImmediateRenderer &renderer, InputContext& input, Camera& camera) override;

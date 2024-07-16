@@ -11,6 +11,10 @@ glm::vec2 InputContext::getMouse() {
 	return {x, y};
 }
 
+bool InputContext::isMouseWithin(Box2D box) {
+	return box.contains(getMouse());
+}
+
 bool InputContext::isKeyPressed(int key) {
 	return window.isKeyPressed(key);
 }
@@ -19,14 +23,6 @@ bool InputContext::isButtonPressed(int button) {
 	return window.isButtonPressed(button);
 }
 
-InputResult InputConsumer::onKey(InputContext& context, InputEvent key) {
-	return InputResult::PASS; // by default input consumer does nothing, override to implement custom behavior
-}
-
-InputResult InputConsumer::onMouse(InputContext& context, InputEvent button) {
-	return InputResult::PASS; // by default input consumer does nothing, override to implement custom behavior
-}
-
-InputResult InputConsumer::onScroll(InputContext& context, float scroll) {
+InputResult InputConsumer::onEvent(InputContext& context, const InputEvent& event) {
 	return InputResult::PASS; // by default input consumer does nothing, override to implement custom behavior
 }
