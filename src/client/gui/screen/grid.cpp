@@ -7,6 +7,7 @@ GridScreen::GridScreen() {
 
 	ComponentProducer producer = GuiComposed::of()
 		.add(1, 0, GuiImage::of().box(3, 3).inset(0.05).sprite("assets/sprites/vkblob.png"))
+		.add(5, 5)
 		.then(Chain::BELOW, GuiImage::of().box(3, 3).inset(0.05).sprite("assets/sprites/vkblob.png"))
 		.build();
 

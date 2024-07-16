@@ -37,8 +37,7 @@ class GuiComposed : public GuiComponent {
 
 			public:
 
-				// TODO implement implicit GuiNull
-
+				Builder& add(int x, int y);
 				Builder& add(int x, int y, ComponentBuilder& builder);
 				Builder& then(Chain chain, ComponentBuilder& builder);
 
@@ -49,7 +48,8 @@ class GuiComposed : public GuiComponent {
 		};
 
 		static inline GuiComposed::Builder of() {
-			return {};
+			GuiComposed::Builder builder;
+			return builder;
 		}
 
 };

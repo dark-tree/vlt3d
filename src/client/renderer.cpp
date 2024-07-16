@@ -38,11 +38,12 @@ void ImmediateRenderer::setLineSize(float size) {
 	this->line_size = size;
 }
 
+void ImmediateRenderer::setTint(Color color) {
+	this->color = color;
+}
+
 void ImmediateRenderer::setTint(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-	this->r = r;
-	this->g = g;
-	this->b = b;
-	this->a = a;
+	setTint({r, g, b, a});
 }
 
 void ImmediateRenderer::setFacing(float x, float y, float z) {
@@ -74,7 +75,7 @@ void ImmediateRenderer::setAlignment(HorizontalAlignment alignment) {
  */
 
 void ImmediateRenderer::drawVertex(float x, float y, float u, float v) {
-	mesh_2d.emplace_back(x / width - 1, y / height - 1, u, v, r, g, b, a);
+	mesh_2d.emplace_back(x / width - 1, y / height - 1, u, v, color.r, color.g, color.b, color.a);
 }
 
 void ImmediateRenderer::drawVertex(glm::vec2 pos, float u, float v) {
@@ -213,7 +214,7 @@ void ImmediateRenderer::drawVertex(float x, float y, float z, float u, float v) 
 }
 
 void ImmediateRenderer::drawVertex(glm::vec3 pos, float u, float v) {
-	mesh_3d.emplace_back(pos.x, pos.y, pos.z, u, v, r, g, b, a);
+	mesh_3d.emplace_back(pos.x, pos.y, pos.z, u, v, color.r, color.g, color.b, color.a);
 }
 
 void ImmediateRenderer::drawText(float x, float y, float z, const std::string& text) {

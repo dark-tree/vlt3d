@@ -6,6 +6,7 @@
 #include "buffer/font.hpp"
 #include "vertices.hpp"
 #include "camera.hpp"
+#include "util/color.hpp"
 
 enum struct BillboardMode {
 	ONE_AXIS,
@@ -32,7 +33,7 @@ class ImmediateRenderer {
 		std::vector<Vertex3D> mesh_3d;
 		BakedSprite blank;
 		BillboardMode mode;
-		uint8_t r, g, b, a;
+		Color color;
 		glm::vec3 target;
 		VerticalAlignment vertical;
 		HorizontalAlignment horizontal;
@@ -56,6 +57,7 @@ class ImmediateRenderer {
 
 		void setFontSize(float size);
 		void setLineSize(float size);
+		void setTint(Color color);
 		void setTint(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
 		void setFacing(float x, float y, float z);
 		void setFacing(glm::vec3 target);

@@ -1,6 +1,7 @@
 
 #include "composed.hpp"
 #include "client/gui/grid/context.hpp"
+#include "client/gui/component/spacer.hpp"
 
 GuiComposed::GuiComposed(Box2D box, const std::vector<std::shared_ptr<GuiComponent>>& components)
 : GuiComponent(box), components(components) {}
@@ -9,9 +10,15 @@ void GuiComposed::draw(GridContext& grid, InputContext& input, ImmediateRenderer
 	for (auto& component : components) {
 		component->draw(grid, input, renderer);
 	}
+
+	drawDebugOutline(grid, input, renderer, "GuiComposed", 0, 255, 255, 0.1);
 }
 
 bool GuiComposed::onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) {
+	if (!grid.shouldAccept(bounding, input, event)) {
+		return false;
+	}
+
 	bool any = false;
 
 	for (auto& component : components) {
@@ -30,7 +37,7 @@ const ComponentFactory& GuiComposed::Builder::getLast() {
 		throw Exception {"Component chain needs to start with a unchained component!"};
 	}
 
-	return children.back();
+	return children.at(children.size() - 1);
 }
 
 void GuiComposed::Builder::append(ComponentFactory factory) {
@@ -40,6 +47,11 @@ void GuiComposed::Builder::append(ComponentFactory factory) {
 
 	// add the factory to the children list
 	children.emplace_back(factory);
+}
+
+GuiComposed::Builder& GuiComposed::Builder::add(int x, int y) {
+	GuiSpacer::Builder builder = GuiSpacer::of();
+	return add(x, y, builder);
 }
 
 GuiComposed::Builder& GuiComposed::Builder::add(int x, int y, ComponentBuilder& builder) {

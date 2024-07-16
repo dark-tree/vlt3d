@@ -52,7 +52,7 @@ Box2D Box2D::inset(float scalar) const {
 }
 
 Box2D Box2D::envelop(Box2D other) const {
-	return empty() ? other : Box2D {std::min(other.x1, x1), std::min(other.y1, y1), std::max(other.x2, x2), std::min(other.y2, y2)};
+	return Box2D {std::min(other.x1, x1), std::min(other.y1, y1), std::max(other.x2, x2), std::max(other.y2, y2)};
 }
 
 Box2D Box2D::round() const {

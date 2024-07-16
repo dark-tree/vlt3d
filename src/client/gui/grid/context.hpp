@@ -35,6 +35,7 @@ class GridContext {
 		GridContext(int width, int height, int size);
 		GridContext(int width, int height, int ox, int oy, float ax, float ay, int size);
 
+		bool isDebugMode() const;
 		bool shouldAccept(Box2D box, InputContext& input, const InputEvent& event);
 		Box2D getScreenBox(Box2D box) const;
 		InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event);

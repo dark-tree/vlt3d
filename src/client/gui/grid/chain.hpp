@@ -22,6 +22,6 @@ class Chain {
 		static Chain AFTER;
 		static Chain BEFORE;
 		static Chain ABOVE;
-		static Chain BELOW; // kinda
+		static Chain BELOW;
 		static Chain OVER;
 };

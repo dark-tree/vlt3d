@@ -2,16 +2,18 @@
 
 #include "external.hpp"
 #include "component.hpp"
+#include "util/color.hpp"
 
 class GuiImage : public GuiComponent {
 
 	private:
 
-		READONLY std::string identifier;
+		std::string identifier;
+		Color color;
 
 	public:
 
-		GuiImage(Box2D box, const std::string& identifier);
+		GuiImage(Box2D box, const std::string& identifier, Color color);
 
 	public:
 
@@ -23,17 +25,20 @@ class GuiImage : public GuiComponent {
 			protected:
 
 				std::string identifier;
+				Color color;
 
 			public:
 
 				Builder& sprite(const std::string& identifier);
+				Builder& tint(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
 
 				ComponentProducer build() const final;
 
 		};
 
 		static inline GuiImage::Builder of() {
-			return {};
+			GuiImage::Builder builder;
+			return builder;
 		}
 
 };

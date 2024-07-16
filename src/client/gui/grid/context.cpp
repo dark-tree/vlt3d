@@ -1,6 +1,10 @@
 
 #include "context.hpp"
 
+bool GridContext::isDebugMode() const {
+	return true;
+}
+
 bool GridContext::shouldAccept(Box2D box, InputContext& input, const InputEvent& event) {
 	if (event.getType() == InputEvent::KEYBOARD) {
 		return true;
