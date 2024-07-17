@@ -43,7 +43,8 @@ const ComponentFactory& GuiComposed::Builder::getLast() {
 void GuiComposed::Builder::append(ComponentFactory factory) {
 
 	// expand our bounding box
-	combined = combined.envelop(factory.getBoundBox().offset(x, y));
+	Box2D other = factory.getBoundBox().offset(x, y);
+	combined = combined.empty() ? other : combined.envelop(other);
 
 	// add the factory to the children list
 	children.emplace_back(factory);

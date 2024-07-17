@@ -37,7 +37,7 @@ class ImmediateRenderer {
 		glm::vec3 target;
 		VerticalAlignment vertical;
 		HorizontalAlignment horizontal;
-		float font_size, line_size;
+		float font_size, line_size, font_tilt;
 		uint32_t width, height;
 		Atlas& atlas;
 		Font& font;
@@ -45,7 +45,7 @@ class ImmediateRenderer {
 		void drawBillboardVertex(glm::quat rotation, glm::vec3 offset, float x, float y, float u, float v);
 		glm::quat getBillboardRotation(glm::vec3 center) const;
 		glm::vec3 getPerpendicular(glm::vec3 normal, float angle) const;
-		glm::vec2 getTextAlignment(const std::string& text) const;
+		glm::vec2 getTextAlignment(const std::string& text, glm::vec2 extend) const;
 
 	public:
 
@@ -56,6 +56,7 @@ class ImmediateRenderer {
 		int getHeight() const;
 
 		void setFontSize(float size);
+		void setFontTilt(float tilt);
 		void setLineSize(float size);
 		void setTint(Color color);
 		void setTint(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
@@ -65,12 +66,13 @@ class ImmediateRenderer {
 		void setBillboardMode(BillboardMode mode);
 		void setAlignment(VerticalAlignment alignment);
 		void setAlignment(HorizontalAlignment alignment);
+		void setAlignment(VerticalAlignment vertical, HorizontalAlignment horizontal);
 
 		// 2D
 		void drawVertex(float x, float y, float u, float v);
 		void drawVertex(glm::vec2 pos, float u, float v);
-		void drawText(float x, float y, const std::string& text);
-		void drawText(glm::vec2 pos, const std::string& text);
+		void drawText(float x, float y, const std::string& text, glm::vec2 extend = {-1, -1});
+		void drawText(glm::vec2 pos, const std::string& text, glm::vec2 extend = {-1, -1});
 		void drawSprite(float x, float y, float w, float h, BakedSprite sprite);
 		void drawSprite(glm::vec2 pos, float w, float h, BakedSprite sprite);
 		void drawLine(float x1, float y1, float x2, float y2);
@@ -79,8 +81,8 @@ class ImmediateRenderer {
 		// 3D
 		void drawVertex(float x, float y, float z, float u, float v);
 		void drawVertex(glm::vec3 pos, float u, float v);
-		void drawText(float x, float y, float z, const std::string& text);
-		void drawText(glm::vec3 pos, const std::string& text);
+		void drawText(float x, float y, float z, const std::string& text, glm::vec2 extend = {-1, -1});
+		void drawText(glm::vec3 pos, const std::string& text, glm::vec2 extend = {-1, -1});
 		void drawSprite(float x, float y, float z, float w, float h, BakedSprite sprite);
 		void drawSprite(glm::vec3 pos, float w, float h, BakedSprite sprite);
 		void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);

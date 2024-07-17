@@ -16,6 +16,7 @@ ImmediateRenderer::ImmediateRenderer(Atlas& atlas, Font& font)
 	setBillboardMode(BillboardMode::TWO_AXIS);
 	setAlignment(VerticalAlignment::TOP);
 	setAlignment(HorizontalAlignment::LEFT);
+	setFontTilt(0);
 }
 
 BakedSprite ImmediateRenderer::getSprite(const std::string& identifier) {
@@ -32,6 +33,10 @@ int ImmediateRenderer::getHeight() const {
 
 void ImmediateRenderer::setFontSize(float size) {
 	this->font_size = size;
+}
+
+void ImmediateRenderer::setFontTilt(float tilt) {
+	this->font_tilt = tilt;
 }
 
 void ImmediateRenderer::setLineSize(float size) {
@@ -70,6 +75,11 @@ void ImmediateRenderer::setAlignment(HorizontalAlignment alignment) {
 	this->horizontal = alignment;
 }
 
+void ImmediateRenderer::setAlignment(VerticalAlignment vertical, HorizontalAlignment horizontal) {
+	setAlignment(vertical);
+	setAlignment(horizontal);
+}
+
 /*
  * 2D Primitives
  */
@@ -82,10 +92,10 @@ void ImmediateRenderer::drawVertex(glm::vec2 pos, float u, float v) {
 	drawVertex(pos.x, pos.y, u, v);
 }
 
-void ImmediateRenderer::drawText(float x, float y, const std::string& text) {
+void ImmediateRenderer::drawText(float x, float y, const std::string& text, glm::vec2 extend) {
 
 	float offset = 0;
-	glm::vec2 alignment = getTextAlignment(text) * font_size;
+	glm::vec2 alignment = getTextAlignment(text, extend) * font_size;
 
 	for (char chr : text) {
 
@@ -93,19 +103,22 @@ void ImmediateRenderer::drawText(float x, float y, const std::string& text) {
 		BakedSprite sprite = glyph.getSprite();
 
 		float w = glyph.getWidth() * font_size;
+		float h = glyph.getHeight() * font_size;
 
-		float sx = x + offset - alignment.x;
+		float sx = x + offset - alignment.x ;
 		float ex = sx + w;
 		float sy = y - alignment.y;
-		float ey = sy + glyph.getHeight() * font_size;
+		float ey = sy + h;
 
-		drawVertex(sx, sy, sprite.u1, sprite.v1);
-		drawVertex(ex, ey, sprite.u2, sprite.v2);
-		drawVertex(sx, ey, sprite.u1, sprite.v2);
+		float tilt = font_tilt * h * -0.25;
 
-		drawVertex(sx, sy, sprite.u1, sprite.v1);
-		drawVertex(ex, sy, sprite.u2, sprite.v1);
-		drawVertex(ex, ey, sprite.u2, sprite.v2);
+		drawVertex(sx - tilt, sy, sprite.u1, sprite.v1);
+		drawVertex(ex + tilt, ey, sprite.u2, sprite.v2);
+		drawVertex(sx + tilt, ey, sprite.u1, sprite.v2);
+
+		drawVertex(sx - tilt, sy, sprite.u1, sprite.v1);
+		drawVertex(ex - tilt, sy, sprite.u2, sprite.v1);
+		drawVertex(ex + tilt, ey, sprite.u2, sprite.v2);
 
 		offset += w + font_size;
 
@@ -113,8 +126,8 @@ void ImmediateRenderer::drawText(float x, float y, const std::string& text) {
 
 }
 
-void ImmediateRenderer::drawText(glm::vec2 pos, const std::string& text) {
-	drawText(pos.x, pos.y, text);
+void ImmediateRenderer::drawText(glm::vec2 pos, const std::string& text, glm::vec2 extend) {
+	drawText(pos.x, pos.y, text, extend);
 }
 
 void ImmediateRenderer::drawSprite(float sx, float sy, float w, float h, BakedSprite sprite) {
@@ -188,24 +201,29 @@ glm::vec3 ImmediateRenderer::getPerpendicular(glm::vec3 normal, float angle) con
 	return glm::normalize(glm::vec3(rotation * glm::vec4(axis, 0.0f)));
 }
 
-glm::vec2 ImmediateRenderer::getTextAlignment(const std::string& text) const {
+glm::vec2 ImmediateRenderer::getTextAlignment(const std::string& text, glm::vec2 extend) const {
 
 	float mx = static_cast<int>(horizontal) / 2.0f;
 	float my = static_cast<int>(vertical) / 2.0f;
+
+	glm::vec2 offset = {
+		extend.x < 0 ? 0 : extend.x * mx / font_size,
+		extend.y < 0 ? 0 : extend.y * my / font_size
+	};
 
 	float ox = 0;
 	float oy = font.getSize();
 
 	// special case as then we don't need to iterate the string
 	if (horizontal == HorizontalAlignment::LEFT) {
-		return {0, oy * my};
+		return glm::vec2 {0, oy * my} - offset;
 	}
 
 	for (char chr : text) {
 		ox += font.getGlyph(chr).getWidth() + 1;
 	}
 
-	return {ox * mx, oy * my};
+	return glm::vec2 {ox * mx, oy * my} - offset;
 
 }
 
@@ -217,16 +235,16 @@ void ImmediateRenderer::drawVertex(glm::vec3 pos, float u, float v) {
 	mesh_3d.emplace_back(pos.x, pos.y, pos.z, u, v, color.r, color.g, color.b, color.a);
 }
 
-void ImmediateRenderer::drawText(float x, float y, float z, const std::string& text) {
-	drawText({x, y, z}, text);
+void ImmediateRenderer::drawText(float x, float y, float z, const std::string& text, glm::vec2 extend) {
+	drawText({x, y, z}, text, extend);
 }
 
-void ImmediateRenderer::drawText(glm::vec3 pos, const std::string& text) {
+void ImmediateRenderer::drawText(glm::vec3 pos, const std::string& text, glm::vec2 extend) {
 
 	float offset = 0;
 	glm::quat rot = getBillboardRotation(pos);
 
-	glm::vec2 alignment = getTextAlignment(text) * font_size;
+	glm::vec2 alignment = getTextAlignment(text, extend) * font_size;
 
 	for (char chr : text) {
 
