@@ -357,7 +357,7 @@ int main() {
 	window.setRootInputConsumer(&stack);
 
 	// Open the cluster-fuck screen :D
-	stack.open(new GridScreen {});
+	stack.open(new TestScreen {});
 
 	Buffer ui_3d, ui_2d;
 	int ui_3d_len = -1, ui_2d_len = -1;

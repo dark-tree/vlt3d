@@ -36,6 +36,9 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	float ox = sin(t);
 	float oy = cos(t);
 
+	renderer.setTint(255, 255, 255);
+	renderer.drawPatch(renderer.getWidth() - 160 - 32, 32, 10, 10, 16, renderer.getNinePatch("assets/sprites/gui-smol.png", 8));
+
 	renderer.setTint(50, 255, 50);
 	renderer.setFontSize(2);
 
@@ -77,7 +80,7 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.setTint(255, 255, 255);
 	renderer.setFontSize(0.05);
 	renderer.setLineSize(0.05);
-	renderer.drawSprite(10 * ox + 10, -3, 10 * oy + 10, 1, 1, renderer.getSprite("assets/sprites/vkblob.png"));
+	renderer.drawTiled(10 * ox + 10, -3, 10 * oy + 10, 2.6, 2.6, renderer.getSprite("assets/sprites/vkblob.png"), 1, 1);
 
 	renderer.setAlignment(VerticalAlignment::CENTER);
 	renderer.setAlignment(HorizontalAlignment::CENTER);

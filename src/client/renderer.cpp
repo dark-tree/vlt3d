@@ -19,16 +19,20 @@ ImmediateRenderer::ImmediateRenderer(Atlas& atlas, Font& font)
 	setFontTilt(0);
 }
 
+NinePatch ImmediateRenderer::getNinePatch(const std::string& identifier, int margin) {
+	return atlas.getNinePatch(identifier, margin);
+}
+
 BakedSprite ImmediateRenderer::getSprite(const std::string& identifier) {
 	return atlas.getBakedSprite(identifier);
 }
 
 int ImmediateRenderer::getWidth() const {
-	return width * 2;
+	return width * 2; // this is multiplied as width and height contains halved values
 }
 
 int ImmediateRenderer::getHeight() const {
-	return height * 2;
+	return height * 2; // this is multiplied as width and height contain halved values
 }
 
 void ImmediateRenderer::setFontSize(float size) {
@@ -166,6 +170,82 @@ void ImmediateRenderer::drawLine(float x1, float y1, float x2, float y2) {
 	drawLine({x1, y1}, {x2, y2});
 }
 
+void ImmediateRenderer::drawTiled(float x, float y, float w, float h, BakedSprite sprite, float sw, float sh) {
+	float dw, dh;
+
+	float u1 = sprite.u1;
+	float v1 = sprite.v1;
+
+	float sx = (sprite.u2 - sprite.u1) / sw;
+	float sy = (sprite.v2 - sprite.v1) / sh;
+
+	for (int i = 0; (dw = w - sw * i) > 0; i ++) {
+
+		float tw = std::min(dw, sw);
+		float tx = sw * i;
+		float u2 = u1 + tw * sx;
+
+		float x1 = x + tx;
+		float x2 = x + tx + tw;
+		float x3 = x + tx + tw;
+		float x4 = x + tx;
+
+		for (int j = 0; (dh = h - sh * j) > 0; j++) {
+
+			float th = std::min(dh, sh);
+			float ty = sh * j;
+			float v2 = v1 + th * sy;
+
+			float y1 = y + ty;
+			float y2 = y + ty;
+			float y3 = y + ty + th;
+			float y4 = y + ty + th;
+
+			drawVertex(x1, y1, u1, v1);
+			drawVertex(x2, y2, u2, v1);
+			drawVertex(x4, y4, u1, v2);
+
+			drawVertex(x2, y2, u2, v1);
+			drawVertex(x3, y3, u2, v2);
+			drawVertex(x4, y4, u1, v2);
+		}
+	}
+}
+
+void ImmediateRenderer::drawTiled(glm::vec2 pos, float w, float h, BakedSprite sprite, float sw, float sh) {
+	drawTiled(pos.x, pos.y, w, h, sprite, sw, sh);
+}
+
+void ImmediateRenderer::drawPatch(float x, float y, float w, float h, float s, const NinePatch& patch, bool fill, bool stroke) {
+
+	float m = s / patch.getMargin();
+	float sc = patch.getCenter() * m;
+	float sm = patch.getMargin() * m;
+
+	if (fill) {
+		drawTiled(x, y, w * s, h * s, patch.getSegment(1, 1), sc, sc);
+	}
+
+	if (stroke) {
+		// edges
+		drawTiled(x - s, y + 0, s, h * s, patch.getSegment(0, 1), sm, sc);
+		drawTiled(x + w * s, y + 0, s, h * s, patch.getSegment(2, 1), sm, sc);
+		drawTiled(x + 0, y - s, w * s, s, patch.getSegment(1, 0), sc, sm);
+		drawTiled(x + 0, y + h * s, w * s, s, patch.getSegment(1, 2), sc, sm);
+
+		// corners
+		drawTiled(x - s, y - s, s, s, patch.getSegment(0, 0), sm, sm);
+		drawTiled(x + w * s, y - s, s, s, patch.getSegment(2, 0), sm, sm);
+		drawTiled(x - s, y + h * s, s, s, patch.getSegment(0, 2), sm, sm);
+		drawTiled(x + w * s, y + h * s, s, s, patch.getSegment(2, 2), sm, sm);
+	}
+
+}
+
+void ImmediateRenderer::drawPatch(glm::vec2 pos, float w, float h, float s, const NinePatch& patch, bool fill, bool stroke) {
+	drawPatch(pos.x, pos.y, w, h, s, patch, fill, stroke);
+}
+
 /*
  * 3D Primitives
  */
@@ -259,13 +339,15 @@ void ImmediateRenderer::drawText(glm::vec3 pos, const std::string& text, glm::ve
 		float sy = - alignment.y;
 		float ey = sy + h;
 
-		drawBillboardVertex(rot, pos, sx, sy, sprite.u1, sprite.v1);
-		drawBillboardVertex(rot, pos, ex, ey, sprite.u2, sprite.v2);
-		drawBillboardVertex(rot, pos, sx, ey, sprite.u1, sprite.v2);
+		float tilt = font_tilt * h * -0.25;
 
-		drawBillboardVertex(rot, pos, sx, sy, sprite.u1, sprite.v1);
-		drawBillboardVertex(rot, pos, ex, sy, sprite.u2, sprite.v1);
-		drawBillboardVertex(rot, pos, ex, ey, sprite.u2, sprite.v2);
+		drawBillboardVertex(rot, pos, sx - tilt, sy, sprite.u1, sprite.v1);
+		drawBillboardVertex(rot, pos, ex + tilt, ey, sprite.u2, sprite.v2);
+		drawBillboardVertex(rot, pos, sx + tilt, ey, sprite.u1, sprite.v2);
+
+		drawBillboardVertex(rot, pos, sx - tilt, sy, sprite.u1, sprite.v1);
+		drawBillboardVertex(rot, pos, ex - tilt, sy, sprite.u2, sprite.v1);
+		drawBillboardVertex(rot, pos, ex + tilt, ey, sprite.u2, sprite.v2);
 
 		offset += w + font_size;
 
@@ -343,6 +425,57 @@ void ImmediateRenderer::drawLine(glm::vec3 pa, glm::vec3 pb) {
 		drawVertex(pb + vc, blank.u2, blank.v2);
 	}
 
+}
+
+void ImmediateRenderer::drawTiled(float x, float y, float z, float w, float h, BakedSprite sprite, float sw, float sh) {
+	drawTiled({x, y, z}, w, h, sprite, sw, sh);
+}
+
+void ImmediateRenderer::drawTiled(glm::vec3 pos, float w, float h, BakedSprite sprite, float sw, float sh) {
+	float dw, dh;
+
+	float u1 = sprite.u1;
+	float v1 = sprite.v1;
+
+	float sx = (sprite.u2 - sprite.u1) / sw;
+	float sy = (sprite.v2 - sprite.v1) / sh;
+
+	float cx = w / 2;
+	float cy = h / 2;
+
+	glm::quat rot = getBillboardRotation(pos);
+
+	for (int i = 0; (dw = w - sw * i) > 0; i ++) {
+
+		float tw = std::min(dw, sw);
+		float tx = sw * i;
+		float u2 = u1 + tw * sx;
+
+		float x1 = tx - cx;
+		float x2 = tx + tw - cx;
+		float x3 = tx + tw - cx;
+		float x4 = tx - cx;
+
+		for (int j = 0; (dh = h - sh * j) > 0; j++) {
+
+			float th = std::min(dh, sh);
+			float ty = sh * j;
+			float v2 = v1 + th * sy;
+
+			float y1 = ty - cy;
+			float y2 = ty - cy;
+			float y3 = ty + th - cy;
+			float y4 = ty + th - cy;
+
+			drawBillboardVertex(rot, pos, x1, y1, u1, v1);
+			drawBillboardVertex(rot, pos, x2, y2, u2, v1);
+			drawBillboardVertex(rot, pos, x4, y4, u1, v2);
+
+			drawBillboardVertex(rot, pos, x2, y2, u2, v1);
+			drawBillboardVertex(rot, pos, x3, y3, u2, v2);
+			drawBillboardVertex(rot, pos, x4, y4, u1, v2);
+		}
+	}
 }
 
 void ImmediateRenderer::prepare(VkExtent2D extent) {

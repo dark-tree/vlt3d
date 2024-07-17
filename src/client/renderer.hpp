@@ -51,7 +51,11 @@ class ImmediateRenderer {
 
 		ImmediateRenderer(Atlas& atlas, Font& font);
 
+		// TODO this will be done differently later using
+		// TODO static sprite arrays, so for example, Sprites::VK_BLOB
+		NinePatch getNinePatch(const std::string& identifier, int margin);
 		BakedSprite getSprite(const std::string& identifier);
+
 		int getWidth() const;
 		int getHeight() const;
 
@@ -77,6 +81,10 @@ class ImmediateRenderer {
 		void drawSprite(glm::vec2 pos, float w, float h, BakedSprite sprite);
 		void drawLine(float x1, float y1, float x2, float y2);
 		void drawLine(glm::vec2 pa, glm::vec2 pb);
+		void drawTiled(float x, float y, float w, float h, BakedSprite sprite, float sw, float sh);
+		void drawTiled(glm::vec2 pos, float w, float h, BakedSprite sprite, float sw, float sh);
+		void drawPatch(float x, float y, float w, float h, float s, const NinePatch& patch, bool fill = true, bool stroke = true);
+		void drawPatch(glm::vec2 pos, float w, float h, float s, const NinePatch& patch, bool fill = true, bool stroke = true);
 
 		// 3D
 		void drawVertex(float x, float y, float z, float u, float v);
@@ -87,6 +95,8 @@ class ImmediateRenderer {
 		void drawSprite(glm::vec3 pos, float w, float h, BakedSprite sprite);
 		void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
 		void drawLine(glm::vec3 pa, glm::vec3 pb);
+		void drawTiled(float x, float y, float z, float w, float h, BakedSprite sprite, float sw, float sh);
+		void drawTiled(glm::vec3 pos, float w, float h, BakedSprite sprite, float sw, float sh);
 
 		void prepare(VkExtent2D extend);
 		void getBuffers(Allocator& allocator, Buffer* buf1, int* len1, Buffer* buf2, int* len2);
