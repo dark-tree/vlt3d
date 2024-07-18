@@ -160,34 +160,10 @@ int main() {
 
 	World world(8888);
 
-	logger::info("World::generateAround took ", Timer::of([&]() {
-		world.generateAround({ 0, 0, 0 }, 3);
-	}).milliseconds(), "ms");
-
-	logger::info("World::draw took ", Timer::of([&]() {
-		world.draw(atlas, pool);
-	}).milliseconds(), "ms");
-
 	Font font;
 	font.addCodePage(atlas, "assets/sprites/8x8font.png", 8, 0);
 
 	atlas.getImage().save("atlas.png");
-
-	// vertex buffer
-	Buffer vertices;
-
-	{
-		BufferInfo buffer_builder { world.getMesh().size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
-		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-		vertices = allocator.allocateBuffer(buffer_builder);
-
-		MemoryMap map = vertices.access().map();
-		map.write(world.getMesh().data(), world.getMesh().size() * sizeof(Vertex3D));
-		map.flush();
-		map.unmap();
-	}
 
 	// swapchain creation
 	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
@@ -363,6 +339,8 @@ int main() {
 	while (!window.shouldClose()) {
 		window.poll();
 		camera.update();
+		
+		std::list<ChunkBuffer>& buffers = world.getBuffers();
 
 		Frame& ref = frames[frame];
 		ref.data.model = glm::identity<glm::mat4>();
@@ -371,6 +349,10 @@ int main() {
 
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
+
+		world.closeBuffers();
+		world.generateAround(camera.getPosition(), 5);
+		world.draw(atlas, pool, allocator, camera.getPosition(), 8);
 
 		renderer.getBuffers(allocator, &ui_3d, &ui_3d_len, &ui_2d, &ui_2d_len, swapchain.vk_extent, camera);
 
@@ -381,15 +363,17 @@ int main() {
 		}
 
 		// record commands
-		frames[frame].buffer.record()
+		CommandRecorder& commandRecorder = frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(pipeline_3d_mix)
 			.bindDescriptorSet(frames[frame].set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
-			.setDynamicScissors(0, 0, extent.width, extent.height)
-			.bindBuffer(vertices)
-			.draw(world.getMesh().size())
-			.bindPipeline(pipeline_3d_tint)
+			.setDynamicScissors(0, 0, extent.width, extent.height);
+		for (auto& buffer : buffers) {
+			commandRecorder.bindBuffer(buffer.buffer)
+				.draw(buffer.size);
+		}		
+		commandRecorder.bindPipeline(pipeline_3d_tint)
 			.bindBuffer(ui_3d)
 			.draw(ui_3d_len)
 			.bindPipeline(pipeline_2d_tint)
