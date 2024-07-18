@@ -48,7 +48,7 @@ bool GuiButton::onEvent(GridContext& grid, ScreenStack& stack, InputContext& inp
 }
 
 /*
- * GuiImage Builder
+ * GuiButton Builder
  */
 
 GuiButton::Builder& GuiButton::Builder::text(const std::string& text) {

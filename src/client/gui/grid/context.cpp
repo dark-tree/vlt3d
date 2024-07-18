@@ -45,29 +45,30 @@ void GridContext::draw(ImmediateRenderer& renderer, InputContext& input) {
 	// screen adjusted box
 	Box2D box = bounding.offset(sax, say);
 
-	// TODO draw (sax, say)
+	renderer.setTint(255, 255, 255);
+	renderer.drawPatch(box.begin(), width, height, size, renderer.getNinePatch("assets/sprites/gui-smol.png", 8));
 
-	if (input.isMouseWithin(box)) {
-		renderer.setTint(155, 255, 155);
-	} else {
-		renderer.setTint(255, 155, 155);
-	}
+	if (isDebugMode()) {
+		renderer.setLineSize(1);
+		renderer.setTint(80, 110, 245);
 
-	renderer.drawSprite(box.begin(), box.width(), box.height(), renderer.getSprite("assets/sprites/blank.png"));
+		// draw vertical grid lines
+		for (int x = 1; x < width; x++) {
+			const float vx = box.x1 + x * box.width() / width;
+			renderer.drawLine(vx, box.y1, vx, box.y2);
+		}
 
-	renderer.setLineSize(1);
-	renderer.setTint(80, 110, 245);
+		// draw horizontal grid lines
+		for (int y = 1; y < height; y++) {
+			const float vy = box.y1 + y * box.height() / height;
+			renderer.drawLine(box.x1, vy, box.x2, vy);
+		}
 
-	// draw vertical grid lines
-	for (int x = 1; x < width; x ++) {
-		const float vx = box.x1 + x * box.width() / width;
-		renderer.drawLine(vx, box.y1, vx, box.y2);
-	}
-
-	// draw horizontal grid lines
-	for (int y = 1; y < height; y ++) {
-		const float vy = box.y1 + y * box.height() / height;
-		renderer.drawLine(box.x1, vy, box.x2, vy);
+		// show the attachment point
+		renderer.setTint(0, 0, 0);
+		renderer.drawCircle(sax, say, 12);
+		renderer.setTint(0, 255, 0);
+		renderer.drawCircle(sax, say, 8);
 	}
 
 	if (root != nullptr) {

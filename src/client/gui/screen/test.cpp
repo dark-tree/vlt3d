@@ -102,6 +102,12 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.drawLine(32 - 0.5, -32 - 0.5, 0 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
 	renderer.drawLine(0 - 0.5, -32 - 0.5, 32 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
 
+	renderer.setTint(255, 0, 0);
+	renderer.drawCircle(16, +40, 16, 8);
+
+	renderer.setTint(0, 255, 0);
+	renderer.drawCircle(16, -40, 16, 8);
+
 	renderer.setTint(255, 255, 255);
 	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, 1, renderer.getSprite("assets/sprites/button.png"), 4, 4, 0, 32);
 	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, (sin(t * 2) + 1) / 2, renderer.getSprite("assets/sprites/button.png"), 4, 4, 1, 32);

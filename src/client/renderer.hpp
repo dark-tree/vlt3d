@@ -31,7 +31,7 @@ class ImmediateRenderer {
 
 		std::vector<Vertex2D> mesh_2d;
 		std::vector<Vertex3D> mesh_3d;
-		BakedSprite blank;
+		BakedSprite blank, circle;
 		BillboardMode mode;
 		Color color;
 		glm::vec3 target;
@@ -79,10 +79,13 @@ class ImmediateRenderer {
 		void drawText(glm::vec2 pos, const std::string& text, glm::vec2 extend = {-1, -1});
 		void drawSprite(float x, float y, float w, float h, BakedSprite sprite);
 		void drawSprite(glm::vec2 pos, float w, float h, BakedSprite sprite);
+		void drawCircle(float x, float y, float r);
+		void drawCircle(glm::vec2 pos, float r);
 		void drawLine(float x1, float y1, float x2, float y2);
 		void drawLine(glm::vec2 pa, glm::vec2 pb);
 		void drawTiled(float x, float y, float w, float h, BakedSprite sprite, float sw, float sh);
 		void drawTiled(glm::vec2 pos, float w, float h, BakedSprite sprite, float sw, float sh);
+
 		void drawBar(float x, float y, float w, float h, float percentage, BakedSprite sprite, int rows, int columns, int row, float sprite_size);
 		void drawPatch(float x, float y, float w, float h, float s, const NinePatch& patch, bool fill = true, bool stroke = true);
 		void drawPatch(glm::vec2 pos, float w, float h, float s, const NinePatch& patch, bool fill = true, bool stroke = true);
@@ -94,6 +97,8 @@ class ImmediateRenderer {
 		void drawText(glm::vec3 pos, const std::string& text, glm::vec2 extend = {-1, -1});
 		void drawSprite(float x, float y, float z, float w, float h, BakedSprite sprite);
 		void drawSprite(glm::vec3 pos, float w, float h, BakedSprite sprite);
+		void drawCircle(float x, float y, float z, float r);
+		void drawCircle(glm::vec3 pos, float r);
 		void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
 		void drawLine(glm::vec3 pa, glm::vec3 pb);
 		void drawTiled(float x, float y, float z, float w, float h, BakedSprite sprite, float sw, float sh);

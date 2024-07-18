@@ -7,6 +7,7 @@
 ImmediateRenderer::ImmediateRenderer(Atlas& atlas, Font& font)
 : mode(BillboardMode::TWO_AXIS), atlas(atlas), font(font) {
 	this->blank = getSprite("assets/sprites/blank.png");
+	this->circle = getSprite("assets/sprites/circle.png");
 
 	// initiate settings to some default values
 	setTint(255, 255, 255, 255);
@@ -150,6 +151,14 @@ void ImmediateRenderer::drawSprite(float sx, float sy, float w, float h, BakedSp
 
 void ImmediateRenderer::drawSprite(glm::vec2 pos, float w, float h, BakedSprite sprite) {
 	drawSprite(pos.x, pos.y, w, h, sprite);
+}
+
+void ImmediateRenderer::drawCircle(float x, float y, float r) {
+	drawSprite(x - r, y - r, 2 * r, 2 * r, this->circle);
+}
+
+void ImmediateRenderer::drawCircle(glm::vec2 pos, float r) {
+	drawCircle(pos.x, pos.y, r);
 }
 
 void ImmediateRenderer::drawLine(glm::vec2 pa, glm::vec2 pb) {
@@ -412,6 +421,14 @@ void ImmediateRenderer::drawSprite(glm::vec3 pos, float w, float h, BakedSprite 
 	drawBillboardVertex(rot, pos, ex, sy, sprite.u2, sprite.v1);
 	drawBillboardVertex(rot, pos, ex, ey, sprite.u2, sprite.v2);
 
+}
+
+void ImmediateRenderer::drawCircle(float x, float y, float z, float r) {
+	drawCircle({x, y, z}, r);
+}
+
+void ImmediateRenderer::drawCircle(glm::vec3 pos, float r) {
+	drawSprite(pos, 2 * r, 2 * r, this->circle);
 }
 
 void ImmediateRenderer::drawLine(float x1, float y1, float z1, float x2, float y2, float z2) {
