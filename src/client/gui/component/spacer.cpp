@@ -1,6 +1,3 @@
-//
-// Created by magistermaks on 7/16/24.
-//
 
 #include "spacer.hpp"
 

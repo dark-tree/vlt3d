@@ -2,8 +2,8 @@
 #include "text.hpp"
 #include "client/gui/grid/context.hpp"
 
-GuiText::GuiText(Box2D box, Color color, float size, const std::string& text, VerticalAlignment vertical, HorizontalAlignment horizontal)
-: GuiComponent(box), color(color), size(size), text(text), vertical(vertical), horizontal(horizontal) {}
+GuiText::GuiText(Box2D box, Color color, float size, float tilt, const std::string& text, VerticalAlignment vertical, HorizontalAlignment horizontal)
+: GuiComponent(box), color(color), size(size), tilt(tilt), text(text), vertical(vertical), horizontal(horizontal) {}
 
 void GuiText::draw(GridContext& grid, InputContext& input, ImmediateRenderer& renderer) {
 	Box2D box = grid.getScreenBox(bounding);
@@ -39,7 +39,7 @@ GuiText::Builder& GuiText::Builder::size(float font_size) {
 }
 
 GuiText::Builder& GuiText::Builder::italics(float font_tilt) {
-	this->tilt = font_tilt;
+	this->font_tilt = font_tilt;
 	return *this;
 }
 
@@ -66,7 +66,7 @@ GuiText::Builder& GuiText::Builder::left() {
 }
 
 ComponentProducer GuiText::Builder::build() const {
-	return [box = this->getBoundBox(), color = this->color, size = this->font_size, text = this->string, va = this->vertical, ha = this->horizontal] (int x, int y) {
-		return new GuiText {box.offset(x, y), color, size, text, va, ha};
+	return [box = this->getBoundBox(), color = this->color, size = this->font_size, tilt = this->font_tilt, text = this->string, va = this->vertical, ha = this->horizontal] (int x, int y) {
+		return new GuiText {box.offset(x, y), color, size, tilt, text, va, ha};
 	};
 }

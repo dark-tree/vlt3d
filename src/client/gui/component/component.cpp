@@ -19,6 +19,8 @@ void GuiComponent::drawDebugOutline(GridContext& grid, InputContext& input, Imme
 		if (input.isMouseWithin(screen)) {
 			renderer.setAlignment(VerticalAlignment::BOTTOM);
 			renderer.setAlignment(HorizontalAlignment::LEFT);
+			renderer.setFontSize(2);
+			renderer.setFontTilt(0);
 			renderer.drawText(screen.begin(), name);
 		}
 	}

@@ -16,7 +16,7 @@ class GuiText : public GuiComponent {
 
 	public:
 
-		GuiText(Box2D box, Color color, float size, const std::string& text, VerticalAlignment vertical, HorizontalAlignment horizontal);
+		GuiText(Box2D box, Color color, float size, float tilt, const std::string& text, VerticalAlignment vertical, HorizontalAlignment horizontal);
 
 	public:
 
@@ -28,7 +28,7 @@ class GuiText : public GuiComponent {
 			private:
 
 				Color color;
-				float font_size, tilt;
+				float font_size, font_tilt;
 				std::string string;
 				VerticalAlignment vertical;
 				HorizontalAlignment horizontal;

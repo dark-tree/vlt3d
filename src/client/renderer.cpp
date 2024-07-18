@@ -216,6 +216,42 @@ void ImmediateRenderer::drawTiled(glm::vec2 pos, float w, float h, BakedSprite s
 	drawTiled(pos.x, pos.y, w, h, sprite, sw, sh);
 }
 
+void ImmediateRenderer::drawBar(float x, float y, float w, float h, float percentage, BakedSprite sprite, int rows, int columns, int row, float sprite_size) {
+
+	float wbreak = percentage * w;
+
+	if (columns < 3) {
+		logger::error("Unable to draw bar atlas with less than 3 columns!");
+		return;
+	}
+
+	float dx = (sprite.u2 - sprite.u1) / columns;
+	float dy = (sprite.v2 - sprite.v1) / rows;
+
+	float v1 = sprite.v1 + dy * row;
+	float v2 = sprite.v1 + dy * (row + 1);
+
+	float after_first = sprite.u1 + dx;
+	float before_last = sprite.u2 - dx;
+
+	// cap is in column `0` and column `columns - 1`
+	BakedSprite left {sprite.u1, v1, after_first, v2};
+	BakedSprite center {after_first, v1, before_last, v2};
+	BakedSprite right {before_last, v1, sprite.u2, v2};
+
+	float center_length = w - 2 * sprite_size;
+
+	float max_left = std::min(wbreak, sprite_size);                                // starts at `0`, goes to `sprite_size`
+	float max_center = std::min(wbreak - sprite_size, center_length);              // starts at `sprite_size` goes to `w - sprite_size`
+	float max_right = std::min(wbreak - center_length - sprite_size, sprite_size); // starts at `w - sprite_size` goes to `w`
+
+	// draw parts (is a not below the threshold)
+	if (max_left > 0)   drawTiled(x, y, max_left, h, left, sprite_size, sprite_size);
+	if (max_center > 0) drawTiled(x + sprite_size, y, max_center, h, center, sprite_size * (columns - 2), sprite_size);
+	if (max_right > 0)  drawTiled(x + sprite_size + center_length, y, max_right, h, right, sprite_size, sprite_size);
+
+}
+
 void ImmediateRenderer::drawPatch(float x, float y, float w, float h, float s, const NinePatch& patch, bool fill, bool stroke) {
 
 	float m = s / patch.getMargin();

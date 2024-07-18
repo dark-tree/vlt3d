@@ -11,7 +11,7 @@ bool GridContext::shouldAccept(Box2D box, InputContext& input, const InputEvent&
 	}
 
 	if (event.getType() == InputEvent::MOUSE) {
-		return input.isMouseWithin(box.offset(sax, say));
+		return input.isMouseWithin(box);
 	}
 
 	return false;
@@ -31,7 +31,7 @@ Box2D GridContext::getScreenBox(Box2D box) const {
 }
 
 InputResult GridContext::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
-	if (root != nullptr && shouldAccept(bounding, input, event)) {
+	if (root != nullptr && shouldAccept(getScreenBox(bounding), input, event)) {
 		return root->onEvent(*this, stack, input, event) ? InputResult::CONSUME : InputResult::BLOCK;
 	}
 

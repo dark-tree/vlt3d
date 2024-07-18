@@ -358,6 +358,7 @@ int main() {
 
 	// Open the cluster-fuck screen :D
 	stack.open(new TestScreen {});
+	stack.open(new GridScreen {});
 
 	Buffer ui_3d, ui_2d;
 	int ui_3d_len = -1, ui_2d_len = -1;

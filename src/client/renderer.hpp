@@ -83,6 +83,7 @@ class ImmediateRenderer {
 		void drawLine(glm::vec2 pa, glm::vec2 pb);
 		void drawTiled(float x, float y, float w, float h, BakedSprite sprite, float sw, float sh);
 		void drawTiled(glm::vec2 pos, float w, float h, BakedSprite sprite, float sw, float sh);
+		void drawBar(float x, float y, float w, float h, float percentage, BakedSprite sprite, int rows, int columns, int row, float sprite_size);
 		void drawPatch(float x, float y, float w, float h, float s, const NinePatch& patch, bool fill = true, bool stroke = true);
 		void drawPatch(glm::vec2 pos, float w, float h, float s, const NinePatch& patch, bool fill = true, bool stroke = true);
 

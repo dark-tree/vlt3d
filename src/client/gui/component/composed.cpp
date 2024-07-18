@@ -15,7 +15,7 @@ void GuiComposed::draw(GridContext& grid, InputContext& input, ImmediateRenderer
 }
 
 bool GuiComposed::onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) {
-	if (!grid.shouldAccept(bounding, input, event)) {
+	if (!grid.shouldAccept(grid.getScreenBox(bounding), input, event)) {
 		return false;
 	}
 
