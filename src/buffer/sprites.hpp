@@ -12,8 +12,22 @@ struct BakedSprite {
 		BakedSprite() = default;
 		BakedSprite(float u1, float v1, float u2, float v2);
 
+		/**
+		 * Assumes the sprite is a grid of the given dimensions
+		 * returns a sub-sprite at the given position
+		 */
 		BakedSprite grid(int rows, int columns, int row, int column) const;
+
+		/**
+		 * Assumes the sprite is a single column (along Y axis)
+		 * of given `length`, returns a sub-sprite at `index`
+		 */
 		BakedSprite column(int length, int index) const;
+
+		/**
+		 * Assumes the sprite is a single row (along X axis)
+		 * of given `length`, returns a sub-sprite at `index`
+		 */
 		BakedSprite row(int length, int index) const;
 
 	public:

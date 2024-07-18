@@ -1,11 +1,6 @@
 
 #include "context.hpp"
 
-
-bool GridContext::isDebugMode() const {
-	return true;
-}
-
 bool GridContext::shouldAccept(Box2D box, InputContext& input, const InputEvent& event) {
 	if (event.getType() == InputEvent::KEYBOARD) {
 		return true;
@@ -22,13 +17,26 @@ GridContext::GridContext(int width, int height, int size)
 : GridContext(width, height, - width * size / 2, - height * size / 2, 0.5f, 0.5f, size) {}
 
 GridContext::GridContext(int width, int height, int ox, int oy, float ax, float ay, int size)
-: width(width), height(height), ax(ax), ay(ay), size(size), bounding(Box2D (0, 0, width, height).scale(size).offset(ox, oy)) {
+: width(width), height(height), size(size), ax(ax), ay(ay), bounding(Box2D (0, 0, width, height).scale(size).offset(ox, oy)) {
 	this->sax = -1;
 	this->say = -1;
 }
 
 Box2D GridContext::getScreenBox(Box2D box) const {
 	return box.scale(size).offset(sax, say).offset(bounding.begin());
+}
+
+bool GridContext::isDebugMode() const {
+	return true;
+}
+
+void GridContext::setModel(ComponentProducer model) {
+	// reset the navigator
+	reset();
+
+	// swap root and scan
+	root.reset(model(0, 0));
+	root->navigatorUpdate(*this);
 }
 
 InputResult GridContext::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
@@ -44,7 +52,7 @@ InputResult GridContext::onEvent(ScreenStack& stack, InputContext& input, const 
 		}
 	}
 
-	if (root != nullptr && shouldAccept(getScreenBox(bounding), input, event)) {
+	if (root != nullptr && GridContext::shouldAccept(getScreenBox(bounding), input, event)) {
 		return root->onEvent(*this, stack, input, event) ? InputResult::CONSUME : InputResult::BLOCK;
 	}
 

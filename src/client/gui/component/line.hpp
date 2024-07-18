@@ -2,7 +2,6 @@
 
 #include "external.hpp"
 #include "component.hpp"
-#include "util/color.hpp"
 
 class GuiLine : public GuiComponent {
 
@@ -29,14 +28,21 @@ class GuiLine : public GuiComponent {
 				float line_weight;
 				float tx, ty;
 
-			public:
-
-				Builder& tint(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
-				Builder& weight(float weight);
-				Builder& to(int x, int y);
-
 				Box2D getGridBox() const final;
 				Box2D getBoundBox() const final;
+
+			public:
+
+				/// Sets the color of the line
+				Builder& tint(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
+
+				/// Sets thickness of the line in pixels
+				Builder& weight(float weight);
+
+				/// Sets the relative end of the line
+				Builder& to(int x, int y);
+
+			public:
 
 				ComponentProducer build() const final;
 

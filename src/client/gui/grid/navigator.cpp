@@ -14,6 +14,11 @@ void GridNavigator::stop() {
 	index = -1;
 }
 
+void GridNavigator::reset() {
+	stop();
+	nodes.clear();
+}
+
 bool GridNavigator::isFocused(const GuiComponent* node) const {
 	return index >= 0 && nodes[index] == node;
 }

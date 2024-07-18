@@ -5,25 +5,9 @@
 #include "buffer/allocator.hpp"
 #include "buffer/font.hpp"
 #include "vertices.hpp"
+#include "alignment.hpp"
 #include "camera.hpp"
 #include "util/color.hpp"
-
-enum struct BillboardMode {
-	ONE_AXIS,
-	TWO_AXIS,
-};
-
-enum struct VerticalAlignment {
-	TOP    = 0,
-	CENTER = 1,
-	BOTTOM = 2
-};
-
-enum struct HorizontalAlignment {
-	LEFT   = 0,
-	CENTER = 1,
-	RIGHT  = 2
-};
 
 class ImmediateRenderer {
 

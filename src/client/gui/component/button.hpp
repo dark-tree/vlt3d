@@ -2,7 +2,6 @@
 
 #include "external.hpp"
 #include "component.hpp"
-#include "client/renderer.hpp"
 
 class GuiButton : public GuiComponent {
 
@@ -32,9 +31,16 @@ class GuiButton : public GuiComponent {
 
 			public:
 
+				/// Sets the text to be displayed over the button
 				Builder& text(const std::string& text);
+
+				/// Sets the sprite to use for the button background
 				Builder& sprite(const std::string& identifier);
+
+				/// Sets the function to invoke when the button is pressed
 				Builder& then(std::function<void(ScreenStack&)> callback);
+
+			public:
 
 				ComponentProducer build() const final;
 

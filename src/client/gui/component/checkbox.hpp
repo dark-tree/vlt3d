@@ -2,15 +2,14 @@
 
 #include "external.hpp"
 #include "component.hpp"
-#include "client/renderer.hpp"
 
 class GuiCheck : public GuiComponent {
 
 	private:
 
-		bool state;
 		std::string label;
 		std::function<void(bool)> callback;
+		bool state;
 
 	public:
 
@@ -26,13 +25,22 @@ class GuiCheck : public GuiComponent {
 
 			private:
 
+				bool value;
 				std::string string;
 				std::function<void(bool)> callback;
 
 			public:
 
+				/// Sets the label of the check box, that is, the text to its right
 				Builder& label(const std::string& text);
+
+				/// Sets the function that should be called when the checkbox is switched
 				Builder& then(std::function<void(bool)> callback);
+
+				/// Sets the initial value of the checkbox
+				Builder& initial(bool initial);
+
+			public:
 
 				ComponentProducer build() const final;
 
@@ -40,6 +48,8 @@ class GuiCheck : public GuiComponent {
 
 		static inline GuiCheck::Builder of() {
 			GuiCheck::Builder builder;
+			builder.then([] (bool state) {});
+			builder.initial(false);
 			return builder;
 		}
 

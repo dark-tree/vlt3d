@@ -3,19 +3,11 @@
 #include "external.hpp"
 #include "sprites.hpp"
 
+/**
+ * Represents a Nine-Patch sprite, can be rendered using `ImmediateRenderer::drawPatch()`
+ * @see https://en.wikipedia.org/wiki/9-slice_scaling
+ */
 class NinePatch {
-
-	public:
-
-//		struct Segment {
-//
-//			BakedSprite sprite;
-//			int width, height;
-//			int x, y;
-//
-//			Segment(BakedSprite sprite, int width, int height, int x, int y);
-//
-//		};
 
 	private:
 

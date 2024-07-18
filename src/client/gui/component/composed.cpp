@@ -1,7 +1,31 @@
 
 #include "composed.hpp"
+#include "util/exception.hpp"
 #include "client/gui/grid/context.hpp"
 #include "client/gui/component/spacer.hpp"
+
+/*
+ * ComponentFactory
+ */
+
+ComponentFactory::ComponentFactory(int x, int y, ComponentBuilder& builder)
+: ox(x), oy(y), grid(builder.getGridBox()), bounding(builder.getBoundBox()), producer(builder.build()) {}
+
+Box2D ComponentFactory::getGridBox() const {
+	return grid;
+}
+
+Box2D ComponentFactory::getBoundBox() const {
+	return bounding;
+}
+
+GuiComponent* ComponentFactory::build(int x, int y) const {
+	return producer(ox + x, oy + y);
+}
+
+/*
+ * GuiComposed
+ */
 
 GuiComposed::GuiComposed(Box2D box, const std::vector<std::shared_ptr<GuiComponent>>& components)
 : GuiComponent(box), components(components) {}
@@ -15,7 +39,7 @@ void GuiComposed::draw(GridContext& grid, InputContext& input, ImmediateRenderer
 }
 
 bool GuiComposed::onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) {
-	if (!grid.shouldAccept(grid.getScreenBox(bounding), input, event)) {
+	if (!GridContext::shouldAccept(grid.getScreenBox(bounding), input, event)) {
 		return false;
 	}
 

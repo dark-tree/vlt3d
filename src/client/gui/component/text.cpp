@@ -1,5 +1,6 @@
 
 #include "text.hpp"
+#include "client/renderer.hpp"
 #include "client/gui/grid/context.hpp"
 
 GuiText::GuiText(Box2D box, Color color, float size, float tilt, const std::string& text, VerticalAlignment vertical, HorizontalAlignment horizontal)

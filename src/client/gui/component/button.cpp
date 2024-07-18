@@ -1,7 +1,6 @@
 
 #include "button.hpp"
-
-#include <utility>
+#include "client/renderer.hpp"
 #include "client/gui/grid/context.hpp"
 
 GuiButton::GuiButton(Box2D box, std::string text, std::string identifier, std::function<void(ScreenStack&)> callback)
@@ -44,7 +43,7 @@ void GuiButton::draw(GridContext& grid, InputContext& input, ImmediateRenderer& 
 bool GuiButton::onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) {
 	Box2D box = grid.getScreenBox(bounding);
 
-	if (!grid.shouldAccept(box, input, event)) {
+	if (!GridContext::shouldAccept(box, input, event)) {
 		return false;
 	}
 

@@ -2,6 +2,7 @@
 #include "button.hpp"
 
 #include "checkbox.hpp"
+#include "client/renderer.hpp"
 #include "client/gui/grid/context.hpp"
 
 GuiCheck::GuiCheck(Box2D box, std::string label, std::function<void(bool)> callback, bool initial)
@@ -42,7 +43,7 @@ void GuiCheck::draw(GridContext& grid, InputContext& input, ImmediateRenderer& r
 bool GuiCheck::onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) {
 	Box2D box = grid.getScreenBox(bounding);
 
-	if (!grid.shouldAccept(box, input, event)) {
+	if (!GridContext::shouldAccept(box, input, event)) {
 		return false;
 	}
 
@@ -83,8 +84,13 @@ GuiCheck::Builder& GuiCheck::Builder::then(std::function<void(bool)> callback) {
 	return *this;
 }
 
+GuiCheck::Builder& GuiCheck::Builder::initial(bool value) {
+	this->value = value;
+	return *this;
+}
+
 ComponentProducer GuiCheck::Builder::build() const {
-	return [box = this->getBoundBox(), label = this->string, callback = this->callback] (int x, int y) {
-		return new GuiCheck {box.offset(x, y), label, callback, false};
+	return [box = this->getBoundBox(), label = this->string, callback = this->callback, value = this->value] (int x, int y) {
+		return new GuiCheck {box.offset(x, y), label, callback, value};
 	};
 }

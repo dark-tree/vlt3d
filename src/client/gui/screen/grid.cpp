@@ -8,8 +8,7 @@
 #include "client/gui/component/checkbox.hpp"
 
 GridScreen::GridScreen() {
-
-	ComponentProducer producer = GuiComposed::of()
+	ComponentProducer model = GuiComposed::of()
 		.add(1, 0, GuiImage::of().box(3, 3).inset(0.05).sprite("assets/sprites/vkblob.png"))
 		.then(Chain::AFTER, GuiText::of().text("Hello World!").box(6, 2).center().tint(50, 50, 50).italics())
 		.then(Chain::BELOW, GuiButton::of().box(3, 1).text("Okay").sprite("assets/sprites/button.png").then([&] (auto& stack) { logger::info("Okay pressed!"); remove(); }))
@@ -20,8 +19,7 @@ GridScreen::GridScreen() {
 		.add(1, 7, GuiCheck::of().label("Click me!").then([] (bool state) { logger::info("Checkbox is now: ", state); }))
 		.build();
 
-	context.root.reset(producer(0, 0));
-	context.root->navigatorUpdate(context);
+	context.setModel(model);
 }
 
 InputResult GridScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
