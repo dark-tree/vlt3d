@@ -17,8 +17,9 @@ class GuiLine : public GuiComponent {
 
 	public:
 
-		virtual void draw(GridContext& grid, InputContext& input, ImmediateRenderer& renderer) override;
-		virtual bool onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) override;
+		virtual void draw(GridContext& grid, InputContext& input, ImmediateRenderer& renderer) final;
+		virtual bool onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) final;
+		virtual void navigatorUpdate(GridNavigator& grid) final;
 
 		class Builder : public ComponentBuilder {
 

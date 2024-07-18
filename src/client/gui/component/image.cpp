@@ -17,6 +17,10 @@ bool GuiImage::onEvent(GridContext& grid, ScreenStack& stack, InputContext& inpu
 	return false;
 }
 
+void GuiImage::navigatorUpdate(GridNavigator& grid) {
+
+}
+
 /*
  * GuiImage Builder
  */

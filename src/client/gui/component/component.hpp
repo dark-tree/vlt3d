@@ -5,6 +5,7 @@
 #include "client/gui/grid/inset.hpp"
 #include "client/gui/grid/chain.hpp"
 
+class GridNavigator;
 class GridContext;
 class ScreenStack;
 class InputContext;
@@ -101,5 +102,6 @@ class GuiComponent {
 		void drawDebugOutline(GridContext& grid, InputContext& input, ImmediateRenderer& renderer, const char* name, uint8_t r, uint8_t g, uint8_t b, float outset = 0) const;
 		virtual void draw(GridContext& grid, InputContext& input, ImmediateRenderer& renderer) = 0;
 		virtual bool onEvent(GridContext& grid, ScreenStack& stack, InputContext& input, const InputEvent& event) = 0;
+		virtual void navigatorUpdate(GridNavigator& grid) = 0;
 
 };

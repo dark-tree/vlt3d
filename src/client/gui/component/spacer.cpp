@@ -12,6 +12,10 @@ bool GuiSpacer::onEvent(GridContext& grid, ScreenStack& stack, InputContext& inp
 	return false;
 }
 
+void GuiSpacer::navigatorUpdate(GridNavigator& grid) {
+
+}
+
 /*
  * GuiSpacer Builder
  */

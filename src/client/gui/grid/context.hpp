@@ -7,8 +7,9 @@
 #include "window/input.hpp"
 #include "window/event.hpp"
 #include "client/gui/component/component.hpp"
+#include "navigator.hpp"
 
-class GridContext {
+class GridContext : public GridNavigator {
 
 	public:
 

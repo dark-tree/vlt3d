@@ -1,6 +1,7 @@
 
 #include "context.hpp"
 
+
 bool GridContext::isDebugMode() const {
 	return true;
 }
@@ -31,6 +32,18 @@ Box2D GridContext::getScreenBox(Box2D box) const {
 }
 
 InputResult GridContext::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
+	if (auto* key = event.as<KeyboardEvent>()) {
+		if (key->isKeyPressed(GLFW_KEY_TAB)) {
+			next();
+			return InputResult::CONSUME;
+		}
+
+		if (key->isKeyPressed(GLFW_KEY_END)) {
+			stop();
+			return InputResult::CONSUME;
+		}
+	}
+
 	if (root != nullptr && shouldAccept(getScreenBox(bounding), input, event)) {
 		return root->onEvent(*this, stack, input, event) ? InputResult::CONSUME : InputResult::BLOCK;
 	}

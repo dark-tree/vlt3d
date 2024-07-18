@@ -28,6 +28,12 @@ bool GuiComposed::onEvent(GridContext& grid, ScreenStack& stack, InputContext& i
 	return any;
 }
 
+void GuiComposed::navigatorUpdate(GridNavigator& grid) {
+	for (auto& component : components) {
+		component->navigatorUpdate(grid);
+	}
+}
+
 /*
  * GuiComposed Builder
  */

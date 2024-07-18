@@ -20,6 +20,10 @@ bool GuiLine::onEvent(GridContext& grid, ScreenStack& stack, InputContext& input
 	return false;
 }
 
+void GuiLine::navigatorUpdate(GridNavigator& grid) {
+
+}
+
 /*
  * GuiLine Builder
  */

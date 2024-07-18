@@ -23,6 +23,14 @@ bool GuiText::onEvent(GridContext& grid, ScreenStack& stack, InputContext& input
 	return false;
 }
 
+void GuiText::navigatorUpdate(GridNavigator& grid) {
+
+}
+
+/*
+ * GuiText Builder
+ */
+
 GuiText::Builder& GuiText::Builder::tint(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 	this->color = Color {r, g, b, a};
 	return *this;

@@ -15,9 +15,12 @@ void GuiButton::draw(GridContext& grid, InputContext& input, ImmediateRenderer& 
 	int br = input.isMouseWithin(box) ? 1 + po : 0;
 	int tc = input.isMouseWithin(box) ? 1 + po : 0;
 
+	if (grid.isFocused(this) && input.isKeyPressed(GLFW_KEY_ENTER)) {
+		br = 2;
+		tc = 2;
+	}
+
 	renderer.setTint(255, 255, 255);
-	renderer.setAlignment(VerticalAlignment::CENTER);
-	renderer.setAlignment(HorizontalAlignment::CENTER);
 	renderer.drawBar(box.x1, box.y1, extend.x, extend.y, 1.0f, renderer.getSprite(identifier), 4, 4, br, extend.y);
 
 	Color colors[3] = {{100, 100, 100}, {150, 150, 150}, {5, 5, 5}};
@@ -25,7 +28,14 @@ void GuiButton::draw(GridContext& grid, InputContext& input, ImmediateRenderer& 
 	renderer.setTint(colors[tc]);
 	renderer.setFontSize(2);
 	renderer.setFontTilt(0);
+	renderer.setAlignment(VerticalAlignment::CENTER);
+	renderer.setAlignment(HorizontalAlignment::CENTER);
 	renderer.drawText(box.begin(), text, extend);
+
+	if (grid.isFocused(this)) {
+		renderer.setTint(255, 255, 255);
+		renderer.drawBar(box.x1, box.y1, extend.x, extend.y, 1.0f, renderer.getSprite(identifier), 4, 4, 3, extend.y);
+	}
 
 	drawDebugOutline(grid, input, renderer, "GuiButton", 0, 255, 0);
 }
@@ -44,7 +54,18 @@ bool GuiButton::onEvent(GridContext& grid, ScreenStack& stack, InputContext& inp
 		}
 	}
 
+	if (auto* key = event.as<KeyboardEvent>()) {
+		if (grid.isFocused(this) && key->isKeyReleased(GLFW_KEY_ENTER)) {
+			callback(stack);
+			return true;
+		}
+	}
+
 	return false;
+}
+
+void GuiButton::navigatorUpdate(GridNavigator& grid) {
+	grid.addNavigationNode(this);
 }
 
 /*

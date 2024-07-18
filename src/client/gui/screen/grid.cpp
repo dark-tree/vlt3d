@@ -19,6 +19,7 @@ GridScreen::GridScreen() {
 		.build();
 
 	context.root.reset(producer(0, 0));
+	context.root->navigatorUpdate(context);
 }
 
 InputResult GridScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
