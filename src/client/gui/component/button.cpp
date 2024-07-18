@@ -11,27 +11,28 @@ void GuiButton::draw(GridContext& grid, InputContext& input, ImmediateRenderer& 
 	Box2D box = grid.getScreenBox(bounding);
 	glm::vec2 extend = {box.width(), box.height()};
 
-	int po = input.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT) ? 1 : 0;
-	int br = input.isMouseWithin(box) ? 1 + po : 0;
-	int tc = input.isMouseWithin(box) ? 1 + po : 0;
+	int row = input.isMouseWithin(box) ? 1 + input.isLeftPressed() : 0;
 
+	// handle navigator input
 	if (grid.isFocused(this) && input.isKeyPressed(GLFW_KEY_ENTER)) {
-		br = 2;
-		tc = 2;
+		row = 2;
 	}
 
+	// draw button body
 	renderer.setTint(255, 255, 255);
-	renderer.drawBar(box.x1, box.y1, extend.x, extend.y, 1.0f, renderer.getSprite(identifier), 4, 4, br, extend.y);
+	renderer.drawBar(box.x1, box.y1, extend.x, extend.y, 1.0f, renderer.getSprite(identifier), 4, 4, row, extend.y);
 
 	Color colors[3] = {{100, 100, 100}, {150, 150, 150}, {5, 5, 5}};
 
-	renderer.setTint(colors[tc]);
+	// draw button label
+	renderer.setTint(colors[row]);
 	renderer.setFontSize(2);
 	renderer.setFontTilt(0);
 	renderer.setAlignment(VerticalAlignment::CENTER);
 	renderer.setAlignment(HorizontalAlignment::CENTER);
 	renderer.drawText(box.begin(), text, extend);
 
+	// draw navigator outline
 	if (grid.isFocused(this)) {
 		renderer.setTint(255, 255, 255);
 		renderer.drawBar(box.x1, box.y1, extend.x, extend.y, 1.0f, renderer.getSprite(identifier), 4, 4, 3, extend.y);

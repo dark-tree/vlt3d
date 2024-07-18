@@ -18,6 +18,7 @@ class GridNavigator {
 	public:
 
 		void addNavigationNode(GuiComponent* node);
-		bool isFocused(GuiComponent* node) const;
+		bool isFocused(const GuiComponent* node) const;
+		int isNavigable(const GuiComponent* pComponent) const;
 
 };

@@ -12,6 +12,10 @@ struct BakedSprite {
 		BakedSprite() = default;
 		BakedSprite(float u1, float v1, float u2, float v2);
 
+		BakedSprite grid(int rows, int columns, int row, int column) const;
+		BakedSprite column(int length, int index) const;
+		BakedSprite row(int length, int index) const;
+
 	public:
 
 		static BakedSprite identity();

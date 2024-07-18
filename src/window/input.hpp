@@ -26,6 +26,8 @@ class InputContext {
 		bool isMouseWithin(Box2D);
 		bool isKeyPressed(int key);
 		bool isButtonPressed(int button);
+		bool isLeftPressed();
+		bool isRightPressed();
 
 };
 

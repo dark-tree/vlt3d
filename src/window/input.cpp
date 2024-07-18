@@ -23,6 +23,14 @@ bool InputContext::isButtonPressed(int button) {
 	return window.isButtonPressed(button);
 }
 
+bool InputContext::isLeftPressed() {
+	return isButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+}
+
+bool InputContext::isRightPressed() {
+	return isButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+}
+
 InputResult InputConsumer::onEvent(InputContext& context, const InputEvent& event) {
 	return InputResult::PASS; // by default input consumer does nothing, override to implement custom behavior
 }

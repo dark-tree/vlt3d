@@ -5,6 +5,7 @@
 #include "client/gui/component/text.hpp"
 #include "client/gui/component/button.hpp"
 #include "client/gui/component/line.hpp"
+#include "client/gui/component/checkbox.hpp"
 
 GridScreen::GridScreen() {
 
@@ -16,6 +17,7 @@ GridScreen::GridScreen() {
 		.add(5, 5)
 		.then(Chain::BELOW, GuiImage::of().box(3, 3).inset(0.05).sprite("assets/sprites/vkblob.png"))
 		.add(7, 5, GuiLine::of().tint(50, 7, 7).to(3, 4).weight(2))
+		.add(1, 7, GuiCheck::of().label("Click me!").then([] (bool state) { logger::info("Checkbox is now: ", state); }))
 		.build();
 
 	context.root.reset(producer(0, 0));

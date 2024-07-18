@@ -14,7 +14,7 @@ class GuiButton : public GuiComponent {
 
 	public:
 
-		GuiButton(Box2D box, std::string  text, std::string  identifier, std::function<void(ScreenStack&)> callback);
+		GuiButton(Box2D box, std::string text, std::string identifier, std::function<void(ScreenStack&)> callback);
 
 	public:
 

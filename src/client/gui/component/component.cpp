@@ -9,7 +9,10 @@ void GuiComponent::drawDebugOutline(GridContext& grid, InputContext& input, Imme
 	if (grid.isDebugMode()) {
 		Box2D screen = grid.getScreenBox(this->bounding.inset(-outset));
 
-		renderer.setTint(r, g, b, 255);
+		renderer.setAlignment(HorizontalAlignment::LEFT);
+		renderer.setFontTilt(0);
+
+		renderer.setTint(r, g, b);
 		renderer.setLineSize(1);
 		renderer.drawLine(screen.x1, screen.y1, screen.x2, screen.y1);
 		renderer.drawLine(screen.x1, screen.y1, screen.x1, screen.y2);
@@ -18,10 +21,15 @@ void GuiComponent::drawDebugOutline(GridContext& grid, InputContext& input, Imme
 
 		if (input.isMouseWithin(screen)) {
 			renderer.setAlignment(VerticalAlignment::BOTTOM);
-			renderer.setAlignment(HorizontalAlignment::LEFT);
 			renderer.setFontSize(2);
-			renderer.setFontTilt(0);
 			renderer.drawText(screen.begin(), name);
+		}
+
+		if (int i = grid.isNavigable(this)) {
+			renderer.setAlignment(VerticalAlignment::TOP);
+			renderer.setTint(255, 255, 255);
+			renderer.setFontSize(1);
+			renderer.drawText(screen.x1 + 3, screen.y1 + 3, "#" + std::to_string(i));
 		}
 	}
 }

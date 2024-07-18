@@ -8,10 +8,24 @@
 BakedSprite::BakedSprite(float u1, float v1, float u2, float v2)
 : u1(u1), v1(v1), u2(u2), v2(v2) {}
 
+BakedSprite BakedSprite::grid(int rows, int columns, int row, int column) const {
+	const float dx = (u2 - u1) / columns;
+	const float dy = (v2 - v1) / rows;
+
+	return {u1 + dx * column, v1 + dy * row, u1 + dx * (column + 1), v1 + dy * (row + 1)};
+}
+
+BakedSprite BakedSprite::column(int length, int index) const {
+	return grid(length, 1, index, 0);
+}
+
+BakedSprite BakedSprite::row(int length, int index) const {
+	return grid(1, length, 0, index);
+}
+
 BakedSprite BakedSprite::identity() {
 	return {0, 0, 1, 1};
 }
-
 
 /*
  * UnbakedSprite
