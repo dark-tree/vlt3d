@@ -49,7 +49,7 @@ class GridContext : public GridNavigator {
 		 * Check is the Grid Debug Mode is enabled and if additional info should be rendered
 		 * over the user interface
 		 */
-		bool isDebugMode() const;
+		bool isDebugMode(InputContext& input) const;
 
 		/**
 		 * Changes the model attached to this grid, this method takes care

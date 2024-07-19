@@ -45,7 +45,7 @@ void ScreenStack::draw(ImmediateRenderer& renderer, InputContext& input, Camera&
 			continue;
 		}
 
-		screen->draw(renderer, input, camera);
+		screen->draw(renderer, input, camera, next(it) == screens.rend());
 		std::advance(it, 1);
 	}
 }

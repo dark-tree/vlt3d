@@ -44,7 +44,6 @@ Window::Window(uint32_t w, uint32_t h, const char* title)
 	}
 
 	glfwSetWindowUserPointer(glfw_window, this);
-//	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetInputMode(glfw_window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	if (!glfwVulkanSupported()) {
@@ -97,6 +96,10 @@ void Window::getCursor(double* x, double* y) const {
 
 void Window::setRootInputConsumer(NULLABLE InputConsumer* root) {
 	this->root = root;
+}
+
+void Window::setMouseCapture(bool capture) {
+	glfwSetInputMode(glfw_window, GLFW_CURSOR, capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 }
 
 InputContext& Window::getInputContext() {

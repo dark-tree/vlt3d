@@ -25,7 +25,7 @@ InputResult GroupScreen::onEvent(ScreenStack& stack, InputContext& input, const 
 	return pass ? InputResult::PASS : InputResult::BLOCK;
 }
 
-void GroupScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
+void GroupScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
 	bool closed = false;
 
 	for (auto& screen : screens) {
@@ -39,7 +39,7 @@ void GroupScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera&
 			break;
 		}
 
-		screen->draw(renderer, input, camera);
+		screen->draw(renderer, input, camera, focused);
 	}
 
 	if (closed) {

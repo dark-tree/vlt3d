@@ -18,6 +18,6 @@ class GroupScreen : public Screen {
 		}
 
 		InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& key);
-		void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera);
+		void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused);
 
 };

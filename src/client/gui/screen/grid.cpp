@@ -1,5 +1,7 @@
 
 #include "grid.hpp"
+
+#include <utility>
 #include "client/gui/component/composed.hpp"
 #include "client/gui/component/image.hpp"
 #include "client/gui/component/text.hpp"
@@ -7,25 +9,25 @@
 #include "client/gui/component/line.hpp"
 #include "client/gui/component/checkbox.hpp"
 
-GridScreen::GridScreen() {
-	ComponentProducer model = GuiComposed::of()
-		.add(1, 0, GuiImage::of().box(3, 3).inset(0.05).sprite("assets/sprites/vkblob.png"))
-		.then(Chain::AFTER, GuiText::of().text("Hello World!").box(6, 2).center().tint(50, 50, 50).italics())
-		.then(Chain::BELOW, GuiButton::of().box(3, 1).text("Okay").sprite("assets/sprites/button.png").then([&] (auto& stack) { logger::info("Okay pressed!"); remove(); }))
-		.then(Chain::AFTER, GuiButton::of().box(3, 1).text("Cancel").sprite("assets/sprites/button.png").then([] (auto& stack) { logger::info("Cancel pressed!"); }))
-		.add(5, 5)
-		.then(Chain::BELOW, GuiImage::of().box(3, 3).inset(0.05).sprite("assets/sprites/vkblob.png"))
-		.add(7, 5, GuiLine::of().tint(50, 7, 7).to(3, 4).weight(2))
-		.add(1, 7, GuiCheck::of().label("Click me!").then([] (bool state) { logger::info("Checkbox is now: ", state); }))
-		.build();
-
-	context.setModel(model);
+void GridScreen::rebuildModel() {
+	this->should_rebuild = true;
 }
+
+GridScreen::GridScreen(GridContext context)
+: context(std::move(context)) {}
 
 InputResult GridScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
 	return context.onEvent(stack, input, event);
 }
 
-void GridScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
+void GridScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
+	if (should_rebuild) {
+		should_rebuild = false;
+		GuiComposed::Builder builder = GuiComposed::of();
+		buildModel(builder);
+		context.setModel(builder.build());
+		logger::info("Rebuild model for screen ", this);
+	}
+
 	context.draw(renderer, input);
 }

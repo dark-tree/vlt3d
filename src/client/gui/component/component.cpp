@@ -6,7 +6,7 @@ GuiComponent::GuiComponent(Box2D box)
 : bounding(box) {}
 
 void GuiComponent::drawDebugOutline(GridContext& grid, InputContext& input, ImmediateRenderer& renderer, const char* name, uint8_t r, uint8_t g, uint8_t b, float outset) const {
-	if (grid.isDebugMode()) {
+	if (grid.isDebugMode(input)) {
 		Box2D screen = grid.getScreenBox(this->bounding.inset(-outset));
 
 		renderer.setAlignment(HorizontalAlignment::LEFT);

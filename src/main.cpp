@@ -113,7 +113,6 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
-#include "client/gui/screen/grid.hpp"
 
 int main() {
 
@@ -358,7 +357,6 @@ int main() {
 
 	// Open the cluster-fuck screen :D
 	stack.open(new TestScreen {});
-	stack.open(new GridScreen {});
 
 	Buffer ui_3d, ui_2d;
 	int ui_3d_len = -1, ui_2d_len = -1;

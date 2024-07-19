@@ -30,7 +30,7 @@ class Screen {
 		virtual ~Screen() = default;
 
 		virtual InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event);
-		virtual void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera);
+		virtual void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused);
 
 		/**
 		 * Close this screen, no more events and draw calls

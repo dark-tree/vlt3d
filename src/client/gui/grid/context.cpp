@@ -26,8 +26,8 @@ Box2D GridContext::getScreenBox(Box2D box) const {
 	return box.scale(size).offset(sax, say).offset(bounding.begin());
 }
 
-bool GridContext::isDebugMode() const {
-	return true;
+bool GridContext::isDebugMode(InputContext& input) const {
+	return input.isKeyPressed(GLFW_KEY_F12);
 }
 
 void GridContext::setModel(ComponentProducer model) {
@@ -69,7 +69,7 @@ void GridContext::draw(ImmediateRenderer& renderer, InputContext& input) {
 	renderer.setTint(255, 255, 255);
 	renderer.drawPatch(box.begin(), width, height, size, renderer.getNinePatch("assets/sprites/gui-smol.png", 8));
 
-	if (isDebugMode()) {
+	if (isDebugMode(input)) {
 		renderer.setLineSize(1);
 		renderer.setTint(80, 110, 245);
 

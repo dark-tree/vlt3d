@@ -28,6 +28,7 @@ class InputContext {
 		bool isButtonPressed(int button);
 		bool isLeftPressed();
 		bool isRightPressed();
+		void setMouseCapture(bool capture);
 
 };
 

@@ -1,17 +1,17 @@
 
 #include "test.hpp"
+#include "pause.hpp"
 
 InputResult TestScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
 	if (auto* key = event.as<KeyboardEvent>()) {
 
 		if (key->isKeyReleased(GLFW_KEY_SPACE)) {
-			logger::info("Toggled test screen visibility");
 			test = !test;
 			return InputResult::CONSUME;
 		}
 
 		if (key->isKeyReleased(GLFW_KEY_ESCAPE)) {
-			remove();
+			stack.open(new PauseScreen {});
 			return InputResult::CONSUME;
 		}
 
@@ -20,7 +20,11 @@ InputResult TestScreen::onEvent(ScreenStack& stack, InputContext& input, const I
 	return InputResult::PASS;
 }
 
-void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
+void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
+
+	if (focused) {
+		input.setMouseCapture(true);
+	}
 
 	if (!test) {
 		renderer.setAlignment(HorizontalAlignment::LEFT);

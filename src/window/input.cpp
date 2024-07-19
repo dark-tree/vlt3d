@@ -31,6 +31,10 @@ bool InputContext::isRightPressed() {
 	return isButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
 }
 
+void InputContext::setMouseCapture(bool capture) {
+	window.setMouseCapture(capture);
+}
+
 InputResult InputConsumer::onEvent(InputContext& context, const InputEvent& event) {
 	return InputResult::PASS; // by default input consumer does nothing, override to implement custom behavior
 }
