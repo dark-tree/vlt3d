@@ -27,7 +27,7 @@ Box2D GridContext::getScreenBox(Box2D box) const {
 }
 
 bool GridContext::isDebugMode(InputContext& input) const {
-	return input.isKeyPressed(GLFW_KEY_F12);
+	return input.isKeyPressed(GLFW_KEY_F1);
 }
 
 void GridContext::setModel(ComponentProducer model) {
