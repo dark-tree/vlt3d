@@ -134,7 +134,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	endif()
 
 	target_compile_options(external PRIVATE -Wno-volatile)
-	target_compile_options(main PRIVATE -Wno-volatile -Wall)
+	target_compile_options(main PRIVATE -Wno-volatile -Wall -Werror=return-type)
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+
+	# we4715 - treat missing return statement as error
+	target_compile_options(main PRIVATE /W4 /we4715)
 endif()
 
 # Copy assets if any exist
