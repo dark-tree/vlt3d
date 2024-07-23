@@ -363,7 +363,7 @@ int main() {
 		}
 
 		// record commands
-		CommandRecorder& commandRecorder = frames[frame].buffer.record()
+		CommandRecorder commandRecorder = frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(pipeline_3d_mix)
 			.bindDescriptorSet(frames[frame].set)
