@@ -65,3 +65,4 @@
 
 // usage hints
 #define READONLY
+#define NULLABLE

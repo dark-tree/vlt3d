@@ -65,7 +65,7 @@ class ImageData {
 			}
 		}
 
-		void save(const std::string& path) {
+		void save(const std::string& path) const {
 			stbi_write_png(path.c_str(), w, h, c, pixels, w * c);
 		}
 
