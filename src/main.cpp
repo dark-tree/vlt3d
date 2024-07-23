@@ -161,30 +161,12 @@ int main() {
 
 	Atlas atlas = AtlasBuilder::createSimpleAtlas("assets/sprites");
 
-	Chunk chunk {0, 0, 0};
-	chunk.random(10000);
-	drawChunk(chunk, atlas);
+	World world(8888);
 
 	Font font {8};
 	font.addCodePage(atlas, "assets/sprites/8x8font.png", 0);
 
 	atlas.getImage().save("atlas.png");
-
-	// vertex buffer
-	Buffer vertices;
-
-	{
-		BufferInfo buffer_builder {mesh.size() * sizeof(Vertex3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
-		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-		vertices = allocator.allocateBuffer(buffer_builder);
-
-		MemoryMap map = vertices.access().map();
-		map.write(mesh.data(), mesh.size() * sizeof(Vertex3D));
-		map.flush();
-		map.unmap();
-	}
 
 	// swapchain creation
 	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
@@ -353,6 +335,7 @@ int main() {
 	ScreenStack stack;
 	ImmediateRenderer renderer {atlas, font};
 	Camera camera {window};
+	camera.move({0, 5, 0});
 	window.setRootInputConsumer(&stack);
 
 	// Open the cluster-fuck screen :D
@@ -364,15 +347,21 @@ int main() {
 	while (!window.shouldClose()) {
 		window.poll();
 		camera.update();
+		
+		std::list<ChunkBuffer>& buffers = world.getBuffers();
 
 		Frame& ref = frames[frame];
 		ref.data.model = glm::identity<glm::mat4>();
-		ref.data.proj = glm::perspective(glm::radians(45.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 100.0f);
+		ref.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 		ref.data.view = camera.getView();
 
 		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
 
+		world.closeBuffers();
+		world.generateAround(camera.getPosition(), 5);
+		world.draw(atlas, pool, allocator, camera.getPosition(), 8);
+    
 		// Render the screens into immediate buffers, this is obviously WIP
 		// * Horribly inefficient
 		// * Incompatible with threading and concurrent frames
@@ -388,15 +377,17 @@ int main() {
 		}
 
 		// record commands
-		frames[frame].buffer.record()
+		CommandRecorder commandRecorder = frames[frame].buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(pipeline_3d_mix)
 			.bindDescriptorSet(frames[frame].set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
-			.setDynamicScissors(0, 0, extent.width, extent.height)
-			.bindBuffer(vertices)
-			.draw(mesh.size())
-			.bindPipeline(pipeline_3d_tint)
+			.setDynamicScissors(0, 0, extent.width, extent.height);
+		for (auto& buffer : buffers) {
+			commandRecorder.bindBuffer(buffer.buffer)
+				.draw(buffer.size);
+		}		
+		commandRecorder.bindPipeline(pipeline_3d_tint)
 			.bindBuffer(ui_3d)
 			.draw(ui_3d_len)
 			.bindPipeline(pipeline_2d_tint)

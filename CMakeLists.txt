@@ -58,6 +58,13 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+		siv
+		GIT_REPOSITORY https://github.com/Reputeless/PerlinNoise
+		GIT_TAG v3.0.0
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
 		shaderc
 		GIT_REPOSITORY https://github.com/google/shaderc
 		GIT_TAG v2023.4
@@ -88,7 +95,7 @@ set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
 # ... And finally add shaderc!
 add_subdirectory(${shaderc_SOURCE_DIR} ${shaderc_BINARY_DIR})
-FetchContent_MakeAvailable(glfw vma stb glm)
+FetchContent_MakeAvailable(glfw vma stb glm siv)
 
 include_directories(
 		src/
@@ -99,6 +106,7 @@ include_directories(
 		${shaderc_SOURCE_DIR}/libshaderc/include # Headers in ./shaderc
 		${Vulkan_INCLUDE_DIRS}                   # Headers in ./vulcan
 		${OpenAL_INCLUDE_DIRS}                   # Headers in ./AL
+		${siv_SOURCE_DIR}                        # Headers in ./
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES
