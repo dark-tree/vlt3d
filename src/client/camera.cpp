@@ -41,26 +41,26 @@ void Camera::update() {
 	const float speed = this->speed * this->delta_time;
 
 	//keyboard input
-	if (window.isPressed(GLFW_KEY_W)) {
+	if (window.isKeyPressed(GLFW_KEY_W)) {
 		this->pos += this->direction * speed;
 	}
 
-	if (window.isPressed(GLFW_KEY_S)) {
+	if (window.isKeyPressed(GLFW_KEY_S)) {
 		this->pos -= this->direction * speed;
 	}
 
-	if (window.isPressed(GLFW_KEY_D)) {
+	if (window.isKeyPressed(GLFW_KEY_D)) {
 		glm::vec3 vec = glm::cross(this->direction, glm::vec3(0, 1, 0));
 		this->pos -= glm::normalize(vec) * speed;
 	}
 
-	if (window.isPressed(GLFW_KEY_A)) {
+	if (window.isKeyPressed(GLFW_KEY_A)) {
 		glm::vec3 vec = glm::cross(this->direction, glm::vec3(0, 1, 0));
 		this->pos += glm::normalize(vec) * speed;
 	}
 
-	this->pos.y -= (window.isPressed(GLFW_KEY_Q)) ? speed : 0;
-	this->pos.y += (window.isPressed(GLFW_KEY_E)) ? speed : 0;
+	this->pos.y -= (window.isKeyPressed(GLFW_KEY_Q)) ? speed : 0;
+	this->pos.y += (window.isKeyPressed(GLFW_KEY_E)) ? speed : 0;
 }
 
 void Camera::getCursorPos(float* x, float* y) {

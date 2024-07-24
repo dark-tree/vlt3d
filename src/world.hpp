@@ -14,7 +14,9 @@ struct ChunkBuffer {
 };
 
 class Chunk {
+
 	private:
+
 		std::vector<Vertex3D> mesh;
 		std::unique_ptr<Buffer> vertex_buffer;
 		uint32_t blocks[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE] = { 0 };
@@ -28,12 +30,13 @@ class Chunk {
 		std::mutex timeout_mutex;
 		
 	public:
+
 		int x, y, z;
 		// is the chunk currently generating (flag used by World)
 		bool busy;
 
 		Chunk(int x, int y, int z)
-		: x(x), y(y), z(z), dirty(true), vertex_buffer(nullptr), empty(true), busy(false), timeout(false) { }
+		: vertex_buffer(nullptr), dirty(true), empty(true), timeout(false), x(x), y(y), z(z), busy(false) { }
 
 		inline uint32_t getBlock(int x, int y, int z) {
 			return blocks[(x * CHUNK_SIZE * CHUNK_SIZE) + (y * CHUNK_SIZE) + (z)];
@@ -113,7 +116,7 @@ class Chunk {
 								uint32_t block = getBlock(x, y, z);
 
 								if (block) {
-									BakedSprite sprite = (block % 2 == 1) ? atlas.getSprite("assets/sprites/vkblob.png") : atlas.getSprite("assets/sprites/digital.png");
+									BakedSprite sprite = (block % 2 == 1) ? atlas.getBakedSprite("assets/sprites/vkblob.png") : atlas.getBakedSprite("assets/sprites/digital.png");
 									float shade = std::clamp((this->y * CHUNK_SIZE + y) / (CHUNK_SIZE * 2.0f) + 0.2f, 0.0f, 1.0f);
 
 									drawCube(
@@ -164,15 +167,13 @@ class Chunk {
 
 						return ChunkBuffer(this, *vertex_buffer, buffer_size);
 					}
-				}
-				else {
+				} else {
 					dirty = false;
 				}
 			}
 			if (vertex_buffer == nullptr) {
 				return ChunkBuffer(this, Buffer(), 0);
-			}
-			else {
+			} else {
 				return ChunkBuffer(this, *vertex_buffer, buffer_size);
 			}
 		}
@@ -205,15 +206,15 @@ class Chunk {
 		}
 
 		bool getTimeout() {
-			{
-				std::lock_guard<std::mutex> lock(timeout_mutex);
-				return timeout;
-			}
+			std::lock_guard<std::mutex> lock(timeout_mutex);
+			return timeout;
 		}
 };
 
 class World {
+
 	private:
+
 		std::unordered_map<glm::ivec3, Chunk*> chunks;
 		siv::PerlinNoise noise;
 		glm::ivec3 max_c_bounds;
@@ -300,7 +301,7 @@ class World {
 
 		// Dispose the buffer after it is no longer needed.
 		// The buffer will be deleted during the next call to closeBuffers.
-		void dispose_buffer(std::unique_ptr<Buffer> buffer) {
+		void disposeBuffer(std::unique_ptr<Buffer> buffer) {
 			std::lock_guard<std::mutex> lock(buffers_to_close_mutex);
 			buffers_to_close.push_back(std::move(buffer));
 		}
@@ -308,7 +309,7 @@ class World {
 	public:	
 
 		World(int seed) 
-			: noise(siv::PerlinNoise(seed)), min_c_bounds(-100, -1, -100), max_c_bounds(100, 4, 100) { }
+		: noise(siv::PerlinNoise(seed)), max_c_bounds(100, 4, 100), min_c_bounds(-100, -1, -100) {}
 
 		// Generate chunk data around the given position in the radius.
 		// If the chunk already exists, it will not be generated again.
@@ -345,7 +346,7 @@ class World {
 						chunk->setTimeout(false);
 						futures.push_back(pool.defer([&, chunk]() -> ChunkBuffer {
 							return chunk->draw(atlas, allocator, [&](std::unique_ptr<Buffer> buffer) {
-								dispose_buffer(std::move(buffer));
+								disposeBuffer(std::move(buffer));
 							});
 						}));
 					}
@@ -354,7 +355,7 @@ class World {
 					if (!chunk->isClosed()) {
 						chunk->setTimeout(true);
 						chunk->close([&](std::unique_ptr<Buffer> buffer) {
-							dispose_buffer(std::move(buffer));
+							disposeBuffer(std::move(buffer));
 						});
 						// delete buffer from buffer list
 						auto it = std::find_if(buffers.begin(), buffers.end(), [&](ChunkBuffer& buffer) {
@@ -401,7 +402,7 @@ class World {
 
 		// Fill the given area with random blocks.
 		void random(int count, glm::ivec3 from, glm::ivec3 to) {
-			while (count-- > 0) {
+			while (count --> 0) {
 				int x = rand() % (to.x - from.x) + from.x;
 				int y = rand() % (to.y - from.y) + from.y;
 				int z = rand() % (to.z - from.z) + from.z;

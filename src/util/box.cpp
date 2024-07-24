@@ -56,5 +56,5 @@ Box2D Box2D::envelop(Box2D other) const {
 }
 
 Box2D Box2D::round() const {
-	return {floor(x1), floor(y1), ceil(x2), ceil(y2)};
+	return {std::floor(x1), std::floor(y1), std::ceil(x2), std::ceil(y2)};
 }
