@@ -23,6 +23,12 @@ class Buffer {
 
 };
 
+/**
+ * OpenGL style generic buffer that automatically resizes
+ * this is a stop-gap solution as doing something like this
+ * in vulkan is simply a crime but for now - its better than
+ * creating a new buffer each frame
+ */
 class BasicBuffer {
 
 	private:

@@ -1,10 +1,37 @@
 #pragma once
 
+#include <utility>
+
 #include "logger.hpp"
+#include "timer.hpp"
 #include "external.hpp"
 
 using Task = std::function<void()>;
 
+/**
+ * A wrapper around a std::function that allows
+ * TaskPool to attach additional information to tasks
+ */
+class ManagedTask {
+
+	private:
+
+		Task task;
+		Timer timer;
+
+	public:
+
+		ManagedTask() = default;
+		ManagedTask(const Task& task);
+
+		inline void call() const;
+
+};
+
+/**
+ * This class can be used to execute callbacks on
+ * specific threads or in specific places
+ */
 class TaskQueue {
 
 	private:
@@ -12,42 +39,29 @@ class TaskQueue {
 		std::mutex queue_mutex;
 		std::queue<Task> tasks;
 
-		// producer methods
 	public:
 
-		void enqueue(const Task& task) {
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			tasks.emplace(task);
-		}
+		void enqueue(const Task& task);
 
 		template <typename Func, typename Arg, typename... Args>
 		void enqueue(Func func, Arg arg, Args... args) {
 			enqueue(std::bind(func, arg, args...));
 		}
 
-		// consumer methods
+
 	public:
 
-		void execute() {
-			std::vector<Task> locals;
-			locals.reserve(locals.size());
-
-			{
-				std::unique_lock<std::mutex> lock(queue_mutex);
-
-				while (!tasks.empty()) {
-					locals.emplace_back(std::move(tasks.front()));
-					tasks.pop();
-				}
-			}
-
-			for (Task& task : locals) {
-				task();
-			}
-		}
+		/**
+		 * Execute all pending task in this queue
+		 */
+		void execute();
 
 };
 
+/**
+ * A basic thread pool implementation with
+ * support for std::futures
+ */
 class TaskPool {
 
 	private:
@@ -56,83 +70,39 @@ class TaskPool {
 
 		std::vector<std::thread> workers;
 		std::mutex queue_mutex;
-		std::queue<Task> tasks;
+		std::queue<ManagedTask> tasks;
 		std::condition_variable condition;
 
-		void run() {
-
-			Task task;
-			while (true) {
-				{
-					std::unique_lock<std::mutex> lock(queue_mutex);
-
-					// wait for task to appear in tasks queue or for the stop sequance to begin
-					condition.wait(lock, [this] { return this->stop || !this->tasks.empty(); });
-					if (stop && tasks.empty()) return;
-
-					task = std::move(tasks.front());
-					tasks.pop();
-				}
-
-				task();
-			}
-
-		}
+		void run();
 
 	public:
 
-		static inline size_t optimal() {
-			return std::max((int) std::thread::hardware_concurrency() - 1, 1);
-		}
+		TaskPool(size_t count = TaskPool::optimal());
+		~TaskPool();
 
-		TaskPool(size_t count = TaskPool::optimal())
-		: stop(false) {
-			logger::info("Created thread pool ", this, " of size: ", count);
+		/**
+		 * Get the "optimal" number of threads for a
+		 * thread pool on this hardware
+		 */
+		static inline size_t optimal();
 
-			while (count --> 0) {
-				workers.emplace_back(&TaskPool::run, this);
-			}
-		}
+		/**
+		 * Enqueue a task for execution by one of the threads
+		 * on this thread pool, the tasks start execution in a FIFO order
+		 */
+		void enqueue(const Task& task);
 
-		~TaskPool() {
-			{
-				std::unique_lock<std::mutex> lock(queue_mutex);
-				stop = true;
-			}
-
-			this->condition.notify_all();
-
-			for(auto& worker : this->workers) {
-				worker.join();
-			}
-
-			logger::info("Stopped thread pool ", this);
-		}
-
-		void enqueue(const Task& task) {
-			{
-				std::unique_lock<std::mutex> lock(queue_mutex);
-
-				// don't allow enqueueing after stopping the pool
-				if (stop) {
-					throw std::runtime_error("Unable to add task to a stopped pool!");
-				}
-
-				if (tasks.size() > 64) {
-					logger::warn("Thread pool ", this, " can't keep up! ", tasks.size(), " tasks awaiting execution!");
-				}
-
-				tasks.emplace(task);
-			}
-
-			condition.notify_one();
-		}
+	public:
 
 		template <typename Func, typename Arg, typename... Args>
 		void enqueue(Func func, Arg arg, Args... args) {
 			this->enqueue(std::bind(func, arg, args...));
 		}
 
+		/**
+		 * Wraps the given function in a std::future and returns it
+		 * while enqueuing the task for execution on this thread pool
+		 */
 		template <typename F, typename T = typename std::invoke_result<F>::type>
 		std::future<T> defer(const F& task) {
 			auto* raw_promise = new std::promise<T>();
