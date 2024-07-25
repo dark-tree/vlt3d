@@ -60,6 +60,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// Lib Format
+#include "tt.hpp"
+#include "bt.hpp"
+
 // Perlin noise
 #include "PerlinNoise.hpp"
 

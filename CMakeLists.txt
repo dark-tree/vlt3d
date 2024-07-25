@@ -65,6 +65,13 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+		format
+		GIT_REPOSITORY https://github.com/magistermaks/lib-format
+		GIT_TAG v0.1.0
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
 		shaderc
 		GIT_REPOSITORY https://github.com/google/shaderc
 		GIT_TAG v2023.4
@@ -95,7 +102,7 @@ set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
 # ... And finally add shaderc!
 add_subdirectory(${shaderc_SOURCE_DIR} ${shaderc_BINARY_DIR})
-FetchContent_MakeAvailable(glfw vma stb glm siv)
+FetchContent_MakeAvailable(glfw vma stb glm siv format)
 
 include_directories(
 		src/
@@ -107,6 +114,7 @@ include_directories(
 		${Vulkan_INCLUDE_DIRS}                   # Headers in ./vulcan
 		${OpenAL_INCLUDE_DIRS}                   # Headers in ./AL
 		${siv_SOURCE_DIR}                        # Headers in ./
+		${format_SOURCE_DIR}/src                 # Headers in ./
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES
@@ -129,6 +137,8 @@ target_link_libraries(main
 		Threads::Threads
 		Vulkan::Vulkan
 		glfw
+		lib-format-tt
+		lib-format-bt
 		shaderc
 		external
 )
@@ -152,6 +162,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 endif()
 
 # Copy assets if any exist
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
-	file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+	# This seams to work or at least be better but if there are still issues
+	# consider doing it like this: https://stackoverflow.com/a/77075253
+
+	add_custom_target(copy-assets ALL
+			COMMAND ${CMAKE_COMMAND} -E copy_directory
+			"${CMAKE_SOURCE_DIR}/assets"
+			"${CMAKE_BINARY_DIR}/assets"
+	)
+
+	add_dependencies(main copy-assets)
 endif()
