@@ -24,9 +24,6 @@ class Window {
 
 		Window(uint32_t w, uint32_t h, const char* title);
 
-		[[deprecated("Use isKeyPressed")]]
-		bool isPressed(int key) const;
-
 		void poll() const;
 		bool shouldClose() const;
 		void getFramebufferSize(int* width, int* height) const;
@@ -38,6 +35,6 @@ class Window {
 		void setRootInputConsumer(NULLABLE InputConsumer* root);
 		void setMouseCapture(bool capture);
 
-			InputContext& getInputContext();
+		InputContext& getInputContext();
 
 };

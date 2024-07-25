@@ -58,10 +58,6 @@ Window::Window(uint32_t w, uint32_t h, const char* title)
 	//glfwSwapInterval(0);
 }
 
-bool Window::isPressed(int key) const {
-	return isKeyPressed(key);
-}
-
 void Window::poll() const {
 	glfwPollEvents();
 }

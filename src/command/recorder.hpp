@@ -76,7 +76,7 @@ class CommandRecorder {
 			return *this;
 		}
 		
-		CommandRecorder& bindBuffer(Buffer& buffer) {
+		CommandRecorder& bindBuffer(const Buffer& buffer) {
 			VkDeviceSize offsets[] = {0};
 			vkCmdBindVertexBuffers(vk_buffer, 0, 1, &buffer.vk_buffer, offsets);
 			return *this;

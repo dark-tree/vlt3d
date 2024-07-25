@@ -19,9 +19,6 @@ class Atlas {
 
 	public:
 
-		[[deprecated("Use Atlas::getBakedSprite")]]
-		BakedSprite getSprite(const std::string& identifier) const;
-
 		BakedSprite getBakedSprite(const std::string& identifier) const;
 		UnbakedSprite getUnbakedSprite(const std::string& identifier) const;
 		NinePatch getNinePatch(const std::string& identifier, int m) const;

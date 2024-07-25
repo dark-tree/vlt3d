@@ -89,6 +89,6 @@ class ImmediateRenderer {
 		void drawTiled(glm::vec3 pos, float w, float h, BakedSprite sprite, float sw, float sh);
 
 		void prepare(VkExtent2D extend);
-		void getBuffers(Allocator& allocator, Buffer* buf1, int* len1, Buffer* buf2, int* len2);
+		void write(Allocator& allocator, BasicBuffer& buffer_3d, BasicBuffer& buffer_2d);
 
 };

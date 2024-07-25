@@ -18,11 +18,6 @@ const PairedSprite& Atlas::getSpritePair(const std::string& identifier) const {
 	return util::fallback_get(sprites, identifier, fallback);
 }
 
-[[deprecated("Use Atlas::getBakedSprite")]]
-BakedSprite Atlas::getSprite(const std::string& identifier) const {
-	return getBakedSprite(identifier);
-}
-
 BakedSprite Atlas::getBakedSprite(const std::string& identifier) const {
 	return getSpritePair(identifier).getBaked();
 }

@@ -3,72 +3,65 @@
 
 void Camera::update() {
 	
-	this->updateTime();
-	float x = 0, y = 0;
+	float time_delta = getTimeDelta();
+	glm::vec2 mouse_delta = getMouseDelta();
 
-	// get cursors position
-	getCursorPos(&x, &y);
-	double delta_x = -1.0f * (cursor.x - x) * this->sensivity;
-	double delta_y = +1.0f * (cursor.y - y) * this->sensivity;
-	cursor.x = x;
-	cursor.y = y;
+	// calculate and clamp the camera angle, in degrees
+	angle.x = angle.x - mouse_delta.x;
+	angle.y = std::clamp(angle.y - mouse_delta.y, -89.0f, +89.0f);
 
-	x = angle.x - delta_x;
-	y = angle.y - delta_y;
-
-	// limit viewing angles
-	if (y > +89.0) y = +89.0;
-	if (y < -89.0) y = -89.0;
-
-	this->angle.x = x;
-	this->angle.y = y;
-
-	// calculate rotation
-	x = glm::radians(x);
-	y = glm::radians(y);
-	this->rotation.x = x + glm::radians(-90.0f);
-	this->rotation.y = y;
+	// calculate rotation, in radians
+	float rx = glm::radians(angle.x);
+	float ry = glm::radians(angle.y);
+	this->rotation.x = rx + glm::radians(-90.0f);
+	this->rotation.y = ry;
 
 	// vector representing where the camera is currently pointing
-	this->direction = {
-		 cos(x) * cos(y),
-		-sin(y),
-		 sin(x) * cos(y)
-	};
+	this->direction = glm::normalize(glm::vec3 {
+		 cos(rx) * cos(ry),
+		-sin(ry),
+		 sin(rx) * cos(ry)
+	});
 
-	this->direction = glm::normalize(this->direction);
+	const float multiplier = speed * time_delta;
 
-	const float speed = this->speed * this->delta_time;
-
-	//keyboard input
+	// keyboard input
 	if (window.isKeyPressed(GLFW_KEY_W)) {
-		this->pos += this->direction * speed;
+		this->pos += this->direction * multiplier;
 	}
 
 	if (window.isKeyPressed(GLFW_KEY_S)) {
-		this->pos -= this->direction * speed;
+		this->pos -= this->direction * multiplier;
 	}
 
 	if (window.isKeyPressed(GLFW_KEY_D)) {
 		glm::vec3 vec = glm::cross(this->direction, glm::vec3(0, 1, 0));
-		this->pos -= glm::normalize(vec) * speed;
+		this->pos -= glm::normalize(vec) * multiplier;
 	}
 
 	if (window.isKeyPressed(GLFW_KEY_A)) {
 		glm::vec3 vec = glm::cross(this->direction, glm::vec3(0, 1, 0));
-		this->pos += glm::normalize(vec) * speed;
+		this->pos += glm::normalize(vec) * multiplier;
 	}
 
-	this->pos.y -= (window.isKeyPressed(GLFW_KEY_Q)) ? speed : 0;
-	this->pos.y += (window.isKeyPressed(GLFW_KEY_E)) ? speed : 0;
+	this->pos.y -= window.isKeyPressed(GLFW_KEY_Q) ? multiplier : 0;
+	this->pos.y += window.isKeyPressed(GLFW_KEY_E) ? multiplier : 0;
 }
 
-void Camera::getCursorPos(float* x, float* y) {
-	double cx, cy;
-	window.getCursor(&cx, &cy);
+float Camera::getTimeDelta() {
+	const double now = glfwGetTime();
 
-	*x = (float) cx;
-	*y = (float) cy;
+	float delta = now - this->last_time;
+	this->last_time = now;
+	return delta;
+}
+
+glm::vec2 Camera::getMouseDelta() {
+	glm::vec2 mouse = window.getInputContext().getMouse();
+	glm::vec2 delta = (cursor - mouse) * glm::vec2 {-1, +1} * sensitivity;
+	cursor = mouse;
+
+	return delta;
 }
 
 Camera::Camera(Window& window, float sensitivity, float speed)
@@ -78,22 +71,15 @@ Camera::Camera(Window& window, float sensitivity, float speed)
 	this->rotation = glm::vec3(0);
 	this->pos = glm::vec3(2, 2, -2);
 
-	this->sensivity = sensitivity;
+	this->sensitivity = sensitivity;
 	this->speed = speed;
 
-	getCursorPos(&cursor.x, &cursor.y);
-	this->last_frame = glfwGetTime();
+	this->cursor = window.getInputContext().getMouse();
+	this->last_time = glfwGetTime();
 }
 
 void Camera::move(const glm::vec3& pos) {
 	this->pos = pos;
-}
-
-void Camera::updateTime() {
-	const double now = glfwGetTime();
-
-	this->delta_time = now - this->last_frame;
-	this->last_frame = now;
 }
 
 glm::vec3 Camera::getPosition() const {

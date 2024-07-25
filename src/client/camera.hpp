@@ -16,14 +16,12 @@ class Camera : public WorldObject {
 		glm::vec3 rotation;
 		glm::vec3 direction;
 
-		float sensivity;
+		float sensitivity;
 		float speed;
+		double last_time;
 
-		double last_frame;
-		double delta_time;
-
-		void updateTime();
-		void getCursorPos(float* x, float* y);
+		float getTimeDelta();
+		glm::vec2 getMouseDelta();
 
 	public:
 
