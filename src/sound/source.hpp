@@ -51,7 +51,7 @@ class SoundSource {
 			return path;
 		}
 
-		bool should_drop() const {
+		bool shouldRemove() const {
 			int state;
 			alGetSourcei(al_source, AL_SOURCE_STATE, &state);
 
@@ -135,7 +135,7 @@ class SoundSource {
 	// state getters
 	public:
 
-		int samples() {
+		int samples() const {
 			int value;
 			alGetSourcei(al_source, AL_SAMPLE_OFFSET, &value);
 			alCheckError("alGetSourcei");
@@ -143,7 +143,7 @@ class SoundSource {
 			return value;
 		}
 
-		float seconds() {
+		float seconds() const {
 			float value;
 			alGetSourcef(al_source, AL_SEC_OFFSET, &value);
 			alCheckError("alGetSourcef");

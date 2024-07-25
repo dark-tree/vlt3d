@@ -49,6 +49,10 @@ class SoundSystem {
 		}
 
 		~SoundSystem() {
+			// C++ will first deconstruct SoundSystem and only then the sound sources which causes errors
+			// as the context is already gone, so clear the array first to force the correct order
+			sources.clear();
+
 			alcMakeContextCurrent(NULL);
 			alcDestroyContext(al_context);
 			alcCloseDevice(al_device);
@@ -61,9 +65,9 @@ class SoundSystem {
 			auto iter = sources.begin();
 
 			while (iter != sources.end()) {
-				bool drop = (*iter)->should_drop();
+				bool remove = (*iter)->shouldRemove();
 
-				if (drop) {
+				if (remove) {
 					iter = sources.erase(iter);
 				} else {
 					(*iter)->update();
