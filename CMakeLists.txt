@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(FETCHCONTENT_QUIET OFF)
 
+find_package(Python REQUIRED COMPONENTS Interpreter)
 find_package(Threads REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(OpenAL)
@@ -84,8 +85,8 @@ message("Fetching external dependencies for target 'shaderc'...")
 
 # Invoke their very special dependency python script
 execute_process(
-		COMMAND python3 ${shaderc_SOURCE_DIR}/utils/git-sync-deps
-		COMMAND_ECHO STDOUT # TODO this doesn't work (no real-time output)
+		COMMAND ${Python_EXECUTABLE} -u ${shaderc_SOURCE_DIR}/utils/git-sync-deps
+		COMMAND_ECHO STDOUT
 		WORKING_DIRECTORY ${shaderc_SOURCE_DIR}
 		RESULT_VARIABLE GIT_SYNC_DEPS_RESULT
 )
