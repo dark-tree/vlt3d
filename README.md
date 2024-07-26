@@ -9,6 +9,13 @@
  - You will also need the LUNARG Vulkan SDK, try running `sudo apt install vulkan-sdk` if that failes you will need to add the LUNARG PPA,
 for more info see https://vulkan.lunarg.com/sdk/home#linux (see the "Ubuntu Packages" section under Linux)
 
+Due to extremely long link times with GCC's `ld` it is recommend 
+to use the [mold linker](https://github.com/rui314/mold):
+
+```bash
+sudo apt install mold
+```
+
 ### Running
 To run VLT3D execute the `main` cmake target, 
 like so:
@@ -16,7 +23,7 @@ like so:
 ```bash
 # Build
 mkdir build
-cmake . -B build
+cmake . -B build -G Ninja
 cmake --build build/ --target main -j $(($(nproc --all) + 1))
 
 # Execute

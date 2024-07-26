@@ -17,6 +17,19 @@ if (CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
 	message(FATAL_ERROR "In source building is deprecated, select another build directory!")
 endif()
 
+# Use the mold linker automatically for GCC if available
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	find_program(MOLD_PROGRAM mold)
+
+	if (MOLD_PROGRAM)
+		message(NOTICE "The MOLD linker was found: ${MOLD_PROGRAM}")
+		set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=mold")
+		set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=mold")
+	else()
+		message(NOTICE "The MOLD linker was NOT found, consider installing it to!")
+	endif()
+endif()
+
 if (NOT OpenAL_FOUND)
 	message(NOTICE "OpenAL was NOT found, falling back to OpenAL-Soft!")
 

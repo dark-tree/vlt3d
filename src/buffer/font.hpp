@@ -38,9 +38,6 @@ class Glyph {
 
 class Font {
 
-
-
-
 	private:
 
 		struct Override {
