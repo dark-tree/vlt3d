@@ -3,6 +3,7 @@
 #include "external.hpp"
 #include "buffer/atlas.hpp"
 #include "buffer/font.hpp"
+#include "render/view.hpp"
 
 class CommandBuffer;
 class Device;

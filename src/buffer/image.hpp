@@ -1,12 +1,18 @@
 #pragma once
 
 #include "external.hpp"
-#include "render/view.hpp"
+#include "memory.hpp"
 
 class Image;
 class CommandRecorder;
 class Allocator;
+class ImageViewBuilder;
 
+/**
+ * Class for representing any CPU-accessible image data
+ * both loaded from a file or created dynamically, it implements
+ * certain helpful image manipulation methods like `blit()` and `resize()`
+ */
 class ImageData {
 
 	private:
@@ -23,107 +29,81 @@ class ImageData {
 
 	public:
 
-		ImageData() {}
+		ImageData() = default;
+		ImageData(Type type, void* pixels, int w, int h, int c);
 
-		ImageData(Type type, void* pixels, int w, int h, int c)
-		: type(type), pixels(pixels), w(w), h(h), c(c) {}
+		/**
+		 * Internally reallocates the image, previous data is copied
+		 * into the new memory and freed (pointers to old data will become invalid!)
+		 */
+		void resize(int w, int h);
 
-		void resize(int w, int h) {
-			if (w * h * channels() < size()) {
-				return;
-			}
+		/**
+		 * Blit (paste) another, smaller, image into this one
+		 * at the given position, both images MUST share channel counts
+		 */
+		void blit(int ox, int oy, ImageData image);
 
-			ImageData buffer = ImageData::allocate(w, h, channels());
-			buffer.blit(0, 0, *this);
+		/**
+		 * Returns a pointer to the given pixel,
+		 * the pointer points to at least `channels()` uint8_t elements
+		 */
+		uint8_t* pixel(int x, int y);
 
-			// no matter how our image was allocated, free it now
-			close();
+		/**
+		 * Free the data held by this image data
+		 * object if that underlying data needs to be freed
+		 */
+		void close();
 
-			this->pixels = buffer.pixels;
-			this->w = w;
-			this->h = h;
-		}
-
-		void blit(int ox, int oy, ImageData image) {
-			if (ox + image.width() > w || oy + image.height() > h) {
-				throw std::runtime_error("Can't blit-in the given image, invalid placement!");
-			}
-
-			if (image.channels() != channels()) {
-				throw std::runtime_error("Can't blit-in the given image, invalid channel count!");
-			}
-
-			for (int y = 0; y < (int) image.height(); y ++) {
-				memcpy(pixel(ox, oy + y), image.pixel(0, y), image.width() * image.channels());
-			}
-		}
-
-		uint8_t* pixel(int x, int y) {
-			return ((uint8_t*) pixels) + (x + y * w) * channels();
-		}
-
-		void close() {
-			if (pixels != nullptr) {
-				if (type == STB_IMAGE) stbi_image_free(pixels);
-				if (type == MALLOCED) free(pixels);
-			}
-		}
-
-		void save(const std::string& path) const {
-			stbi_write_png(path.c_str(), w, h, c, pixels, w * c);
-		}
+		/**
+		 * Save the image data as a PNG image under the
+		 * given path, can be useful for debugging
+		 */
+		void save(const std::string& path) const;
 
 		/**
 		 * Returns an image data buffer for the image pointer to by the
 		 * given file path and of the given number of channels
 		 */
-		static ImageData loadFromFile(const std::string& path, int channels = 4) {
-			int ignored, w, h;
-			void* pixels = stbi_load(path.c_str(), &w, &h, &ignored, channels);
-
-			if (!pixels) {
-				throw std::runtime_error("stbi_load: Failed to load texture from '" + path + "'");
-			}
-
-			return {Type::STB_IMAGE, pixels, w, h, channels};
-		}
+		static ImageData loadFromFile(const std::string& path, int channels = 4);
 
 		/**
 		 * Creates a new uninitialized image of the given
 		 * dimensions and channel count.
 		 */
-		static ImageData allocate(int w, int h, int channels = 4) {
-			return {Type::MALLOCED, malloc(w * h * channels), w, h, channels};
-		}
+		static ImageData allocate(int w, int h, int channels = 4);
 
-	public:
-
-		inline size_t size() const {
-			return width() * height() * channels();
-		}
-
-		inline size_t width() const {
-			return w;
-		}
-
-		inline size_t height() const {
-			return h;
-		}
-
-		inline size_t channels() const {
-			return c;
-		}
-
-		inline const void* data() const {
-			return pixels;
-		}
-
-	public:
-
+		/**
+		 * Records a copy-to-GPU-memory operation into the
+		 * given command buffer, a staging buffer IS used and resulting image returned
+		 */
 		Image upload(Allocator& allocator, CommandRecorder& recorder, VkFormat format) const;
+
+	public:
+
+		/// returns the size, in bytes, of the data buffer used by this image
+		size_t size() const;
+
+		/// returns the width, in pixels, of the image
+		size_t width() const;
+
+		/// returns the height, in pixels, of the image
+		size_t height() const;
+
+		/// returns the number of channels (bytes) per pixel
+		size_t channels() const;
+
+		/// returns a pointer to the start of images' data buffer
+		const void* data() const;
 
 };
 
+/**
+ * Wrapper around the vulkan image class for
+ * representing any GPU-accessible image data.
+ * It can be created from image data using `upload()`
+ */
 class Image {
 
 	public:
@@ -134,16 +114,10 @@ class Image {
 
 	public:
 
-		Image() {}
+		Image() = default;
+		Image(VkImage vk_image, VkFormat vk_format);
+		Image(VkImage vk_image, VkFormat vk_format, MemoryAccess memory);
 
-		Image(VkImage vk_image, VkFormat vk_format)
-		: vk_image(vk_image), vk_format(vk_format), memory() {}
-
-		Image(VkImage vk_image, VkFormat vk_format, MemoryAccess memory)
-		: vk_image(vk_image), vk_format(vk_format), memory(memory) {}
-
-		ImageViewBuilder getViewBuilder() {
-			return ImageViewBuilder {vk_image, vk_format};
-		}
+		ImageViewBuilder getViewBuilder();
 
 };

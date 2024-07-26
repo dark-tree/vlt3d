@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external.hpp"
+#include "render/view.hpp"
 
 class DescriptorSet {
 

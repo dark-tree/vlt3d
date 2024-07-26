@@ -2,8 +2,10 @@
 #pragma once
 
 #include "external.hpp"
-#include "atlas.hpp"
-#include "util/exception.hpp"
+#include "sprites.hpp"
+
+class ImageData;
+class Atlas;
 
 class Glyph {
 
@@ -11,93 +13,97 @@ class Glyph {
 
 		int width, height;
 		BakedSprite baked;
+		bool draw;
 
 	public:
 
 		Glyph() = default;
-		Glyph(UnbakedSprite unbaked, ImageData image, int height)
-		: width(unbaked.w), height(height), baked(unbaked.bake(image.width(), image.height())) {}
+		Glyph(UnbakedSprite unbaked, ImageData image, int height, bool draw);
 
 	public:
 
-		int getWidth() const {
-			return width;
-		}
+		/// Returns the width, in pixels, of this glyph
+		int getWidth() const;
 
-		int getHeight() const {
-			return height;
-		}
+		/// Returns the height, in pixels, of this glyph
+		int getHeight() const;
 
-		BakedSprite getSprite() const {
-			return baked;
-		}
+		/// Returns the scaled sprite that can be directly used to display this glyph
+		BakedSprite getSprite() const;
+
+		/// Should this glyph emit any vertex data, should return false for empty sprites (like space, new line etc)
+		bool shouldDraw() const;
 
 };
 
 class Font {
 
+
+
+
 	private:
 
+		struct Override {
+			int start;
+			int width;
+		};
+
+		class Overrides {
+
+			private:
+
+				std::unordered_map<int, Override> cache;
+
+			public:
+
+				Overrides(const TextTreeList* overrides);
+
+				/**
+				 * Check if the given codepoint has a manual override
+				 * MUST be called and checked before calling `get()`
+				 */
+				bool has(int codepoint) const;
+
+				/**
+				 * Get the manual override for a particular codepoint,
+				 * MUST be called only if `has()` returned true
+				 */
+				Override get(int codepoint) const;
+
+		};
+
+	private:
+
+		bool monospaced;
 		int size;
 		std::unordered_map<int, Glyph> glyphs;
 
-		UnbakedSprite scanBlock(int bx, int by, int ix, int iy, ImageData image) {
-			int min = size;
-			int max = 0;
+		UnbakedSprite scanBlock(int code, int bx, int by, int ix, int iy, ImageData image, Overrides& overrides);
+		void addCodePage(Atlas& atlas, const std::string& identifier, int base, Overrides& overrides);
 
-			int ox = bx * size;
-			int oy = by * size;
-			int px = ox + ix;
-			int py = oy + iy;
+	private:
 
-			for (int x = 0; x < size; x ++) {
-				for (int y = 0; y < size; y ++) {
-					uint8_t a = image.pixel(x + px, y + py)[3];
-
-					if (a > 250) {
-						if (x > max) max = x;
-						if (x < min) min = x;
-						break;
-					}
-				}
-			}
-
-			// there are no pixels set in this block
-			if (min > max) {
-				return {ox, oy, size, size};
-			}
-
-			return {ox + min, oy, max - min + 1, size};
-		}
+		Font(bool monospaced, int size);
 
 	public:
 
-		Font(int size)
-		: size(size) {}
+		/**
+		 * Get the Glyph for a particular code point
+		 * this includes custom characters and normal ones
+		 */
+		Glyph getGlyph(int unicode) const;
 
-		void addCodePage(Atlas& atlas, const std::string& identifier, int base) {
-			ImageData image = atlas.getImage();
-			UnbakedSprite page = atlas.getUnbakedSprite(identifier);
+		/**
+		 * Get the size of the glyph in the source image
+		 * this is also equal to the font height
+		 */
+		int getSize() const;
 
-			if (page.w % size != 0 || page.h % size != 0) {
-				auto dim = std::to_string(size);
-				throw Exception {"Code page " + identifier + " is not divisible into " + dim + "x" + dim + " blocks"};
-			}
+	public:
 
-			int line = page.w / size;
-			for (int x = 0; x < page.w / size; x ++) {
-				for (int y = 0; y < page.h / size; y ++) {
-					glyphs.try_emplace(x + y * line + base, page.combine(scanBlock(x, y, page.x, page.y, image)), image, size);
-				}
-			}
-		}
-
-		Glyph getGlyph(int unicode) const {
-			return glyphs.at(unicode);
-		}
-
-		int getSize() const {
-			return size;
-		}
+		/**
+		 * Loads the font from a .tt definition file
+		 */
+		static Font loadFromFile(Atlas& atlas, const std::string& filename);
 
 };

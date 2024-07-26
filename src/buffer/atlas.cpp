@@ -2,6 +2,8 @@
 #include "atlas.hpp"
 #include "image.hpp"
 #include "patch.hpp"
+#include "util/util.hpp"
+#include "util/logger.hpp"
 
 /*
  * Atlas

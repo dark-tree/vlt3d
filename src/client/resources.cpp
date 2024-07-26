@@ -3,8 +3,7 @@
 #include "command/pool.hpp"
 
 ResourceManager::State::State(Device& device, Allocator& allocator, CommandRecorder& recorder)
-: atlas(AtlasBuilder::createSimpleAtlas("assets/sprites")), font(8) {
-	this->font.addCodePage(atlas, "assets/sprites/8x8font.png", 0);
+: atlas(AtlasBuilder::createSimpleAtlas("assets/sprites")), font(Font::loadFromFile(atlas, "assets/font.tt")) {
 	this->atlas.getImage().save("atlas.png");
 
 	Image image = atlas.getImage().upload(allocator, recorder, VK_FORMAT_R8G8B8A8_SRGB);

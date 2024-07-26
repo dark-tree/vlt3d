@@ -118,13 +118,15 @@ void ImmediateRenderer::drawText(float x, float y, const std::string& text, glm:
 
 		float tilt = font_tilt * h * -0.25;
 
-		drawVertex(sx - tilt, sy, sprite.u1, sprite.v1);
-		drawVertex(ex + tilt, ey, sprite.u2, sprite.v2);
-		drawVertex(sx + tilt, ey, sprite.u1, sprite.v2);
+		if (glyph.shouldDraw()) {
+			drawVertex(sx - tilt, sy, sprite.u1, sprite.v1);
+			drawVertex(ex + tilt, ey, sprite.u2, sprite.v2);
+			drawVertex(sx + tilt, ey, sprite.u1, sprite.v2);
 
-		drawVertex(sx - tilt, sy, sprite.u1, sprite.v1);
-		drawVertex(ex - tilt, sy, sprite.u2, sprite.v1);
-		drawVertex(ex + tilt, ey, sprite.u2, sprite.v2);
+			drawVertex(sx - tilt, sy, sprite.u1, sprite.v1);
+			drawVertex(ex - tilt, sy, sprite.u2, sprite.v1);
+			drawVertex(ex + tilt, ey, sprite.u2, sprite.v2);
+		}
 
 		offset += w + font_size;
 
@@ -390,13 +392,15 @@ void ImmediateRenderer::drawText(glm::vec3 pos, const std::string& text, glm::ve
 
 		float tilt = font_tilt * h * -0.25;
 
-		drawBillboardVertex(rot, pos, sx - tilt, sy, sprite.u1, sprite.v1);
-		drawBillboardVertex(rot, pos, ex + tilt, ey, sprite.u2, sprite.v2);
-		drawBillboardVertex(rot, pos, sx + tilt, ey, sprite.u1, sprite.v2);
+		if (glyph.shouldDraw()) {
+			drawBillboardVertex(rot, pos, sx - tilt, sy, sprite.u1, sprite.v1);
+			drawBillboardVertex(rot, pos, ex + tilt, ey, sprite.u2, sprite.v2);
+			drawBillboardVertex(rot, pos, sx + tilt, ey, sprite.u1, sprite.v2);
 
-		drawBillboardVertex(rot, pos, sx - tilt, sy, sprite.u1, sprite.v1);
-		drawBillboardVertex(rot, pos, ex - tilt, sy, sprite.u2, sprite.v1);
-		drawBillboardVertex(rot, pos, ex + tilt, ey, sprite.u2, sprite.v2);
+			drawBillboardVertex(rot, pos, sx - tilt, sy, sprite.u1, sprite.v1);
+			drawBillboardVertex(rot, pos, ex - tilt, sy, sprite.u2, sprite.v1);
+			drawBillboardVertex(rot, pos, ex + tilt, ey, sprite.u2, sprite.v2);
+		}
 
 		offset += w + font_size;
 
