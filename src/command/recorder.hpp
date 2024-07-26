@@ -5,6 +5,7 @@
 #include "render/pipeline.hpp"
 #include "buffer/allocator.hpp"
 #include "descriptor/descriptor.hpp"
+#include "render/framebuffer.hpp"
 
 class CommandRecorder {
 

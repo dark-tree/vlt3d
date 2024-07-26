@@ -8,6 +8,7 @@
 #include "binding.hpp"
 #include "descriptor/layout.hpp"
 #include "util/timer.hpp"
+#include "shader/module.hpp"
 
 #define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw Exception {"Feature '" #feature "' not enabled on this device!"}; }
 

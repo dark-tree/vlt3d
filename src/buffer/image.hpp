@@ -3,6 +3,10 @@
 #include "external.hpp"
 #include "render/view.hpp"
 
+class Image;
+class CommandRecorder;
+class Allocator;
+
 class ImageData {
 
 	private:
@@ -113,6 +117,10 @@ class ImageData {
 		inline const void* data() const {
 			return pixels;
 		}
+
+	public:
+
+		Image upload(Allocator& allocator, CommandRecorder& recorder, VkFormat format) const;
 
 };
 

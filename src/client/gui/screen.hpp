@@ -2,7 +2,7 @@
 
 #include "external.hpp"
 #include "window/input.hpp"
-#include "client/renderer.hpp"
+#include "client/immediate.hpp"
 
 class ScreenStack;
 

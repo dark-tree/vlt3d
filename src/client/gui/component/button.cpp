@@ -1,6 +1,6 @@
 
 #include "button.hpp"
-#include "client/renderer.hpp"
+#include "client/immediate.hpp"
 #include "client/gui/grid/context.hpp"
 
 GuiButton::GuiButton(Box2D box, std::string text, std::string identifier, std::function<void(ScreenStack&)> callback)

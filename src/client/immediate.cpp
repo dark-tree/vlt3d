@@ -1,11 +1,11 @@
 
-#include "renderer.hpp"
+#include "immediate.hpp"
 #include "client/vertices.hpp"
 #include "buffer/allocator.hpp"
 #include "buffer/atlas.hpp"
 
-ImmediateRenderer::ImmediateRenderer(Atlas& atlas, Font& font)
-: mode(BillboardMode::TWO_AXIS), atlas(atlas), font(font) {
+ImmediateRenderer::ImmediateRenderer(const ResourceManager& assets)
+: mode(BillboardMode::TWO_AXIS), assets(assets) {
 	this->blank = getSprite("assets/sprites/blank.png");
 	this->circle = getSprite("assets/sprites/circle.png");
 
@@ -21,11 +21,11 @@ ImmediateRenderer::ImmediateRenderer(Atlas& atlas, Font& font)
 }
 
 NinePatch ImmediateRenderer::getNinePatch(const std::string& identifier, int margin) {
-	return atlas.getNinePatch(identifier, margin);
+	return assets.getAtlas().getNinePatch(identifier, margin);
 }
 
 BakedSprite ImmediateRenderer::getSprite(const std::string& identifier) {
-	return atlas.getBakedSprite(identifier);
+	return assets.getAtlas().getBakedSprite(identifier);
 }
 
 int ImmediateRenderer::getWidth() const {
@@ -101,6 +101,7 @@ void ImmediateRenderer::drawText(float x, float y, const std::string& text, glm:
 
 	float offset = 0;
 	glm::vec2 alignment = getTextAlignment(text, extend) * font_size;
+	const Font& font = assets.getFont();
 
 	for (char chr : text) {
 
@@ -336,6 +337,8 @@ glm::vec2 ImmediateRenderer::getTextAlignment(const std::string& text, glm::vec2
 		extend.y < 0 ? 0 : extend.y * my / font_size
 	};
 
+	const Font& font = assets.getFont();
+
 	float ox = 0;
 	float oy = font.getSize();
 
@@ -370,6 +373,7 @@ void ImmediateRenderer::drawText(glm::vec3 pos, const std::string& text, glm::ve
 	glm::quat rot = getBillboardRotation(pos);
 
 	glm::vec2 alignment = getTextAlignment(text, extend) * font_size;
+	const Font& font = assets.getFont();
 
 	for (char chr : text) {
 

@@ -105,7 +105,7 @@ class Chunk {
 			this->dirty = true;
 		}
 
-		ChunkBuffer draw(Atlas& atlas, Allocator& allocator, std::function<void(std::unique_ptr<Buffer>)> dispose_buffer) {
+		ChunkBuffer draw(const Atlas& atlas, Allocator& allocator, std::function<void(std::unique_ptr<Buffer>)> dispose_buffer) {
 			int buffer_size = 0;
 			if (dirty) {
 				mesh.clear();
@@ -335,7 +335,7 @@ class World {
 		}
 
 		// Generate chunk mesh around the given position in the radius.
-		void draw(Atlas& atlas, TaskPool& pool, Allocator& allocator, glm::ivec3 pos, float c_radius) {
+		void draw(const Atlas& atlas, TaskPool& pool, Allocator& allocator, glm::ivec3 pos, float c_radius) {
 			
 			glm::vec3 viewer_c_pos = { pos.x / CHUNK_SIZE, pos.y / CHUNK_SIZE, pos.z / CHUNK_SIZE };
 

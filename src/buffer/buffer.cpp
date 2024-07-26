@@ -21,7 +21,7 @@ void BasicBuffer::reallocate(size_t capacity) {
 	close();
 	buffer = allocator.allocateBuffer(buffer_builder);
 	this->capacity = capacity;
-	logger::info("Reallocated 3D simple buffer to ", capacity, " bytes");
+	logger::info("Reallocated simple buffer ", this, " to ", capacity, " bytes");
 }
 
 size_t BasicBuffer::encompass(size_t target) {

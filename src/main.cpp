@@ -2,8 +2,7 @@
 #include "external.hpp"
 #include "context.hpp"
 #include "client/camera.hpp"
-#include "client/renderer.hpp"
-#include "client/vertices.hpp"
+#include "client/immediate.hpp"
 
 struct UBO {
 	glm::mat4 model;
@@ -23,7 +22,7 @@ struct Frame {
 	MemoryMap map;
 	DescriptorSet set;
 
-	Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, ImageSampler& sampler)
+	Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler)
 	: buffer(pool.allocate()), image_available_semaphore(device.semaphore()), render_finished_semaphore(device.semaphore()), in_flight_fence(device.fence(true)) {
 
 		BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
@@ -51,7 +50,7 @@ DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
 	throw std::runtime_error("No viable Vulkan device found!");
 }
 
-Swapchain createSwapchain(Device& device, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& presentation) {
+Swapchain createSwapchain(Device& device, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& transfer, QueueInfo& presentation) {
 
 	// swapchain information gathering
 	SwapchainInfo info {device, surface};
@@ -70,13 +69,14 @@ Swapchain createSwapchain(Device& device, WindowSurface& surface, Window& window
 	// swapchain creation
 	SwapchainBuilder swapchain_builder {VK_PRESENT_MODE_FIFO_KHR, selected_format, extent, images, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, transform};
 	swapchain_builder.addSyncedQueue(graphics);
+	swapchain_builder.addSyncedQueue(transfer);
 	swapchain_builder.addSyncedQueue(presentation);
 
 	return swapchain_builder.build(device, surface);
 
 }
 
-void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& presentation, RenderPass& pass, std::vector<Framebuffer>& framebuffers, Swapchain& swapchain) {
+void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& transfer, QueueInfo& presentation, RenderPass& pass, std::vector<Framebuffer>& framebuffers, Swapchain& swapchain) {
 
 	device.wait();
 	swapchain.close();
@@ -89,7 +89,7 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 	Image depth_image;
 	ImageView depth_image_view;
 
-	swapchain = createSwapchain(device, surface, window, graphics, presentation);
+	swapchain = createSwapchain(device, surface, window, graphics, transfer, presentation);
 
 	// create the depth buffer
 	{
@@ -113,6 +113,7 @@ void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surf
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
+#include "client/resources.hpp"
 
 int main() {
 
@@ -137,6 +138,7 @@ int main() {
 
 	// device configuration
 	QueueInfo graphics_ref = device_builder.addQueue(QueueType::GRAPHICS, 1);
+	QueueInfo transfer_ref = device_builder.addQueue(QueueType::TRANSFER, 1);
 	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
 	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
 
@@ -147,7 +149,12 @@ int main() {
 	// device and queue creation
 	Device device = device_builder.create();
 	VkQueue graphics = device.get(graphics_ref, 0);
+	VkQueue transfer = device.get(transfer_ref, 0);
 	VkQueue presentation = device.get(presentation_ref, 0);
+
+	// create command pools
+	CommandPool main_pool = CommandPool::build(device, graphics_ref, false);
+	CommandPool transient_pool = CommandPool::build(device, transfer_ref, true);
 
 	// create a compiler and compile the glsl into spirv
 	Compiler compiler;
@@ -159,17 +166,23 @@ int main() {
 	// create VMA based memory allocator
 	Allocator allocator {device, instance};
 
-	Atlas atlas = AtlasBuilder::createSimpleAtlas("assets/sprites");
+	ResourceManager assets;
+
+	logger::debug("Resource reload took: ", Timer::of([&] {
+		Fence fence = device.fence();
+		CommandBuffer buffer = transient_pool.allocate();
+		assets.reload(device, allocator, buffer);
+		buffer.submit().unlocks(fence).done(transfer);
+
+		fence.wait();
+		fence.close();
+		buffer.close();
+	}).milliseconds(), "ms");
 
 	World world(8888);
 
-	Font font {8};
-	font.addCodePage(atlas, "assets/sprites/8x8font.png", 0);
-
-	atlas.getImage().save("atlas.png");
-
 	// swapchain creation
-	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, presentation_ref);
+	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, transfer_ref, presentation_ref);
 	auto extent = swapchain.vk_extent;
 
 	// render pass creation
@@ -265,58 +278,6 @@ int main() {
 		.withDescriptorSetLayout(layout)
 		.build("2D Tinted");
 
-	// create command pools
-	CommandPool main_pool = CommandPool::build(device, graphics_ref, false);
-	CommandPool transient_pool = CommandPool::build(device, graphics_ref, true);
-
-	// quad texture
-	Image image;
-	ImageView image_view;
-	ImageSampler image_sampler;
-
-	// load file and copy it through a staging buffer into a device local image
-	{
-		ImageData image_file = atlas.getImage();
-
-		BufferInfo buffer_builder {image_file.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
-		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-		Buffer staging = allocator.allocateBuffer(buffer_builder);
-
-		MemoryMap map = staging.access().map();
-		map.write(image_file.data(), image_file.size());
-		map.flush();
-		map.unmap();
-
-		ImageInfo image_builder {image_file.width(), image_file.height(), VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
-		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
-
-		image = allocator.allocateImage(image_builder);
-		image_file.close();
-
-		Fence copy_fence = device.fence();
-		CommandBuffer buffer = transient_pool.allocate();
-
-		buffer.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-			.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED)
-			.copyBufferToImage(image, staging, image_file.width(), image_file.height())
-			.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			.done();
-
-		buffer.submit()
-			.unlocks(copy_fence)
-			.done(graphics);
-
-		copy_fence.wait();
-		buffer.close();
-		//staging.close();
-
-		image_view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
-		image_sampler = image_view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
-	}
-
 	int concurrent_frames = 1;
 	int frame = 0;
 
@@ -329,11 +290,11 @@ int main() {
 	std::vector<VkDescriptorSet> sets;
 
 	for (int i = 0; i < concurrent_frames; i ++) {
-		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(layout), image_sampler);
+		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(layout), assets.getAtlasSampler());
 	}
 
 	ScreenStack stack;
-	ImmediateRenderer renderer {atlas, font};
+	ImmediateRenderer renderer {assets};
 	Camera camera {window};
 	camera.move({0, 5, 0});
 	window.setRootInputConsumer(&stack);
@@ -363,7 +324,7 @@ int main() {
 		// * Incompatible with threading and concurrent frames
 		world.closeBuffers();
 		world.generateAround(camera.getPosition(), 5);
-		world.draw(atlas, pool, allocator, camera.getPosition(), 8);
+		world.draw(assets.getAtlas(), pool, allocator, camera.getPosition(), 8);
 
 		renderer.prepare(swapchain.vk_extent);
 		stack.draw(renderer, window.getInputContext(), camera);
@@ -373,7 +334,7 @@ int main() {
 
 		uint32_t image_index;
 		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {
-			recreateSwapchain(device, allocator, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
+			recreateSwapchain(device, allocator, surface, window, graphics_ref, transfer_ref, presentation_ref, pass, framebuffers, swapchain);
 			extent = swapchain.vk_extent;
 		}
 
@@ -405,7 +366,7 @@ int main() {
 			.done(graphics);
 
 		if (swapchain.present(presentation, frames[frame].render_finished_semaphore, image_index).mustReplace()) {
-			recreateSwapchain(device, allocator, surface, window, graphics_ref, presentation_ref, pass, framebuffers, swapchain);
+			recreateSwapchain(device, allocator, surface, window, graphics_ref, transfer_ref, presentation_ref, pass, framebuffers, swapchain);
 			extent = swapchain.vk_extent;
 		}
 

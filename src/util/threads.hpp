@@ -84,7 +84,7 @@ class TaskPool {
 		 * Get the "optimal" number of threads for a
 		 * thread pool on this hardware
 		 */
-		static inline size_t optimal();
+		static size_t optimal();
 
 		/**
 		 * Enqueue a task for execution by one of the threads
