@@ -9,6 +9,7 @@ class DescriptorSetLayout {
 
 	public:
 
+		DescriptorSetLayout() = default;
 		DescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout)
 		: vk_device(device), vk_layout(layout) {}
 

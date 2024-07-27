@@ -76,6 +76,9 @@ class RenderSystem {
 
 		ResourceManager assets;
 
+		DescriptorSetLayout descriptor_layout;
+		BindingLayout binding_3d;
+		BindingLayout binding_2d;
 		GraphicsPipeline pipeline_3d_mix;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;
@@ -122,6 +125,60 @@ class RenderSystem {
 		 */
 		void recreateSwapchain();
 
+		/**
+		 *
+		 */
+		void createPipelines() {
+
+			VkExtent2D extent = swapchain.vk_extent;
+			TaskPool pool {4};
+
+			/*
+			 * Well yeah this IS stupid but it's temporary
+			 */
+			Compiler compiler;
+			std::shared_future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); }).share();
+			std::shared_future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); }).share();
+			std::shared_future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); }).share();
+			std::shared_future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); }).share();
+
+			pipeline_3d_mix = GraphicsPipelineBuilder::of(device)
+				.withViewport(0, 0, extent.width, extent.height)
+				.withScissors(0, 0, extent.width, extent.height)
+				.withRenderPass(render_pass)
+				.withShaders(vert_3d, frag_mix)
+				.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
+				.withBindingLayout(binding_3d)
+				.withDescriptorSetLayout(descriptor_layout)
+				.build("3D Mixed");
+
+			pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
+				.withViewport(0, 0, extent.width, extent.height)
+				.withScissors(0, 0, extent.width, extent.height)
+				.withRenderPass(render_pass)
+				.withShaders(vert_3d, frag_tint)
+				.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
+				.withBlendMode(BlendMode::ENABLED)
+				.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+				.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+				.withBindingLayout(binding_3d)
+				.withDescriptorSetLayout(descriptor_layout)
+				.build("3D Tinted");
+
+			pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
+				.withViewport(0, 0, extent.width, extent.height)
+				.withScissors(0, 0, extent.width, extent.height)
+				.withRenderPass(render_pass)
+				.withShaders(vert_2d, frag_tint)
+				.withBlendMode(BlendMode::ENABLED)
+				.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+				.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+				.withBindingLayout(binding_2d)
+				.withDescriptorSetLayout(descriptor_layout)
+				.build("2D Tinted");
+
+		}
+
 	public:
 
 		RenderSystem(TaskPool& pool, Window& window, int concurrent)
@@ -166,6 +223,26 @@ class RenderSystem {
 			// get the VMA allocator ready
 			allocator = Allocator {device, instance};
 
+			// Create this thing
+			descriptor_layout = DescriptorSetLayoutBuilder::begin()
+				.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+				.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+				.done(device);
+
+			// 3D binding layout
+			binding_3d = BindingLayoutBuilder::begin()
+				.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
+				.attribute(1, VK_FORMAT_R32G32_SFLOAT)
+				.attribute(2, VK_FORMAT_R32_UINT)
+				.done();
+
+			// 2D binding layout
+			binding_2d = BindingLayoutBuilder::begin()
+				.attribute(0, VK_FORMAT_R32G32_SFLOAT)
+				.attribute(1, VK_FORMAT_R32G32_SFLOAT)
+				.attribute(2, VK_FORMAT_R32_UINT)
+				.done();
+
 			///
 			/// Phase 2
 			/// this step needs to be more or less repeated every time the window size changes
@@ -180,11 +257,11 @@ class RenderSystem {
 			/// this step will need to be repeated each time the resources are reloaded
 			///
 
-			Compiler compiler;
-			std::shared_future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); }).share();
-			std::shared_future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); }).share();
-			std::shared_future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); }).share();
-			std::shared_future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); }).share();
+//			Compiler compiler;
+//			std::shared_future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); }).share();
+//			std::shared_future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); }).share();
+//			std::shared_future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); }).share();
+//			std::shared_future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); }).share();
 
 			logger::debug("Resource reload took: ", Timer::of([&] {
 				Fence fence = device.fence();
@@ -197,57 +274,7 @@ class RenderSystem {
 				buffer.close();
 			}).milliseconds(), "ms");
 
-			// Create this thing
-			DescriptorSetLayout descriptor_layout = DescriptorSetLayoutBuilder::begin()
-				.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-				.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-				.done(device);
-
-			// 3D binding layout
-			BindingLayout binding_3d = BindingLayoutBuilder::begin()
-				.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
-				.attribute(1, VK_FORMAT_R32G32_SFLOAT)
-				.attribute(2, VK_FORMAT_R32_UINT)
-				.done();
-
-			// 2D binding layout
-			BindingLayout binding_2d = BindingLayoutBuilder::begin()
-				.attribute(0, VK_FORMAT_R32G32_SFLOAT)
-				.attribute(1, VK_FORMAT_R32G32_SFLOAT)
-				.attribute(2, VK_FORMAT_R32_UINT)
-				.done();
-
-			pipeline_3d_mix = GraphicsPipelineBuilder::of(device)
-				.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
-				.withRenderPass(render_pass)
-				.withShaders(vert_3d, frag_mix)
-				.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
-				.withBindingLayout(binding_3d)
-				.withDescriptorSetLayout(descriptor_layout)
-				.build("3D Mixed");
-
-			pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
-				.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
-				.withRenderPass(render_pass)
-				.withShaders(vert_3d, frag_tint)
-				.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
-				.withBlendMode(BlendMode::ENABLED)
-				.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-				.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-				.withBindingLayout(binding_3d)
-				.withDescriptorSetLayout(descriptor_layout)
-				.build("3D Tinted");
-
-			pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
-				.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
-				.withRenderPass(render_pass)
-				.withShaders(vert_2d, frag_tint)
-				.withBlendMode(BlendMode::ENABLED)
-				.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-				.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-				.withBindingLayout(binding_2d)
-				.withDescriptorSetLayout(descriptor_layout)
-				.build("2D Tinted");
+			createPipelines();
 
 			DescriptorPool descriptor_pool = DescriptorPoolBuilder::begin()
 				.add(concurrent, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
@@ -278,6 +305,9 @@ class RenderSystem {
 			return frames[index];
 		}
 
+		/**
+		 * Advanced to the next frame, MUST be called AFTER `presentFramebuffer()`
+		 */
 		void nextFrame() {
 			index = (index + 1) % concurrent;
 		}

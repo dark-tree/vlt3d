@@ -77,9 +77,7 @@ int main() {
 		CommandRecorder commandRecorder = frame.buffer.record()
 			.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(system.pipeline_3d_mix)
-			.bindDescriptorSet(frame.set)
-			.setDynamicViewport(0, 0, extent.width, extent.height)
-			.setDynamicScissors(0, 0, extent.width, extent.height);
+			.bindDescriptorSet(frame.set);
 
 		for (auto& buffer : buffers) {
 			commandRecorder.bindBuffer(buffer.buffer).draw(buffer.size);
