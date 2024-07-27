@@ -29,8 +29,8 @@ class Device {
 		/**
 		 * Get a previously requested Vulkan Queue from the device
 		 */
-		VkQueue get(QueueInfo& info, uint32_t index) {
-			return info.get(vk_device, index);
+		Queue get(QueueInfo& info, uint32_t index) {
+			return {info.get(vk_device, index), info};
 		}
 
 		void wait() {

@@ -7,6 +7,7 @@ class Image;
 class CommandRecorder;
 class Allocator;
 class ImageViewBuilder;
+class Device;
 
 /**
  * Class for representing any CPU-accessible image data
@@ -119,5 +120,6 @@ class Image {
 		Image(VkImage vk_image, VkFormat vk_format, MemoryAccess memory);
 
 		ImageViewBuilder getViewBuilder();
+		void close(Device& device);
 
 };

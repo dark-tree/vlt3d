@@ -59,7 +59,7 @@ class Swapchain {
 				builder.addAttachment(image.getViewBuilder().build(*device, VK_IMAGE_ASPECT_COLOR_BIT));
 				builder.addAttachment(depth_image);
 
-				framebuffers.push_back(builder.build(*device));
+				framebuffers.push_back(builder.build(*device, framebuffers.size()));
 			}
 
 			return framebuffers;
@@ -69,7 +69,7 @@ class Swapchain {
 			return {vkAcquireNextImageKHR(device->vk_device, vk_swapchain, UINT64_MAX, semaphore.vk_semaphore, VK_NULL_HANDLE, image_index)};
 		}
 
-		PresentResult present(VkQueue queue, Semaphore& await, uint32_t image_index) {
+		PresentResult present(Queue queue, Semaphore& await, uint32_t image_index) {
 
 			VkPresentInfoKHR info {};
 			info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -82,7 +82,7 @@ class Swapchain {
 			info.pImageIndices = &image_index;
 			info.pResults = nullptr;
 
-			return {vkQueuePresentKHR(queue, &info)};
+			return {vkQueuePresentKHR(queue.vk_queue, &info)};
 
 		}
 
@@ -111,13 +111,14 @@ class SwapchainBuilder {
 		SwapchainBuilder(VkPresentModeKHR mode, VkSurfaceFormatKHR format, VkExtent2D extent, uint32_t images, VkImageUsageFlags usage, VkSurfaceTransformFlagBitsKHR transform)
 		: mode(mode), format(format), extent(extent), images(images), usage(usage), transform(transform) {}
 
-		void addSyncedQueue(QueueInfo& queue) {
+		void addSyncedQueue(Queue queue) {
+			QueueInfo info = queue.info;
 
 			for (uint32_t family : families) {
-				if (queue.index == family) return;
+				if (info.index == family) return;
 			}
 
-			families.push_back(queue.index);
+			families.push_back(info.index);
 
 		}
 

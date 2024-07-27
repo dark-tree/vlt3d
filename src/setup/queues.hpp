@@ -143,3 +143,18 @@ class QueueFamilyPredicate {
 		}
 
 };
+
+class Queue {
+
+	public:
+
+		READONLY VkQueue vk_queue;
+		READONLY QueueInfo info;
+
+	public:
+
+		Queue() = default;
+		Queue(VkQueue vk_queue, QueueInfo& info)
+		: vk_queue(vk_queue), info(info) {}
+
+};

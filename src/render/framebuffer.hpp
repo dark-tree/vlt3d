@@ -11,11 +11,12 @@ class Framebuffer {
 
 		READONLY VkFramebuffer vk_buffer;
 		READONLY VkDevice vk_device;
+		READONLY uint32_t index;
 
 	public:
 
-		Framebuffer(VkFramebuffer vk_buffer, VkDevice vk_device)
-		: vk_buffer(vk_buffer), vk_device(vk_device) {}
+		Framebuffer(VkFramebuffer vk_buffer, VkDevice vk_device, uint32_t index)
+		: vk_buffer(vk_buffer), vk_device(vk_device), index(index) {}
 
 		void close() {
 			vkDestroyFramebuffer(vk_device, vk_buffer, nullptr);
@@ -43,7 +44,7 @@ class FramebufferBuilder {
 			attachments.push_back(view.vk_view);
 		}
 
-		Framebuffer build(Device& device) {
+		Framebuffer build(Device& device, uint32_t index) {
 
 			VkFramebufferCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -60,10 +61,10 @@ class FramebufferBuilder {
 			VkFramebuffer framebuffer;
 
 			if (vkCreateFramebuffer(device.vk_device, &create_info, nullptr, &framebuffer) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateFramebuffer: Failed to create a framebuffer!");
+				throw Exception {"Failed to create a framebuffer!"};
 			}
 
-			return {framebuffer, device.vk_device};
+			return {framebuffer, device.vk_device, index};
 
 		}
 

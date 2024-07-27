@@ -43,6 +43,11 @@ struct Frame {
 		descriptor.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ubo, sizeof(UBO));
 		descriptor.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
 	}
+
+	void wait() {
+		in_flight_fence.lock();
+	}
+
 };
 
 class RenderSystem {
@@ -56,10 +61,9 @@ class RenderSystem {
 		Device device;
 		Allocator allocator;
 
-		// TODO merge the VkQueue and QueueInfo into one class, we often nerd both
-		VkQueue graphics_queue; QueueInfo graphics_ref;
-		VkQueue transfer_queue; QueueInfo transfer_ref;
-		VkQueue presentation_queue; QueueInfo presentation_ref;
+		Queue graphics_queue;
+		Queue transfer_queue;
+		Queue presentation_queue;
 
 		CommandPool graphics_pool;
 		CommandPool transient_pool;
@@ -86,97 +90,37 @@ class RenderSystem {
 		// frame rendering (each frame can be drawn at the same time)
 		std::vector<Frame> frames;
 
-		void createRenderPass(Swapchain& surface) {
-
-			VkFormat format = surface.vk_surface_format.format;
-			RenderPassBuilder builder;
-
-			builder.addAttachment(format, VK_SAMPLE_COUNT_1_BIT)
-				.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
-				.output(ColorOp::STORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-				.next();
-
-			builder.addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-				.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
-				.output(ColorOp::IGNORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-				.next();
-
-			builder.addDependency()
-				.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0)
-				.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-				.next();
-
-			builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS)
-				.addColor(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-				.addDepth(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-				.next();
-
-			render_pass = builder.build(device);
-
-		}
+	private:
 
 		/**
-		 * Pick a device that has all the features that we need
+		 * Picks a device that has all the features that we will need
+		 * if no device is found throws an exception
 		 */
-		DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
-			for (DeviceInfo& device : instance.getDevices()) {
-				if (device.getQueueFamily(QueueType::GRAPHICS) && device.getQueueFamily(surface) && device.hasSwapchain(surface)) {
-					logger::info("Selected device: ", device.getProperties().deviceName);
-					return device.builder();
-				}
-			}
+		DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface);
 
-			throw Exception {"No viable Vulkan device found!"};
-		}
+		/**
+		 * Create a swapchain that matches our window, needs to be called before we can create
+		 * a render pass or frame buffer, and recalled when the window changes, see `acquireFramebuffer()`
+		 */
+		void createSwapchain();
 
-		void createSwapchain() {
+		/**
+		 * Creates the vulkan render pass, this MAY need to be called when the
+		 * swapchain is recreated, depending on the format picked by `createSwapchain()`
+		 */
+		void createRenderPass(Swapchain& surface);
 
-			// swapchain information gathering
-			SwapchainInfo info {device, surface};
-			auto extent = info.getExtent(window);
-			auto images = info.getImageCount();
-			auto transform = info.getTransform();
+		/**
+		 * Populates the framebuffer array, needs to be called after the swapchain is recreated
+		 * this function depends on render pass as the created framebuffers need to be compatible with it
+		 */
+		void createFramebuffers(RenderPass& pass);
 
-			VkSurfaceFormatKHR selected = info.getFormats()[0];
-			bool matched = false;
-
-			for (auto& format : info.getFormats()) {
-				if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-					selected = format;
-					matched = true;
-				}
-			}
-
-			if (!matched) {
-				logger::error("No surface format matched the requested parameters!");
-			}
-
-			// swapchain creation
-			SwapchainBuilder builder {VK_PRESENT_MODE_FIFO_KHR, selected, extent, images, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, transform};
-			builder.addSyncedQueue(graphics_ref);
-			builder.addSyncedQueue(transfer_ref);
-			builder.addSyncedQueue(presentation_ref);
-
-			swapchain = builder.build(device, surface);
-
-		}
-
-		void createFramebuffers(RenderPass& pass) {
-
-			// create the depth buffer shared by the framebuffers
-			{
-				ImageInfo image_builder {swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
-				image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-				image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
-
-				depth_image = allocator.allocateImage(image_builder);
-				depth_view = depth_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_DEPTH_BIT);
-			}
-
-			// create framebuffers
-			framebuffers = swapchain.getFramebuffers(pass, depth_view);
-
-		}
+		/**
+		 * Called from `acquireFramebuffer()` and `presentFramebuffer()` when the current swapchain is
+		 * no longer compatible with the window (for example when the size changed)
+		 */
+		void recreateSwapchain();
 
 	public:
 
@@ -200,9 +144,9 @@ class RenderSystem {
 			DeviceBuilder device_builder = pickDevice(instance, surface);
 
 			// device configuration
-			graphics_ref = device_builder.addQueue(QueueType::GRAPHICS, 1);
-			transfer_ref = device_builder.addQueue(QueueType::TRANSFER, 1);
-			presentation_ref = device_builder.addQueue(surface, 1);
+			QueueInfo graphics_ref = device_builder.addQueue(QueueType::GRAPHICS, 1);
+			QueueInfo transfer_ref = device_builder.addQueue(QueueType::TRANSFER, 1);
+			QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
 			device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
 
 			// enable some additional features
@@ -228,11 +172,7 @@ class RenderSystem {
 			///
 
 			createSwapchain();
-
-			// create swapchain compatible render pass
 			createRenderPass(swapchain);
-
-			// create renderpass compatible framebuffers
 			createFramebuffers(render_pass);
 
 			///
@@ -319,41 +259,34 @@ class RenderSystem {
 			}
 		}
 
-		void recreateSwapchain() {
-
-			// free old stuff
-			swapchain.close();
-			// FIXME depth_view.close();
-			// FIXME depth_image.close();
-
-			for (Framebuffer& framebuffer : framebuffers) {
-				framebuffer.close();
+		Framebuffer& acquireFramebuffer() {
+			uint32_t image_index;
+			if (swapchain.getNextImage(getFrame().image_available_semaphore, &image_index).mustReplace()) {
+				recreateSwapchain();
 			}
 
-			VkFormat old_format = swapchain.vk_surface_format.format;
-			framebuffers.clear();
+			return framebuffers[image_index];
+		}
 
-			createSwapchain();
-
-			// we don't necessarily need to recreate the render pass if the format stayed the same
-			if (swapchain.vk_surface_format.format != old_format) {
-				logger::info("Swapchain format changed, recreating render pass!");
-				createRenderPass(swapchain);
+		void presentFramebuffer(Framebuffer& framebuffer) {
+			if (swapchain.present(presentation_queue, getFrame().render_finished_semaphore, framebuffer.index).mustReplace()) {
+				recreateSwapchain();
 			}
-
-			// create new framebuffers
-			createFramebuffers(render_pass);
-
 		}
 
 		Frame& getFrame() {
-			Frame& frame = frames[index];
-			frame.in_flight_fence.lock();
-			return frame;
+			return frames[index];
 		}
 
 		void nextFrame() {
 			index = (index + 1) % concurrent;
+		}
+
+		/**
+		 * Wait (block) for all pending operations on all queues are finished
+		 */
+		void wait() {
+			device.wait();
 		}
 
 };

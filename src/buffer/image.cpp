@@ -134,3 +134,7 @@ Image::Image(VkImage vk_image, VkFormat vk_format, MemoryAccess memory)
 ImageViewBuilder Image::getViewBuilder() {
 	return ImageViewBuilder {vk_image, vk_format};
 }
+
+void Image::close(Device& device) {
+	vkDestroyImage(device.vk_device, vk_image, nullptr);
+}

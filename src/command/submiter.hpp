@@ -38,7 +38,7 @@ class CommandSubmiter {
 			return *this;
 		}
 
-		void done(VkQueue queue) {
+		void done(Queue queue) {
 
 			VkSubmitInfo info {};
 			info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -55,7 +55,7 @@ class CommandSubmiter {
 			info.signalSemaphoreCount = (uint32_t) reset_semaphores.size();
 			info.pSignalSemaphores = reset_semaphores.data();
 
-			if (vkQueueSubmit(queue, 1, &info, finished_fence) != VK_SUCCESS) {
+			if (vkQueueSubmit(queue.vk_queue, 1, &info, finished_fence) != VK_SUCCESS) {
 				throw std::runtime_error("failed to submit draw command buffer!");
 			}
 

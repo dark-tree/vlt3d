@@ -4,6 +4,7 @@
 #include "external.hpp"
 #include "attachment.hpp"
 #include "util/pyramid.hpp"
+#include "setup/device.hpp"
 
 class RenderPassBuilder;
 

@@ -25,17 +25,11 @@ int main() {
 	RenderSystem system {pool, window, 1};
 
 	// for now
-	Device& device = system.device;
 	Allocator& allocator = system.allocator;
-	VkQueue& graphics = system.graphics_queue;
-	VkQueue& presentation_queue = system.presentation_queue;
 	Swapchain& swapchain = system.swapchain;
 	RenderPass& pass = system.render_pass;
-	std::vector<Framebuffer>& framebuffers = system.framebuffers;
 
 	World world(8888);
-
-	auto extent = swapchain.vk_extent;
 
 	ScreenStack stack;
 	ImmediateRenderer renderer {system.assets};
@@ -54,14 +48,14 @@ int main() {
 		camera.update();
 		
 		std::list<ChunkBuffer>& buffers = world.getBuffers();
+		Frame& frame = system.getFrame();
 
-		Frame& ref = system.getFrame();
+		frame.data.model = glm::identity<glm::mat4>();
+		frame.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
+		frame.data.view = camera.getView();
 
-		ref.data.model = glm::identity<glm::mat4>();
-		ref.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
-		ref.data.view = camera.getView();
-
-		ref.map.write(&ref.data, sizeof(UBO));
+		frame.wait();
+		frame.map.write(&frame.data, sizeof(UBO));
 
 		// BEGIN THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
 		// * Horribly inefficient
@@ -76,17 +70,14 @@ int main() {
 		// * Also we now have 3 separate buffer types
 		// END THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
 
-		uint32_t image_index;
-		if (swapchain.getNextImage(ref.image_available_semaphore, &image_index).mustReplace()) {
-			system.recreateSwapchain();
-			extent = swapchain.vk_extent;
-		}
+		Framebuffer& framebuffer = system.acquireFramebuffer();
+		VkExtent2D extent = system.swapchain.vk_extent;
 
 		// record commands
-		CommandRecorder commandRecorder = ref.buffer.record()
-			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
+		CommandRecorder commandRecorder = frame.buffer.record()
+			.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f)
 			.bindPipeline(system.pipeline_3d_mix)
-			.bindDescriptorSet(ref.set)
+			.bindDescriptorSet(frame.set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height);
 
@@ -103,26 +94,20 @@ int main() {
 			.endRenderPass()
 			.done();
 
-		ref.buffer.submit()
-			.awaits(ref.image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-			.unlocks(ref.render_finished_semaphore)
-			.unlocks(ref.in_flight_fence)
-			.done(graphics);
+		frame.buffer.submit()
+			.awaits(frame.image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+			.unlocks(frame.render_finished_semaphore)
+			.unlocks(frame.in_flight_fence)
+			.done(system.graphics_queue);
 
-		if (swapchain.present(presentation_queue, ref.render_finished_semaphore, image_index).mustReplace()) {
-			system.recreateSwapchain();
-			extent = swapchain.vk_extent;
-		}
-
+		system.presentFramebuffer(framebuffer);
 		system.nextFrame();
 
-		// TODO audio is busted irit
-		// why does this look like this? not 100% sure, ask the linear algebra guy
-		sound_system.getListener().position(camera.getPosition()).facing(camera.getDirection() * glm::vec3(-1), camera.getUp());
+		sound_system.getListener().position(camera.getPosition()).facing(camera.getDirection(), camera.getUp());
 		sound_system.update();
 	}
 
-	device.wait();
+	system.wait();
 	window.close();
 	glfwTerminate();
 
