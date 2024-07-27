@@ -4,6 +4,7 @@
 #include "buffer/atlas.hpp"
 #include "buffer/font.hpp"
 #include "render/view.hpp"
+#include "shader/module.hpp"
 
 class CommandBuffer;
 class Device;
@@ -11,13 +12,18 @@ class Allocator;
 
 class ResourceManager {
 
-	private:
+	public:
 
 		struct State {
 
 			Atlas atlas;
 			Font font;
 			ImageSampler sampler;
+
+			ShaderModule vert_2d;
+			ShaderModule vert_3d;
+			ShaderModule frag_mix;
+			ShaderModule frag_tint;
 
 			State(Device& device, Allocator& allocator, CommandRecorder& recorder);
 

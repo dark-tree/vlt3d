@@ -44,6 +44,17 @@ struct Frame {
 		descriptor.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
 	}
 
+	~Frame() {
+		buffer.close();
+		image_available_semaphore.close();
+		render_finished_semaphore.close();
+		in_flight_fence.close();
+
+		map.unmap();
+		ubo.close();
+		// TODO set.close();
+	}
+
 	void wait() {
 		in_flight_fence.lock();
 	}
@@ -82,6 +93,8 @@ class RenderSystem {
 		GraphicsPipeline pipeline_3d_mix;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;
+
+		DescriptorPool descriptor_pool;
 
 		int concurrent;
 
@@ -131,22 +144,12 @@ class RenderSystem {
 		void createPipelines() {
 
 			VkExtent2D extent = swapchain.vk_extent;
-			TaskPool pool {4};
-
-			/*
-			 * Well yeah this IS stupid but it's temporary
-			 */
-			Compiler compiler;
-			std::shared_future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); }).share();
-			std::shared_future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); }).share();
-			std::shared_future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); }).share();
-			std::shared_future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); }).share();
 
 			pipeline_3d_mix = GraphicsPipelineBuilder::of(device)
 				.withViewport(0, 0, extent.width, extent.height)
 				.withScissors(0, 0, extent.width, extent.height)
 				.withRenderPass(render_pass)
-				.withShaders(vert_3d, frag_mix)
+				.withShaders(assets.state->vert_3d, assets.state->frag_mix)
 				.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 				.withBindingLayout(binding_3d)
 				.withDescriptorSetLayout(descriptor_layout)
@@ -156,7 +159,7 @@ class RenderSystem {
 				.withViewport(0, 0, extent.width, extent.height)
 				.withScissors(0, 0, extent.width, extent.height)
 				.withRenderPass(render_pass)
-				.withShaders(vert_3d, frag_tint)
+				.withShaders(assets.state->vert_3d, assets.state->frag_tint)
 				.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 				.withBlendMode(BlendMode::ENABLED)
 				.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
@@ -169,7 +172,7 @@ class RenderSystem {
 				.withViewport(0, 0, extent.width, extent.height)
 				.withScissors(0, 0, extent.width, extent.height)
 				.withRenderPass(render_pass)
-				.withShaders(vert_2d, frag_tint)
+				.withShaders(assets.state->vert_2d, assets.state->frag_tint)
 				.withBlendMode(BlendMode::ENABLED)
 				.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 				.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
@@ -243,6 +246,11 @@ class RenderSystem {
 				.attribute(2, VK_FORMAT_R32_UINT)
 				.done();
 
+			descriptor_pool = DescriptorPoolBuilder::begin()
+				.add(concurrent, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+				.add(concurrent, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.done(device, concurrent);
+
 			///
 			/// Phase 2
 			/// this step needs to be more or less repeated every time the window size changes
@@ -257,12 +265,6 @@ class RenderSystem {
 			/// this step will need to be repeated each time the resources are reloaded
 			///
 
-//			Compiler compiler;
-//			std::shared_future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); }).share();
-//			std::shared_future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); }).share();
-//			std::shared_future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); }).share();
-//			std::shared_future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); }).share();
-
 			logger::debug("Resource reload took: ", Timer::of([&] {
 				Fence fence = device.fence();
 				CommandBuffer buffer = transient_pool.allocate();
@@ -276,14 +278,44 @@ class RenderSystem {
 
 			createPipelines();
 
-			DescriptorPool descriptor_pool = DescriptorPoolBuilder::begin()
-				.add(concurrent, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-				.add(concurrent, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-				.done(device, concurrent);
-
 			for (int i = 0; i < concurrent; i ++) {
 				frames.emplace_back(allocator, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
 			}
+		}
+
+		void reloadAssets() {
+			wait();
+
+			logger::debug("Resource reload took: ", Timer::of([&] {
+				Fence fence = device.fence();
+				CommandBuffer buffer = transient_pool.allocate();
+				assets.reload(device, allocator, buffer);
+				buffer.submit().unlocks(fence).done(transfer_queue);
+
+				fence.wait();
+				fence.close();
+				buffer.close();
+
+				pipeline_2d_tint.close();
+				pipeline_3d_mix.close();
+				pipeline_3d_tint.close();
+
+				createPipelines();
+
+				// TODO reset
+				descriptor_pool.close();
+				descriptor_pool = DescriptorPoolBuilder::begin()
+					.add(concurrent, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+					.add(concurrent, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+					.done(device, concurrent);
+
+				frames.clear();
+
+				for (int i = 0; i < concurrent; i ++) {
+					frames.emplace_back(allocator, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
+				}
+			}).milliseconds(), "ms");
+
 		}
 
 		Framebuffer& acquireFramebuffer() {
@@ -301,6 +333,9 @@ class RenderSystem {
 			}
 		}
 
+		/**
+		 * Get a reference to the current frame state
+		 */
 		Frame& getFrame() {
 			return frames[index];
 		}

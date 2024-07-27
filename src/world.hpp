@@ -416,4 +416,11 @@ class World {
 			this->min_c_bounds = c_min;
 			this->max_c_bounds = c_max;
 		}
+
+		void reload() {
+			for (auto& [c_pos, chunk] : chunks) {
+				chunk->setDirty(true);
+			}
+		}
+
 };

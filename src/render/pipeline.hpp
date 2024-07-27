@@ -47,7 +47,7 @@ class GraphicsPipelineBuilder {
 		std::vector<VkDynamicState> dynamics;
 		std::vector<VkVertexInputBindingDescription> bindings;
 		std::vector<VkVertexInputAttributeDescription> attributes;
-		std::vector<std::shared_future<ShaderModule>> stages;
+		std::vector<ShaderModule> stages;
 
 		VkPipelineViewportStateCreateInfo view {};
 		VkPipelineDynamicStateCreateInfo dynamic {};
@@ -362,8 +362,8 @@ class GraphicsPipelineBuilder {
 
 			std::vector<VkPipelineShaderStageCreateInfo> shaders;
 
-			for (std::shared_future<ShaderModule>& future : stages) {
-				shaders.push_back(future.get().getStageConfig());
+			for (ShaderModule& stage : stages) {
+				shaders.push_back(stage.getStageConfig());
 			}
 
 			VkGraphicsPipelineCreateInfo create_info {};

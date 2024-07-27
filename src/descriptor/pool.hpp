@@ -13,6 +13,7 @@ class DescriptorPool {
 
 	public:
 
+		DescriptorPool() = default;
 		DescriptorPool(VkDescriptorPool vk_pool, VkDevice vk_device)
 		: vk_pool(vk_pool), vk_device(vk_device) {}
 

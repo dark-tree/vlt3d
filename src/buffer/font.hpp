@@ -84,6 +84,8 @@ class Font {
 
 	public:
 
+		Font() = default;
+
 		/**
 		 * Get the Glyph for a particular code point
 		 * this includes custom characters and normal ones

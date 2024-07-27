@@ -19,6 +19,8 @@ class Atlas {
 
 	public:
 
+		Atlas() = default;
+
 		BakedSprite getBakedSprite(const std::string& identifier) const;
 		UnbakedSprite getUnbakedSprite(const std::string& identifier) const;
 		NinePatch getNinePatch(const std::string& identifier, int m) const;
