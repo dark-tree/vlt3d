@@ -3,109 +3,7 @@
 #include "context.hpp"
 #include "client/camera.hpp"
 #include "client/immediate.hpp"
-
-struct UBO {
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
-};
-
-struct Frame {
-
-	CommandBuffer buffer;
-	Semaphore image_available_semaphore;
-	Semaphore render_finished_semaphore;
-	Fence in_flight_fence;
-
-	UBO data;
-	Buffer ubo;
-	MemoryMap map;
-	DescriptorSet set;
-
-	Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler)
-	: buffer(pool.allocate()), image_available_semaphore(device.semaphore()), render_finished_semaphore(device.semaphore()), in_flight_fence(device.fence(true)) {
-
-		BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
-		buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-		ubo = allocator.allocateBuffer(buffer_builder);
-		map = ubo.access().map();
-		set = descriptor;
-
-		descriptor.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ubo, sizeof(UBO));
-		descriptor.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
-	}
-};
-
-/// Pick a device that has all the features that we need
-DeviceBuilder pickDevice(Instance& instance, WindowSurface& surface) {
-	for (DeviceInfo& device : instance.getDevices()) {
-		if (device.getQueueFamily(QueueType::GRAPHICS) && device.getQueueFamily(surface) && device.hasSwapchain(surface)) {
-			logger::info("Selected device: ", device.getProperties().deviceName);
-			return device.builder();
-		}
-	}
-
-	throw std::runtime_error("No viable Vulkan device found!");
-}
-
-Swapchain createSwapchain(Device& device, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& transfer, QueueInfo& presentation) {
-
-	// swapchain information gathering
-	SwapchainInfo info {device, surface};
-	auto extent = info.getExtent(window);
-	auto images = info.getImageCount();
-	auto transform = info.getTransform();
-
-	VkSurfaceFormatKHR selected_format = info.getFormats()[0];
-
-	for (auto& format : info.getFormats()) {
-		if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-			selected_format = format;
-		}
-	}
-
-	// swapchain creation
-	SwapchainBuilder swapchain_builder {VK_PRESENT_MODE_FIFO_KHR, selected_format, extent, images, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, transform};
-	swapchain_builder.addSyncedQueue(graphics);
-	swapchain_builder.addSyncedQueue(transfer);
-	swapchain_builder.addSyncedQueue(presentation);
-
-	return swapchain_builder.build(device, surface);
-
-}
-
-void recreateSwapchain(Device& device, Allocator& allocator, WindowSurface& surface, Window& window, QueueInfo& graphics, QueueInfo& transfer, QueueInfo& presentation, RenderPass& pass, std::vector<Framebuffer>& framebuffers, Swapchain& swapchain) {
-
-	device.wait();
-	swapchain.close();
-
-	for (Framebuffer& framebuffer : framebuffers) {
-		framebuffer.close();
-	}
-
-	// FIXME gpu resource leak
-	Image depth_image;
-	ImageView depth_image_view;
-
-	swapchain = createSwapchain(device, surface, window, graphics, transfer, presentation);
-
-	// create the depth buffer
-	{
-		ImageInfo image_builder {swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
-		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
-
-		depth_image = allocator.allocateImage(image_builder);
-		depth_image_view = depth_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_DEPTH_BIT);
-	}
-
-	framebuffers = swapchain.getFramebuffers(pass, depth_image_view);
-
-	logger::info("Swapchain recreated!");
-
-}
+#include "client/renderer.hpp"
 
 // for now
 #include "world.hpp"
@@ -124,177 +22,23 @@ int main() {
 	sound_system.add(buffer).loop().play();
 
 	Window window {1000, 700, "Funny Vulkan App"};
+	RenderSystem system {pool, window, 1};
 
-	// instance configuration
-	InstanceBuilder builder;
-	builder.addApplicationInfo("My Funny Vulkan Application");
-	builder.addValidationLayer("VK_LAYER_KHRONOS_validation").orFail();
-	builder.addDebugMessenger();
-
-	// instance and surface creation, and device selection
-	Instance instance = builder.build();
-	WindowSurface surface = instance.createSurface(window);
-	DeviceBuilder device_builder = pickDevice(instance, surface);
-
-	// device configuration
-	QueueInfo graphics_ref = device_builder.addQueue(QueueType::GRAPHICS, 1);
-	QueueInfo transfer_ref = device_builder.addQueue(QueueType::TRANSFER, 1);
-	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
-	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
-
-	// enable some additional features
-	device_builder.features.enableFillModeNonSolid().orFail();
-	device_builder.features.enableWideLines().orFail();
-
-	// device and queue creation
-	Device device = device_builder.create();
-	VkQueue graphics = device.get(graphics_ref, 0);
-	VkQueue transfer = device.get(transfer_ref, 0);
-	VkQueue presentation = device.get(presentation_ref, 0);
-
-	// create command pools
-	CommandPool main_pool = CommandPool::build(device, graphics_ref, false);
-	CommandPool transient_pool = CommandPool::build(device, transfer_ref, true);
-
-	// create a compiler and compile the glsl into spirv
-	Compiler compiler;
-	std::shared_future<ShaderModule> vert_2d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device); }).share();
-	std::shared_future<ShaderModule> vert_3d = pool.defer([&] { return compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device); }).share();
-	std::shared_future<ShaderModule> frag_mix = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_mix.glsl", Kind::FRAGMENT).create(device); }).share();
-	std::shared_future<ShaderModule> frag_tint = pool.defer([&] { return compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device); }).share();
-
-	// create VMA based memory allocator
-	Allocator allocator {device, instance};
-
-	ResourceManager assets;
-
-	logger::debug("Resource reload took: ", Timer::of([&] {
-		Fence fence = device.fence();
-		CommandBuffer buffer = transient_pool.allocate();
-		assets.reload(device, allocator, buffer);
-		buffer.submit().unlocks(fence).done(transfer);
-
-		fence.wait();
-		fence.close();
-		buffer.close();
-	}).milliseconds(), "ms");
+	// for now
+	Device& device = system.device;
+	Allocator& allocator = system.allocator;
+	VkQueue& graphics = system.graphics_queue;
+	VkQueue& presentation_queue = system.presentation_queue;
+	Swapchain& swapchain = system.swapchain;
+	RenderPass& pass = system.render_pass;
+	std::vector<Framebuffer>& framebuffers = system.framebuffers;
 
 	World world(8888);
 
-	// swapchain creation
-	Swapchain swapchain = createSwapchain(device, surface, window, graphics_ref, transfer_ref, presentation_ref);
 	auto extent = swapchain.vk_extent;
 
-	// render pass creation
-	RenderPassBuilder pass_builder;
-
-	pass_builder.addAttachment(swapchain.vk_surface_format.format, VK_SAMPLE_COUNT_1_BIT)
-		.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
-		.output(ColorOp::STORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-		.next();
-
-	pass_builder.addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-		.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
-		.output(ColorOp::IGNORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-		.next();
-
-	pass_builder.addDependency()
-		.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0)
-		.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-		.next();
-
-	pass_builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS)
-		.addColor(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-		.addDepth(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-		.next();
-
-	RenderPass pass = pass_builder.build(device);
-
-	Image depth_image;
-	ImageView depth_image_view;
-
-	// create the depth buffer for the first time
-	{
-		ImageInfo image_builder {swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
-		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
-
-		depth_image = allocator.allocateImage(image_builder);
-		depth_image_view = depth_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_DEPTH_BIT);
-	}
-
-	// create framebuffers
-	std::vector<Framebuffer> framebuffers = swapchain.getFramebuffers(pass, depth_image_view);
-
-	// Create this thing
-	DescriptorSetLayoutBuilder dsl_builder;
-	dsl_builder.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-	dsl_builder.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	DescriptorSetLayout layout = dsl_builder.build(device);
-
-	// 3D binding layout
-	BindingLayout binding_3d = BindingLayoutBuilder::begin()
-		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
-		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
-		.attribute(2, VK_FORMAT_R32_UINT)
-		.done();
-
-	// 2D binding layout
-	BindingLayout binding_2d = BindingLayoutBuilder::begin()
-		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
-		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
-		.attribute(2, VK_FORMAT_R32_UINT)
-		.done();
-
-	GraphicsPipeline pipeline_3d_mix = GraphicsPipelineBuilder::of(device)
-		.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
-		.withRenderPass(pass)
-		.withShaders(vert_3d, frag_mix)
-		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
-		.withBindingLayout(binding_3d)
-		.withDescriptorSetLayout(layout)
-		.build("3D Mixed");
-
-	GraphicsPipeline pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
-		.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
-		.withRenderPass(pass)
-		.withShaders(vert_3d, frag_tint)
-		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
-		.withBlendMode(BlendMode::ENABLED)
-		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-		.withBindingLayout(binding_3d)
-		.withDescriptorSetLayout(layout)
-		.build("3D Tinted");
-
-	GraphicsPipeline pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
-		.withDynamics(VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR)
-		.withRenderPass(pass)
-		.withShaders(vert_2d, frag_tint)
-		.withBlendMode(BlendMode::ENABLED)
-		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-		.withBindingLayout(binding_2d)
-		.withDescriptorSetLayout(layout)
-		.build("2D Tinted");
-
-	int concurrent_frames = 1;
-	int frame = 0;
-
-	DescriptorPoolBuilder descriptor_pool_builder;
-	descriptor_pool_builder.add(concurrent_frames, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-	descriptor_pool_builder.add(concurrent_frames, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-	DescriptorPool descriptor_pool = descriptor_pool_builder.build(device, concurrent_frames);
-
-	std::vector<Frame> frames;
-	std::vector<VkDescriptorSet> sets;
-
-	for (int i = 0; i < concurrent_frames; i ++) {
-		frames.emplace_back(allocator, main_pool, device, descriptor_pool.allocate(layout), assets.getAtlasSampler());
-	}
-
 	ScreenStack stack;
-	ImmediateRenderer renderer {assets};
+	ImmediateRenderer renderer {system.assets};
 	Camera camera {window};
 	camera.move({0, 5, 0});
 	window.setRootInputConsumer(&stack);
@@ -311,12 +55,12 @@ int main() {
 		
 		std::list<ChunkBuffer>& buffers = world.getBuffers();
 
-		Frame& ref = frames[frame];
+		Frame& ref = system.getFrame();
+
 		ref.data.model = glm::identity<glm::mat4>();
 		ref.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 		ref.data.view = camera.getView();
 
-		ref.in_flight_fence.lock();
 		ref.map.write(&ref.data, sizeof(UBO));
 
 		// BEGIN THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
@@ -324,7 +68,7 @@ int main() {
 		// * Incompatible with threading and concurrent frames
 		world.closeBuffers();
 		world.generateAround(camera.getPosition(), 5);
-		world.draw(assets.getAtlas(), pool, allocator, camera.getPosition(), 8);
+		world.draw(system.assets.getAtlas(), pool, allocator, camera.getPosition(), 8);
 
 		renderer.prepare(swapchain.vk_extent);
 		stack.draw(renderer, window.getInputContext(), camera);
@@ -333,16 +77,16 @@ int main() {
 		// END THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
 
 		uint32_t image_index;
-		if (swapchain.getNextImage(frames[frame].image_available_semaphore, &image_index).mustReplace()) {
-			recreateSwapchain(device, allocator, surface, window, graphics_ref, transfer_ref, presentation_ref, pass, framebuffers, swapchain);
+		if (swapchain.getNextImage(ref.image_available_semaphore, &image_index).mustReplace()) {
+			system.recreateSwapchain();
 			extent = swapchain.vk_extent;
 		}
 
 		// record commands
-		CommandRecorder commandRecorder = frames[frame].buffer.record()
+		CommandRecorder commandRecorder = ref.buffer.record()
 			.beginRenderPass(pass, framebuffers[image_index], extent, 0.0f, 0.0f, 0.0f, 1.0f)
-			.bindPipeline(pipeline_3d_mix)
-			.bindDescriptorSet(frames[frame].set)
+			.bindPipeline(system.pipeline_3d_mix)
+			.bindDescriptorSet(ref.set)
 			.setDynamicViewport(0, 0, extent.width, extent.height)
 			.setDynamicScissors(0, 0, extent.width, extent.height);
 
@@ -350,28 +94,29 @@ int main() {
 			commandRecorder.bindBuffer(buffer.buffer).draw(buffer.size);
 		}
 
-		commandRecorder.bindPipeline(pipeline_3d_tint)
+		commandRecorder.bindPipeline(system.pipeline_3d_tint)
 			.bindBuffer(buffer_3d.getBuffer())
 			.draw(buffer_3d.getCount())
-			.bindPipeline(pipeline_2d_tint)
+			.bindPipeline(system.pipeline_2d_tint)
 			.bindBuffer(buffer_2d.getBuffer())
 			.draw(buffer_2d.getCount())
 			.endRenderPass()
 			.done();
 
-		frames[frame].buffer.submit()
-			.awaits(frames[frame].image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-			.unlocks(frames[frame].render_finished_semaphore)
-			.unlocks(frames[frame].in_flight_fence)
+		ref.buffer.submit()
+			.awaits(ref.image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+			.unlocks(ref.render_finished_semaphore)
+			.unlocks(ref.in_flight_fence)
 			.done(graphics);
 
-		if (swapchain.present(presentation, frames[frame].render_finished_semaphore, image_index).mustReplace()) {
-			recreateSwapchain(device, allocator, surface, window, graphics_ref, transfer_ref, presentation_ref, pass, framebuffers, swapchain);
+		if (swapchain.present(presentation_queue, ref.render_finished_semaphore, image_index).mustReplace()) {
+			system.recreateSwapchain();
 			extent = swapchain.vk_extent;
 		}
 
-		frame = (frame + 1) % concurrent_frames;
+		system.nextFrame();
 
+		// TODO audio is busted irit
 		// why does this look like this? not 100% sure, ask the linear algebra guy
 		sound_system.getListener().position(camera.getPosition()).facing(camera.getDirection() * glm::vec3(-1), camera.getUp());
 		sound_system.update();

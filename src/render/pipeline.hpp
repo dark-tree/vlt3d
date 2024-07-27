@@ -28,6 +28,7 @@ class GraphicsPipeline {
 
 	public:
 
+		GraphicsPipeline() = default;
 		GraphicsPipeline(VkPipeline vk_pipeline, VkPipelineLayout vk_layout, VkDevice vk_device)
 		: vk_pipeline(vk_pipeline), vk_layout(vk_layout), vk_device(vk_device) {}
 

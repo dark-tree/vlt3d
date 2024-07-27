@@ -33,6 +33,7 @@ class WindowSurface {
 
 	public:
 
+		WindowSurface() = default;
 		WindowSurface(Window& window, VkInstance& vk_instance)
 		: vk_instance(vk_instance) {
 			bool created = false;
@@ -47,7 +48,7 @@ class WindowSurface {
 
 			if (!created) {
 				logger::fatal("Unable to create window surface with the platform used by GLFW (id: ", platform, ")");
-				throw std::runtime_error("No supported API found!");
+				throw Exception {"No supported Window API found!"};
 			}
 		}
 

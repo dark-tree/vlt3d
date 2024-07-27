@@ -27,6 +27,7 @@ class Instance {
 
 	public:
 
+		Instance() = default;
 		Instance(VkInstance vk_instance, DebugMessanger messenger, bool validation)
 		: vk_instance(vk_instance), messenger(messenger), validation(validation) {
 

@@ -17,14 +17,12 @@ class Device {
 
 		READONLY VkPhysicalDevice vk_physical_device;
 		READONLY VkDevice vk_device;
+		READONLY FeatureSetView features;
+		READONLY MemoryInfo memory;
 
 	public:
 
-		const FeatureSetView features;
-		const MemoryInfo memory;
-
-	public:
-
+		Device() = default;
 		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, FeatureSetView& features)
 		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features), memory(vk_physical_device, vk_device) {}
 

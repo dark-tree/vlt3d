@@ -6,11 +6,12 @@ class QueueInfo {
 
 	public:
 
-		READONLY const uint32_t index;
-		READONLY const uint32_t count;
+		READONLY uint32_t index;
+		READONLY uint32_t count;
 
 	public:
 
+		QueueInfo() = default;
 		QueueInfo(uint32_t index, uint32_t count)
 		: index(index), count(count) {}
 

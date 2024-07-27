@@ -196,6 +196,7 @@ class Allocator {
 
 	public:
 
+		Allocator() = default;
 		Allocator(Device& device, Instance& instance) {
 			VmaVulkanFunctions functions = {};
 			functions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;

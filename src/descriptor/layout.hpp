@@ -41,7 +41,7 @@ class DescriptorSetLayoutBuilder {
 			return *this;
 		}
 
-		DescriptorSetLayout build(Device device) const {
+		DescriptorSetLayout done(Device device) const {
 			VkDescriptorSetLayout layout;
 
 			VkDescriptorSetLayoutCreateInfo create_info {};
@@ -56,4 +56,9 @@ class DescriptorSetLayoutBuilder {
 
 			return {device.vk_device, layout};
 		}
+
+		inline static DescriptorSetLayoutBuilder begin() {
+			return {};
+		}
+
 };

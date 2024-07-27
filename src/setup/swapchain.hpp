@@ -21,12 +21,13 @@ class Swapchain {
 	private:
 
 		std::vector<Image> images;
-		std::reference_wrapper<Device> device;
+		Device* device;
 
 	public:
 
+		Swapchain() = default;
 		Swapchain(VkSwapchainKHR vk_swapchain, VkSurfaceFormatKHR vk_surface_format, VkExtent2D vk_extent, Device& device)
-		: vk_swapchain(vk_swapchain), vk_surface_format(vk_surface_format), vk_extent(vk_extent), device(device) {
+		: vk_swapchain(vk_swapchain), vk_surface_format(vk_surface_format), vk_extent(vk_extent), device(&device) {
 
 			uint32_t count;
 
@@ -55,17 +56,17 @@ class Swapchain {
 
 			for (Image& image : images) {
 				FramebufferBuilder builder {pass, vk_extent.width, vk_extent.height};
-				builder.addAttachment(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT));
+				builder.addAttachment(image.getViewBuilder().build(*device, VK_IMAGE_ASPECT_COLOR_BIT));
 				builder.addAttachment(depth_image);
 
-				framebuffers.push_back(builder.build(device));
+				framebuffers.push_back(builder.build(*device));
 			}
 
 			return framebuffers;
 		}
 
 		PresentResult getNextImage(Semaphore& semaphore, uint32_t* image_index) {
-			return {vkAcquireNextImageKHR(device.get().vk_device, vk_swapchain, UINT64_MAX, semaphore.vk_semaphore, VK_NULL_HANDLE, image_index)};
+			return {vkAcquireNextImageKHR(device->vk_device, vk_swapchain, UINT64_MAX, semaphore.vk_semaphore, VK_NULL_HANDLE, image_index)};
 		}
 
 		PresentResult present(VkQueue queue, Semaphore& await, uint32_t image_index) {
@@ -86,7 +87,7 @@ class Swapchain {
 		}
 
 		void close() {
-			vkDestroySwapchainKHR(device.get().vk_device, vk_swapchain, nullptr);
+			vkDestroySwapchainKHR(device->vk_device, vk_swapchain, nullptr);
 		}
 
 };

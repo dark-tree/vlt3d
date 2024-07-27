@@ -237,6 +237,7 @@ class RenderPass {
 
 	public:
 
+		RenderPass() = default;
 		RenderPass(VkDevice vk_device, VkRenderPass vk_pass)
 		: vk_device(vk_device), vk_pass(vk_pass) {}
 
