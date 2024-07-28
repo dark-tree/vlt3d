@@ -2,6 +2,9 @@
 #include "test.hpp"
 #include "pause.hpp"
 
+TestScreen::TestScreen(Profiler& profiler)
+: profiler(profiler) {}
+
 InputResult TestScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {
 	if (auto* key = event.as<KeyboardEvent>()) {
 
@@ -31,8 +34,8 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 		renderer.setAlignment(VerticalAlignment::TOP);
 		renderer.setTint(255, 255, 0);
 		renderer.setFontSize(2);
-		renderer.drawText(10, 10, "Press [SPACE] to show");
-		renderer.drawText(10, 10 + 9 * 2, "Press [ESCAPE] to close");
+		renderer.drawText(10, 10 + 9 * 2, "Press [SPACE] to show");
+		renderer.drawText(10, 10 + 9 * 4, "Press [ESCAPE] to close");
 		return;
 	}
 
@@ -72,8 +75,9 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.setAlignment(HorizontalAlignment::LEFT);
 	renderer.setAlignment(VerticalAlignment::TOP);
 	renderer.setTint(255, 255, 0);
-	renderer.drawText(10, 10, "Press [SPACE] to hide");
-	renderer.drawText(10, 10 + 9 * 2, "Press [ESCAPE] to close");
+	renderer.drawText(10, 10, "FPS: " + std::to_string(profiler.getCountPerSecond()));
+	renderer.drawText(10, 10 + 9 * 2, "Press [SPACE] to hide");
+	renderer.drawText(10, 10 + 9 * 4, "Press [ESCAPE] to close");
 
 	renderer.setTint(10, 100, 220);
 	renderer.drawLine(50, 200, 50, 550);

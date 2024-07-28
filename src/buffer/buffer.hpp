@@ -36,6 +36,7 @@ class BasicBuffer {
 		Allocator& allocator;
 		Buffer buffer;
 		size_t capacity, count;
+		MemoryMap map;
 
 		void reallocate(size_t capacity);
 		size_t encompass(size_t target);
@@ -54,10 +55,8 @@ class BasicBuffer {
 			}
 
 			if (count > 0) {
-				MemoryMap map = buffer.access().map();
 				map.write(data, bytes);
 				map.flush();
-				map.unmap();
 			}
 		}
 

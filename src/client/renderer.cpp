@@ -74,7 +74,7 @@ void RenderSystem::createSwapchain() {
 	}
 
 	// swapchain creation
-	SwapchainBuilder builder {VK_PRESENT_MODE_FIFO_KHR, selected, extent, images, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, transform};
+	SwapchainBuilder builder {VK_PRESENT_MODE_IMMEDIATE_KHR, selected, extent, images, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, transform};
 	builder.addSyncedQueue(graphics_queue);
 	builder.addSyncedQueue(transfer_queue);
 	builder.addSyncedQueue(presentation_queue);

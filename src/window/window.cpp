@@ -1,5 +1,6 @@
 
 #include "window.hpp"
+#include "util/logger.hpp"
 
 void Window::glfwKeyCallback(GLFWwindow* glfw_window, int key, int scancode, int action, int mods) {
 	Window* window = (Window*) glfwGetWindowUserPointer(glfw_window);
@@ -25,17 +26,24 @@ void Window::glfwScrollCallback(GLFWwindow* glfw_window, double x_scroll, double
 	}
 }
 
+void Window::glfwErrorCallback(int code, const char* description) {
+	logger::error("[GLFW] ", description);
+}
+
 Window::Window(uint32_t w, uint32_t h, const char* title)
 : input(*this), root(nullptr) {
 	// one-of init
 	static auto init = [] {
-		return glfwInit();
+		bool init = glfwInit();
+		glfwSetErrorCallback(glfwErrorCallback);
+		return init;
 	} ();
 
 	if (!init) {
 		throw Exception {"Failed to initialize!"};
 	}
 
+	glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	glfw_window = glfwCreateWindow(w, h, title, nullptr, nullptr);
@@ -54,8 +62,6 @@ Window::Window(uint32_t w, uint32_t h, const char* title)
 	glfwSetKeyCallback(glfw_window, glfwKeyCallback);
 	glfwSetMouseButtonCallback(glfw_window, glfwButtonCallback);
 	glfwSetScrollCallback(glfw_window, glfwScrollCallback);
-
-	//glfwSwapInterval(0);
 }
 
 void Window::poll() const {

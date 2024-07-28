@@ -19,6 +19,7 @@ class Window {
 		static void glfwKeyCallback(GLFWwindow* glfw_window, int key, int scancode, int action, int mods);
 		static void glfwButtonCallback(GLFWwindow* glfw_window, int button, int action, int mods);
 		static void glfwScrollCallback(GLFWwindow* glfw_window, double x_scroll, double y_scroll);
+		static void glfwErrorCallback(int code, const char* description);
 
 	public:
 

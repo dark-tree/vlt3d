@@ -10,6 +10,7 @@
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
+#include "window/profiler.hpp"
 
 int main() {
 
@@ -35,12 +36,15 @@ int main() {
 	camera.move({0, 5, 0});
 	window.setRootInputConsumer(&stack);
 
+	Profiler profiler;
+
 	// Open the cluster-fuck screen :D
-	stack.open(new TestScreen {});
+	stack.open(new TestScreen {profiler});
 
 	while (!window.shouldClose()) {
 		window.poll();
 		camera.update();
+		profiler.next();
 		
 		std::list<ChunkBuffer>& buffers = world.getBuffers();
 		Frame& frame = system.getFrame();

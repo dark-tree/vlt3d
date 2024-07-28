@@ -19,7 +19,8 @@ void BasicBuffer::reallocate(size_t capacity) {
 	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
 	close();
-	buffer = allocator.allocateBuffer(buffer_builder);
+	this->buffer = allocator.allocateBuffer(buffer_builder);
+	this->map = buffer.access().map();
 	this->capacity = capacity;
 	logger::info("Reallocated simple buffer ", this, " to ", capacity, " bytes");
 }
@@ -48,5 +49,8 @@ const Buffer& BasicBuffer::getBuffer() const {
 }
 
 void BasicBuffer::close() {
-	if (capacity > 0) buffer.close();
+	if (capacity > 0) {
+		map.unmap();
+		buffer.close();
+	}
 }
