@@ -45,12 +45,13 @@ Font::Overrides::Overrides(const TextTreeList* overrides) {
 		int codepoint = *override->get<TextTreeInt>("codepoint");
 		int start = *override->get<TextTreeInt>("start");
 		int width = *override->get<TextTreeInt>("width");
+		bool draw = *override->get<TextTreeBool>("draw");
 
 		if (cache.contains(codepoint)) {
 			throw Exception {"Duplicate codepoint override in font definition"};
 		}
 
-		cache[codepoint] = {start, width};
+		cache[codepoint] = {start, width, draw};
 	}
 
 }
@@ -67,7 +68,7 @@ Font::Override Font::Overrides::get(int codepoint) const {
  * Font
  */
 
-UnbakedSprite Font::scanBlock(int code, int bx, int by, int ix, int iy, ImageData image, Overrides& overrides) {
+UnbakedSprite Font::scanBlock(int code, int bx, int by, int ix, int iy, ImageData image, Overrides& overrides, bool* draw) {
 	int min = size;
 	int max = 0;
 
@@ -78,6 +79,7 @@ UnbakedSprite Font::scanBlock(int code, int bx, int by, int ix, int iy, ImageDat
 
 	if (overrides.has(code)) {
 		Override override = overrides.get(code);
+		*draw = override.draw;
 		return {override.start, oy, override.width, size};
 	}
 
@@ -99,6 +101,7 @@ UnbakedSprite Font::scanBlock(int code, int bx, int by, int ix, int iy, ImageDat
 
 	// there are no pixels set in this block
 	if (min > max) {
+		*draw = false;
 		return {ox, oy, size, size};
 	}
 
@@ -121,7 +124,8 @@ void Font::addCodePage(Atlas& atlas, const std::string& identifier, int base, Ov
 	for (int x = 0; x < page.w / size; x ++) {
 		for (int y = 0; y < page.h / size; y ++) {
 			int code = x + y * line + base;
-			glyphs.try_emplace(code, page.combine(scanBlock(code, x, y, page.x, page.y, image, overrides)), image, size, true /* TODO */);
+			bool draw = true;
+			glyphs.try_emplace(code, page.combine(scanBlock(code, x, y, page.x, page.y, image, overrides, &draw)), image, size, draw);
 		}
 	}
 }

@@ -157,6 +157,10 @@ target_link_libraries(main
 		external
 )
 
+target_compile_definitions(main
+		PRIVATE "SOURCE_ROOT=\"${CMAKE_SOURCE_DIR}\""
+)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 	# GCC debugging doodads

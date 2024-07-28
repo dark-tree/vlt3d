@@ -3,10 +3,9 @@
 
 #ifdef __cpp_lib_stacktrace
 std::string StackCollector::filterPath(std::string path) {
-	//TODO
-	//#ifdef _MSC_VER
-	//return std::filesystem::path(path).lexically_relative("").generic_string();
-	//#endif
+	#ifdef _MSC_VER
+	return std::filesystem::path(path).lexically_relative(SOURCE_ROOT).generic_string();
+	#endif
 
 	return path;
 }

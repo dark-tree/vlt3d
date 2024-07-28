@@ -44,6 +44,7 @@ class Font {
 		struct Override {
 			int start;
 			int width;
+			bool draw;
 		};
 
 		class Overrides {
@@ -77,7 +78,7 @@ class Font {
 		std::unordered_map<int, Glyph> glyphs;
 		Glyph fallback;
 
-		UnbakedSprite scanBlock(int code, int bx, int by, int ix, int iy, ImageData image, Overrides& overrides);
+		UnbakedSprite scanBlock(int code, int bx, int by, int ix, int iy, ImageData image, Overrides& overrides, bool* draw);
 		void addCodePage(Atlas& atlas, const std::string& identifier, int base, Overrides& overrides);
 		void addFallback(Atlas& atlas);
 

@@ -88,7 +88,7 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 
 	renderer.setAlignment(VerticalAlignment::CENTER);
 	renderer.setAlignment(HorizontalAlignment::CENTER);
-	renderer.drawText(-0.5, -0.5, -0.5, "Hello!");
+	renderer.drawText(-0.5, -0.5, -0.5, "Hello !");
 	renderer.drawLine(0, -3, 0, 10 * ox + 10, -3, 10 * oy + 10);
 
 	renderer.setTint(255, 255, 0);
