@@ -299,7 +299,7 @@ void ImmediateRenderer::drawPatch(glm::vec2 pos, float w, float h, float s, cons
  */
 
 void ImmediateRenderer::drawBillboardVertex(glm::quat rotation, glm::vec3 offset, float x, float y, float u, float v) {
-	drawVertex((rotation * glm::vec3 {x, y, 0}) + offset, u, v);
+	drawVertex((rotation * glm::vec3 {-x, -y, 0}) + offset, u, v);
 }
 
 glm::quat ImmediateRenderer::getBillboardRotation(glm::vec3 center) const {
@@ -447,12 +447,12 @@ void ImmediateRenderer::drawLine(glm::vec3 pa, glm::vec3 pb) {
 	glm::vec3 ab = glm::normalize(pb - pa);
 
 	float radius = line_size / 2;
-	int sides = 6;
+	int sides = 4;
 	float slice = (2 * glm::pi<float>()) / sides;
 
 	for (int i = 0; i < sides; i ++) {
-		float ac = (i + 0) * slice;
-		float an = (i + 1) * slice;
+		float ac = (i + 0) * slice + glm::pi<float>() / 4;
+		float an = (i + 1) * slice + glm::pi<float>() / 4;
 
 		glm::vec3 vc = getPerpendicular(ab, ac) * radius;
 		glm::vec3 vn = getPerpendicular(ab, an) * radius;

@@ -9,4 +9,9 @@ layout(location = 0) out vec4 fColor;
 
 void main() {
     fColor = mix(texture(uSampler, vTexture).rgba, vColor, 0.5);
+
+    // 1/250
+    if (fColor.a <= 0.004) {
+        discard;
+    }
 }
