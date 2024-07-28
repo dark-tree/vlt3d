@@ -3,6 +3,43 @@
 
 #include "setup/device.hpp"
 
+/*
+ * Frame
+ */
+
+Frame::Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler)
+: buffer(pool.allocate()), immediate_2d(allocator, 1024), immediate_3d(allocator, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
+
+	BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
+	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+	ubo = allocator.allocateBuffer(buffer_builder);
+	map = ubo.access().map();
+	set = descriptor;
+
+	descriptor.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ubo, sizeof(UBO));
+	descriptor.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
+}
+
+Frame::~Frame() {
+	buffer.close();
+	available_semaphore.close();
+	finished_semaphore.close();
+	flight_fence.close();
+
+	map.unmap();
+	ubo.close();
+}
+
+void Frame::wait() {
+	flight_fence.lock();
+}
+
+/*
+ * RenderSystem
+ */
+
 DeviceBuilder RenderSystem::pickDevice(Instance& instance, WindowSurface& surface) {
 	for (DeviceInfo& device : instance.getDevices()) {
 		if (device.getQueueFamily(QueueType::GRAPHICS) && device.getQueueFamily(surface) && device.hasSwapchain(surface)) {
@@ -127,4 +164,197 @@ void RenderSystem::recreateSwapchain() {
 
 	createPipelines();
 
+}
+
+void RenderSystem::createPipelines() {
+
+	VkExtent2D extent = swapchain.vk_extent;
+
+	pipeline_3d_mix = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withRenderPass(render_pass)
+		.withShaders(assets.state->vert_3d, assets.state->frag_mix)
+		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
+		.withBindingLayout(binding_3d)
+		.withDescriptorSetLayout(descriptor_layout)
+		.build();
+
+	pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withRenderPass(render_pass)
+		.withShaders(assets.state->vert_3d, assets.state->frag_tint)
+		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
+		.withBlendMode(BlendMode::ENABLED)
+		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBindingLayout(binding_3d)
+		.withDescriptorSetLayout(descriptor_layout)
+		.build();
+
+	pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withRenderPass(render_pass)
+		.withShaders(assets.state->vert_2d, assets.state->frag_tint)
+		.withBlendMode(BlendMode::ENABLED)
+		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+		.withBindingLayout(binding_2d)
+		.withDescriptorSetLayout(descriptor_layout)
+		.build();
+
+}
+
+RenderSystem::RenderSystem(Window& window, int concurrent)
+: window(window), concurrent(concurrent) {
+
+	// Phase 1
+	// this step is only ever executed once
+
+	// instance configuration
+	InstanceBuilder builder;
+	builder.addApplicationInfo("My Funny Vulkan Application");
+	builder.addValidationLayer("VK_LAYER_KHRONOS_validation").orFail();
+	builder.addDebugMessenger();
+
+	// instance and surface creation, and device selection
+	instance = builder.build();
+	surface = instance.createSurface(window);
+	DeviceBuilder device_builder = pickDevice(instance, surface);
+
+	// device configuration
+	QueueInfo graphics_ref = device_builder.addQueue(QueueType::GRAPHICS, 1);
+	QueueInfo transfer_ref = device_builder.addQueue(QueueType::TRANSFER, 1);
+	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
+	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
+
+	// enable some additional features
+	device_builder.features.enableFillModeNonSolid().orFail();
+	device_builder.features.enableWideLines().orFail();
+
+	// device and queue creation
+	device = device_builder.create();
+	graphics_queue = device.get(graphics_ref, 0);
+	transfer_queue = device.get(transfer_ref, 0);
+	presentation_queue = device.get(presentation_ref, 0);
+
+	// create command pools
+	graphics_pool = CommandPool::build(device, graphics_ref, false);
+	transient_pool = CommandPool::build(device, transfer_ref, true);
+
+	// get the VMA allocator ready
+	allocator = Allocator {device, instance};
+
+	// this is NEED so that frames do not relocated and deconstruct frames
+	frames.reserve(concurrent);
+
+	// Create this thing
+	descriptor_layout = DescriptorSetLayoutBuilder::begin()
+		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.done(device);
+
+	// 3D binding layout
+	binding_3d = BindingLayoutBuilder::begin()
+		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
+		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(2, VK_FORMAT_R32_UINT)
+		.done();
+
+	// 2D binding layout
+	binding_2d = BindingLayoutBuilder::begin()
+		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(2, VK_FORMAT_R32_UINT)
+		.done();
+
+	descriptor_pool = DescriptorPoolBuilder::begin()
+		.add(concurrent, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+		.add(concurrent, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+		.done(device, concurrent);
+
+	// Phase 2
+	// this step needs to be more or less repeated every time the window size changes
+
+	createSwapchain();
+	createRenderPass(swapchain);
+	createFramebuffers(render_pass);
+
+	// Phase 3
+	// this step will need to be repeated each time the resources are reloaded
+
+	logger::debug("Resource reload took: ", Timer::of([&] {
+		Fence fence = device.fence();
+		CommandBuffer buffer = transient_pool.allocate();
+		assets.reload(device, allocator, buffer);
+		buffer.submit().unlocks(fence).done(transfer_queue);
+
+		fence.wait();
+		fence.close();
+		buffer.close();
+	}).milliseconds(), "ms");
+
+	createPipelines();
+
+	for (int i = 0; i < concurrent; i ++) {
+		frames.emplace_back(allocator, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
+	}
+}
+
+void RenderSystem::reloadAssets() {
+	wait();
+
+	logger::debug("Resource reload took: ", Timer::of([&] {
+		Fence fence = device.fence();
+		CommandBuffer buffer = transient_pool.allocate();
+		assets.reload(device, allocator, buffer);
+		buffer.submit().unlocks(fence).done(transfer_queue);
+
+		fence.wait();
+		fence.close();
+		buffer.close();
+
+		pipeline_2d_tint.close();
+		pipeline_3d_mix.close();
+		pipeline_3d_tint.close();
+
+		createPipelines();
+
+		descriptor_pool.reset();
+		frames.clear();
+
+		for (int i = 0; i < concurrent; i ++) {
+			frames.emplace_back(allocator, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
+		}
+	}).milliseconds(), "ms");
+
+}
+
+Framebuffer& RenderSystem::acquireFramebuffer() {
+	uint32_t image_index;
+	if (swapchain.getNextImage(getFrame().available_semaphore, &image_index).mustReplace()) {
+		recreateSwapchain();
+	}
+
+	return framebuffers[image_index];
+}
+
+void RenderSystem::presentFramebuffer(Framebuffer& framebuffer) {
+	if (swapchain.present(presentation_queue, getFrame().finished_semaphore, framebuffer.index).mustReplace()) {
+		recreateSwapchain();
+	}
+}
+
+Frame& RenderSystem::getFrame() {
+	return frames[index];
+}
+
+void RenderSystem::nextFrame() {
+	index = (index + 1) % concurrent;
+}
+
+void RenderSystem::wait() {
+	device.wait();
 }

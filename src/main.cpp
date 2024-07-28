@@ -7,11 +7,9 @@
 
 // for now
 #include "world.hpp"
-#include "buffer/font.hpp"
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
-#include "client/resources.hpp"
 
 int main() {
 
@@ -22,7 +20,7 @@ int main() {
 	sound_system.add(buffer).loop().play();
 
 	Window window {1000, 700, "Funny Vulkan App"};
-	RenderSystem system {pool, window, 1};
+	RenderSystem system {window, 1};
 
 	// for now
 	Allocator& allocator = system.allocator;
@@ -40,9 +38,6 @@ int main() {
 	// Open the cluster-fuck screen :D
 	stack.open(new TestScreen {});
 
-	BasicBuffer buffer_3d {allocator, 1024};
-	BasicBuffer buffer_2d {allocator, 1024};
-
 	while (!window.shouldClose()) {
 		window.poll();
 		camera.update();
@@ -58,17 +53,14 @@ int main() {
 		frame.map.write(&frame.data, sizeof(UBO));
 
 		// BEGIN THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
-		// * Horribly inefficient
-		// * Incompatible with threading and concurrent frames
 		world.closeBuffers();
 		world.generateAround(camera.getPosition(), 5);
 		world.draw(system.assets.getAtlas(), pool, allocator, camera.getPosition(), 8);
+		// END THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
 
 		renderer.prepare(swapchain.vk_extent);
 		stack.draw(renderer, window.getInputContext(), camera);
-		renderer.write(allocator, buffer_3d, buffer_2d);
-		// * Also we now have 3 separate buffer types
-		// END THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
+		renderer.write(allocator, frame.immediate_3d, frame.immediate_2d);
 
 		Framebuffer& framebuffer = system.acquireFramebuffer();
 		VkExtent2D extent = system.swapchain.vk_extent;
@@ -84,18 +76,18 @@ int main() {
 		}
 
 		commandRecorder.bindPipeline(system.pipeline_3d_tint)
-			.bindBuffer(buffer_3d.getBuffer())
-			.draw(buffer_3d.getCount())
+			.bindBuffer(frame.immediate_3d.getBuffer())
+			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)
-			.bindBuffer(buffer_2d.getBuffer())
-			.draw(buffer_2d.getCount())
+			.bindBuffer(frame.immediate_2d.getBuffer())
+			.draw(frame.immediate_2d.getCount())
 			.endRenderPass()
 			.done();
 
 		frame.buffer.submit()
-			.awaits(frame.image_available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-			.unlocks(frame.render_finished_semaphore)
-			.unlocks(frame.in_flight_fence)
+			.awaits(frame.available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+			.unlocks(frame.finished_semaphore)
+			.unlocks(frame.flight_fence)
 			.done(system.graphics_queue);
 
 		system.presentFramebuffer(framebuffer);

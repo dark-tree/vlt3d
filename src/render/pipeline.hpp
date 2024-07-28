@@ -342,7 +342,7 @@ class GraphicsPipelineBuilder {
 
 	public:
 
-		GraphicsPipeline build(const char* name = "Untitled") {
+		GraphicsPipeline build() {
 
 			Timer timer;
 
@@ -399,7 +399,6 @@ class GraphicsPipelineBuilder {
 				throw Exception {"Failed to create graphics pipeline!"};
 			}
 
-			logger::info("Pipeline '", name, "' creation took: ", timer.milliseconds(), "ms");
 			return {pipeline, pipeline_layout, device.vk_device};
 
 		}

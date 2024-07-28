@@ -37,6 +37,10 @@ class DescriptorPool {
 			return {vk_device, set};
 		}
 
+		void reset() {
+			vkResetDescriptorPool(vk_device, vk_pool, 0);
+		}
+
 };
 
 class DescriptorPoolBuilder {
