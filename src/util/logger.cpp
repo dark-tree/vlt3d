@@ -2,18 +2,16 @@
 #include "logger.hpp"
 
 std::string logger::getTimestamp() {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	time_t epoch = tv.tv_sec;
+	auto now = std::chrono::system_clock::now();
+	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
-	char clock_string[128];
-	struct tm ts = *localtime(&epoch);
-	strftime(clock_string, sizeof clock_string, "%H:%M:%S", &ts);
+	std::time_t epoch_time = std::chrono::system_clock::to_time_t(now);
+	std::tm local_time = *std::localtime(&epoch_time);
 
-	char milli_string[255];
-	snprintf(milli_string, sizeof milli_string, "%s.%03ld", clock_string, (tv.tv_usec / 1000));
+	std::ostringstream oss;
+	oss << std::put_time(&local_time, "%H:%M:%S") << '.' << std::setfill('0') << std::setw(3) << ms.count();
 
-	return std::string(milli_string);
+	return oss.str();
 }
 
 std::string logger::getText(const std::string& type, std::stringstream& buffer) {
