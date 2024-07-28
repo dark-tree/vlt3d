@@ -41,7 +41,7 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	float oy = cos(t);
 
 	renderer.setTint(255, 255, 255);
-	renderer.drawPatch(renderer.getWidth() - 160 - 32, 32, 10, 10, 16, renderer.getNinePatch("assets/sprites/gui-smol.png", 8));
+	renderer.drawPatch(renderer.getWidth() - 160 - 32, 32, 10, 10, 16, renderer.getNinePatch("gui-smol", 8));
 
 	renderer.setTint(50, 255, 50);
 	renderer.setFontSize(2);
@@ -67,7 +67,7 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.setTint(255, 255, 255);
 	renderer.setFontSize(2);
 	renderer.setLineSize(4);
-	renderer.drawSprite(10, 10, 100, 100, renderer.getSprite("assets/sprites/vkblob.png"));
+	renderer.drawSprite(10, 10, 100, 100, renderer.getSprite("vkblob"));
 
 	renderer.setAlignment(HorizontalAlignment::LEFT);
 	renderer.setAlignment(VerticalAlignment::TOP);
@@ -84,7 +84,7 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.setTint(255, 255, 255);
 	renderer.setFontSize(0.05);
 	renderer.setLineSize(0.05);
-	renderer.drawTiled(10 * ox + 10, -3, 10 * oy + 10, 2.6, 2.6, renderer.getSprite("assets/sprites/vkblob.png"), 1, 1);
+	renderer.drawTiled(10 * ox + 10, -3, 10 * oy + 10, 2.6, 2.6, renderer.getSprite("vkblob"), 1, 1);
 
 	renderer.setAlignment(VerticalAlignment::CENTER);
 	renderer.setAlignment(HorizontalAlignment::CENTER);
@@ -113,8 +113,8 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.drawCircle(16, -40, 16, 8);
 
 	renderer.setTint(255, 255, 255);
-	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, 1, renderer.getSprite("assets/sprites/button.png"), 4, 4, 0, 32);
-	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, (sin(t * 2) + 1) / 2, renderer.getSprite("assets/sprites/button.png"), 4, 4, 1, 32);
+	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, 1, renderer.getSprite("button"), 4, 4, 0, 32);
+	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, (sin(t * 2) + 1) / 2, renderer.getSprite("button"), 4, 4, 1, 32);
 
 
 }

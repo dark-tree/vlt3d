@@ -8,8 +8,10 @@
  */
 
 Glyph::Glyph(UnbakedSprite unbaked, ImageData image, int height, bool draw)
-: width(unbaked.w), height(height), baked(unbaked.bake(image.width(), image.height())), draw(draw) {}
+: Glyph(unbaked.w, height, unbaked.bake(image.width(), image.height()), draw) {}
 
+Glyph::Glyph(int width, int height, BakedSprite sprite, bool draw)
+: width(width), height(height), baked(sprite), draw(draw) {}
 
 int Glyph::getWidth() const {
 	return width;
@@ -124,8 +126,16 @@ void Font::addCodePage(Atlas& atlas, const std::string& identifier, int base, Ov
 	}
 }
 
-Glyph Font::getGlyph(int unicode) const {
-	return glyphs.at(unicode);
+void Font::addFallback(Atlas& atlas) {
+	this->fallback = {size, size, atlas.getBakedSprite("font-fallback"), true};
+}
+
+Glyph Font::getGlyph(int codepoint) const {
+	try {
+		return glyphs.at(codepoint);
+	} catch (std::out_of_range& first) {
+		return fallback;
+	}
 }
 
 int Font::getSize() const {
@@ -148,10 +158,11 @@ Font Font::loadFromFile(Atlas& atlas, const std::string& filename) {
 		auto page = entry->as<TextTreeDict>();
 
 		int base = *page->get<TextTreeInt>("base");
-		std::string path = page->get<TextTreeString>("path")->copy();
+		std::string path = page->get<TextTreeString>("sprite")->copy();
 
 		font.addCodePage(atlas, path, base, overrides);
 	}
 
+	font.addFallback(atlas);
 	return font;
 }

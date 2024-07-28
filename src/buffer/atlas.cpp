@@ -17,7 +17,15 @@ Atlas::Atlas(ImageData atlas, const std::unordered_map<std::string, UnbakedSprit
 }
 
 const PairedSprite& Atlas::getSpritePair(const std::string& identifier) const {
-	return util::fallback_get(sprites, identifier, fallback);
+	auto it = sprites.find(identifier);
+
+	if (it == sprites.end()) {
+		logger::warn("Using missing sprite for: '" + identifier + "'");
+		sprites[identifier] = fallback;
+		return fallback;
+	} else {
+		return it->second;
+	}
 }
 
 BakedSprite Atlas::getBakedSprite(const std::string& identifier) const {
@@ -107,14 +115,8 @@ AtlasBuilder::AtlasBuilder() {
 	atlas = ImageData::allocate(512, 512);
 }
 
-void AtlasBuilder::submitDirectory(const std::string& identifier) {
-	for (const auto& entry : std::filesystem::recursive_directory_iterator(identifier)) {
-		if (entry.is_regular_file()) submitFile(entry.path().generic_string());
-	}
-}
-
-void AtlasBuilder::submitFile(const std::string& identifier) {
-	submitImage(identifier, ImageData::loadFromFile(identifier));
+void AtlasBuilder::submitFile(const std::string& identifier, const std::string& path) {
+	submitImage(identifier, ImageData::loadFromFile(path));
 }
 
 void AtlasBuilder::submitImage(const std::string& identifier, ImageData image) {
@@ -129,9 +131,18 @@ Atlas AtlasBuilder::build() {
 	return {atlas, sprites, getFallback()};
 }
 
-Atlas AtlasBuilder::createSimpleAtlas(const std::string& identifier) {
+Atlas AtlasBuilder::createSimpleAtlas(const std::string& root, ImageData fallback) {
 	AtlasBuilder builder;
-	builder.submitDirectory(identifier);
+
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
+		if (entry.is_regular_file()) {
+			const std::filesystem::path& path = entry.path();
+			std::string identifier = path.lexically_relative(root).replace_extension().generic_string();
+			builder.submitFile(identifier, path.generic_string());
+		}
+	}
+
+	builder.submitFallback(fallback);
 	return builder.build();
 }
 

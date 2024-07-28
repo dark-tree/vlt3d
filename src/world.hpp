@@ -116,7 +116,7 @@ class Chunk {
 								uint32_t block = getBlock(x, y, z);
 
 								if (block) {
-									BakedSprite sprite = (block % 2 == 1) ? atlas.getBakedSprite("assets/sprites/vkblob.png") : atlas.getBakedSprite("assets/sprites/digital.png");
+									BakedSprite sprite = (block % 2 == 1) ? atlas.getBakedSprite("vkblob") : atlas.getBakedSprite("digital");
 									float shade = std::clamp((this->y * CHUNK_SIZE + y) / (CHUNK_SIZE * 2.0f) + 0.2f, 0.0f, 1.0f);
 
 									drawCube(

@@ -3,7 +3,7 @@
     sizing 8
 
     pages [
-        { base 0, path "assets/sprites/font-latin.png" }
+        { base 0, sprite "font-latin" }
     ]
 
     overrides [

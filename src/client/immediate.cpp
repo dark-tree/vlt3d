@@ -6,8 +6,8 @@
 
 ImmediateRenderer::ImmediateRenderer(const ResourceManager& assets)
 : mode(BillboardMode::TWO_AXIS), assets(assets) {
-	this->blank = getSprite("assets/sprites/blank.png");
-	this->circle = getSprite("assets/sprites/circle.png");
+	this->blank = getSprite("blank");
+	this->circle = getSprite("circle");
 
 	// initiate settings to some default values
 	setTint(255, 255, 255, 255);

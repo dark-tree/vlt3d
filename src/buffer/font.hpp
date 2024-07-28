@@ -19,6 +19,7 @@ class Glyph {
 
 		Glyph() = default;
 		Glyph(UnbakedSprite unbaked, ImageData image, int height, bool draw);
+		Glyph(int width, int height, BakedSprite sprite, bool draw);
 
 	public:
 
@@ -74,9 +75,11 @@ class Font {
 		bool monospaced;
 		int size;
 		std::unordered_map<int, Glyph> glyphs;
+		Glyph fallback;
 
 		UnbakedSprite scanBlock(int code, int bx, int by, int ix, int iy, ImageData image, Overrides& overrides);
 		void addCodePage(Atlas& atlas, const std::string& identifier, int base, Overrides& overrides);
+		void addFallback(Atlas& atlas);
 
 	private:
 

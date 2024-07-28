@@ -67,7 +67,7 @@ void GridContext::draw(ImmediateRenderer& renderer, InputContext& input) {
 	Box2D box = bounding.offset(sax, say);
 
 	renderer.setTint(255, 255, 255);
-	renderer.drawPatch(box.begin(), width, height, size, renderer.getNinePatch("assets/sprites/gui-smol.png", 8));
+	renderer.drawPatch(box.begin(), width, height, size, renderer.getNinePatch("gui-smol", 8));
 
 	if (isDebugMode(input)) {
 		renderer.setLineSize(1);

@@ -8,10 +8,23 @@ ResourceManager::State::State(Device& device, Allocator& allocator, CommandRecor
 
 	Compiler compiler;
 
-	this->atlas = AtlasBuilder::createSimpleAtlas("assets/sprites");
+	ImageData fallback = ImageData::allocate(8, 8);
+
+	for (int x = 0; x < 8; x ++) {
+		for (int y = 0; y < 8; y ++) {
+			uint8_t* pixel = fallback.pixel(x, y);
+			pixel[0] = ((x < 4) ^ (y < 4)) ? 255 : 0;
+			pixel[1] = 0;
+			pixel[2] = ((x < 4) ^ (y < 4)) ? 255 : 0;
+			pixel[3] = 255;
+		}
+	}
+
+	this->atlas = AtlasBuilder::createSimpleAtlas("assets/sprites", fallback);
 	this->font = Font::loadFromFile(atlas, "assets/font.tt");
 
 	atlas.getImage().save("atlas.png");
+	fallback.close();
 
 	Image image = atlas.getImage().upload(allocator, recorder, VK_FORMAT_R8G8B8A8_SRGB);
 	ImageView view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
