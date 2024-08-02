@@ -22,17 +22,24 @@ void ManagedTask::call() const {
  * TaskQueue
  */
 
+TaskQueue::TaskQueue(const TaskQueue& other)
+: tasks(other.tasks) {}
+
+TaskQueue::TaskQueue(TaskQueue&& other) noexcept
+: tasks(std::move(other.tasks)) {}
+
 void TaskQueue::enqueue(const Task& task) {
-	std::unique_lock<std::mutex> lock(queue_mutex);
+	std::lock_guard lock(queue_mutex);
 	tasks.emplace(task);
 }
 
-void TaskQueue::execute() {
+int TaskQueue::execute() {
 	std::vector<Task> locals;
-	locals.reserve(locals.size());
+	locals.reserve(tasks.size());
+	int count = tasks.size();
 
 	{
-		std::unique_lock<std::mutex> lock(queue_mutex);
+		std::lock_guard lock(queue_mutex);
 
 		while (!tasks.empty()) {
 			locals.emplace_back(std::move(tasks.front()));
@@ -43,6 +50,8 @@ void TaskQueue::execute() {
 	for (Task& task : locals) {
 		task();
 	}
+
+	return count;
 }
 
 /*

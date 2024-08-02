@@ -44,6 +44,12 @@ class Frame {
 		MemoryMap map;
 		DescriptorSet set;
 
+	private:
+
+		friend class RenderSystem;
+
+		TaskQueue queue;
+
 	public:
 
 		Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler);
@@ -60,6 +66,12 @@ class Frame {
 		 * this is too keep the CPU from "running away" from the GPU
 		 */
 		void wait();
+
+		/**
+		 * Execute all pending frame tasks, this usually is used
+		 * for running cleanup hooks
+		 */
+		void execute();
 
 };
 
@@ -169,6 +181,9 @@ class RenderSystem {
 
 		/// Advanced to the next frame, must be called AFTER `presentFramebuffer()`
 		void nextFrame();
+
+		/// Defer some task until the next frame of the same index, useful for running cleanup hooks
+		void defer(const Task& task);
 
 		/// Wait for all pending operations on all queues are finished
 		void wait();

@@ -41,6 +41,10 @@ class TaskQueue {
 
 	public:
 
+		TaskQueue() = default;
+		TaskQueue(const TaskQueue& other);
+		TaskQueue(TaskQueue&& other) noexcept;
+
 		void enqueue(const Task& task);
 
 		template <typename Func, typename Arg, typename... Args>
@@ -48,13 +52,12 @@ class TaskQueue {
 			enqueue(std::bind(func, arg, args...));
 		}
 
-
 	public:
 
 		/**
 		 * Execute all pending task in this queue
 		 */
-		void execute();
+		int execute();
 
 };
 

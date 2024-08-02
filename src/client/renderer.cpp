@@ -36,6 +36,14 @@ void Frame::wait() {
 	flight_fence.lock();
 }
 
+void Frame::execute() {
+	int count = queue.execute();
+
+	if (count > 0) {
+		logger::debug("Executed ", count, " defered frame tasks");
+	}
+}
+
 /*
  * RenderSystem
  */
@@ -210,7 +218,7 @@ void RenderSystem::createPipelines() {
 }
 
 RenderSystem::RenderSystem(Window& window, int concurrent)
-: window(window), concurrent(concurrent) {
+: window(window), concurrent(concurrent), index(0) {
 
 	// Phase 1
 	// this step is only ever executed once
@@ -355,6 +363,10 @@ Frame& RenderSystem::getFrame() {
 
 void RenderSystem::nextFrame() {
 	index = (index + 1) % concurrent;
+}
+
+void RenderSystem::defer(const Task& task) {
+	getFrame().queue.enqueue(task);
 }
 
 void RenderSystem::wait() {

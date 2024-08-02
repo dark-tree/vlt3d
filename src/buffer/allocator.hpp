@@ -226,7 +226,7 @@ class Allocator {
 			const VkBufferCreateInfo buffer_info = info.getBufferInfo();
 
 			if(vmaCreateBuffer(vma_allocator, &buffer_info, &allocation_info, &buffer, &allocation, nullptr) != VK_SUCCESS) {
-				throw std::runtime_error {"vmaCreateBuffer: Failed to allocated buffer!"};
+				throw Exception {"Failed to allocated buffer!"};
 			}
 
 			return {buffer, {vma_allocator, allocation}};
@@ -240,7 +240,7 @@ class Allocator {
 			const VkImageCreateInfo image_info = info.getImageInfo();
 
 			if(vmaCreateImage(vma_allocator, &image_info, &allocation_info, &image, &allocation, nullptr) != VK_SUCCESS) {
-				throw std::runtime_error {"vmaCreateBuffer: Failed to allocated buffer!"};
+				throw Exception {"Failed to allocated buffer!"};
 			}
 
 			return {image, image_info.format, {vma_allocator, allocation}};
