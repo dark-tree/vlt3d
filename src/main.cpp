@@ -8,6 +8,7 @@
 // for now
 #include "world/world.hpp"
 #include "world/renderer.hpp"
+#include "world/generator.hpp"
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
@@ -30,6 +31,7 @@ int main() {
 
 	World world;
 	WorldRenderer world_renderer;
+	WorldGenerator world_generator {8888};
 
 	ScreenStack stack;
 	ImmediateRenderer renderer {system.assets};
@@ -67,7 +69,7 @@ int main() {
 		CommandRecorder recorder = frame.buffer.record();
 
 		world_renderer.prepare(renderer, world, system, recorder);
-		world.update(camera.getPosition(), 8);
+		world.update(world_generator, camera.getPosition(), 8);
 
 		renderer.write(system, frame.immediate_3d, frame.immediate_2d);
 		frame.immediate_2d.upload(recorder);

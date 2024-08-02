@@ -1,37 +1,6 @@
 
 #include "world.hpp"
-
-Chunk* World::generate(glm::ivec3 pos) const {
-	const float noise_scale = 16.0f;
-	const int max_height = 32;
-
-	Chunk* chunk = new Chunk(pos);
-
-	for (int x = 0; x < Chunk::size; x++) {
-		for (int z = 0; z < Chunk::size; z++) {
-			int xpos = pos.x * Chunk::size + x;
-			int ypos = pos.y * Chunk::size;
-			int zpos = pos.z * Chunk::size + z;
-
-			int height = noise.noise2D_01(xpos / noise_scale, zpos / noise_scale) * max_height - max_height * 0.5f;
-
-			if (ypos < height) {
-				int local_height = std::min(Chunk::size, height - ypos);
-				for (int y = 0; y < local_height; y++) {
-
-					if (y + ypos < height - 2) {
-						chunk->setBlock(x, y, z, 1);
-					} else {
-						chunk->setBlock(x, y, z, 2);
-					}
-
-				}
-			}
-		}
-	}
-
-	return chunk;
-}
+#include "generator.hpp"
 
 bool World::isChunkRenderReady(glm::ivec3 chunk) const {
 	if (!chunks.contains(chunk)) {
@@ -53,7 +22,7 @@ void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t directions) {
 	updates[chunk] |= directions;
 }
 
-void World::update(glm::ivec3 origin, float radius) {
+void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 	glm::ivec3 pos = {origin.x / Chunk::size, origin.y / Chunk::size, origin.z / Chunk::size};
 
 	// chunk unloading
@@ -75,7 +44,7 @@ void World::update(glm::ivec3 origin, float radius) {
 
 				if (glm::length(glm::vec3(cx, cy, cz)) < radius) {
 					if (it == chunks.end()) {
-						chunks[key].reset(generate(key));
+						chunks[key].reset(generator.get(key));
 						pushChunkUpdate(key, 0b00111111);
 
 						continue;

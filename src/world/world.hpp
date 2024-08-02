@@ -15,16 +15,14 @@ struct AccessError {
 
 };
 
+class WorldGenerator;
+
 class World {
 
 	private:
 
-		siv::PerlinNoise noise;
 		std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
 		std::unordered_map<glm::ivec3, uint8_t> updates;
-
-		/// Generates (as in world generation, not meshing) the requested chunk and returns it
-		Chunk* generate(glm::ivec3 chunk) const;
 
 		/// Checks if the chunk `chunk` can be submitted for rendering
 		bool isChunkRenderReady(glm::ivec3 chunk) const;
@@ -67,7 +65,7 @@ class World {
 
 		/// Update the world
 		/// manages chunk loading and unloading
-		void update(glm::ivec3 origin, float radius);
+		void update(WorldGenerator& generator, glm::ivec3 origin, float radius);
 
 		/// Returns the chunk at the specified chunk coordinates
 		/// if the chunk is not loaded returns an empty weak_ptr
