@@ -548,7 +548,7 @@ void ImmediateRenderer::prepare(VkExtent2D extent) {
 
 }
 
-void ImmediateRenderer::write(Allocator& allocator, BasicBuffer& buffer_3d, BasicBuffer& buffer_2d) {
-	buffer_3d.write<Vertex3D>(mesh_3d.data(), mesh_3d.size());
-	buffer_2d.write<Vertex2D>(mesh_2d.data(), mesh_2d.size());
+void ImmediateRenderer::write(RenderSystem& system, BasicBuffer& buffer_3d, BasicBuffer& buffer_2d) {
+	buffer_3d.checkedWrite(system, mesh_3d.data(), mesh_3d.size());
+	buffer_2d.checkedWrite(system, mesh_2d.data(), mesh_2d.size());
 }

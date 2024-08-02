@@ -19,6 +19,14 @@ struct UBO {
 
 class Frame {
 
+	private:
+
+		friend class RenderSystem;
+
+		/// this needs to be before any BasicBuffer so that the internal mutex is ready
+		/// before the BasicBuffer constructor runs as it uses `system.defer()`
+		TaskQueue queue;
+
 	public:
 
 		CommandBuffer buffer;
@@ -44,15 +52,9 @@ class Frame {
 		MemoryMap map;
 		DescriptorSet set;
 
-	private:
-
-		friend class RenderSystem;
-
-		TaskQueue queue;
-
 	public:
 
-		Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler);
+		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler);
 
 		/**
 		 * This class is fully managed by the RenderSystem so it uses

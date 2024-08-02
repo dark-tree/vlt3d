@@ -7,14 +7,14 @@
  * Frame
  */
 
-Frame::Frame(Allocator& allocator, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler)
-: buffer(pool.allocate()), immediate_2d(allocator, 1024), immediate_3d(allocator, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
+Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler)
+: buffer(pool.allocate()), immediate_2d(system, 1024), immediate_3d(system, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
 
 	BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
 	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
-	ubo = allocator.allocateBuffer(buffer_builder);
+	ubo = system.allocator.allocateBuffer(buffer_builder);
 	map = ubo.access().map();
 	set = descriptor;
 
@@ -257,7 +257,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	// get the VMA allocator ready
 	allocator = Allocator {device, instance};
 
-	// this is NEED so that frames do not relocated and deconstruct frames
+	// this is NEEDED so that `frames` vector does not relocate and deconstruct stored frames during insertion
 	frames.reserve(concurrent);
 
 	// Create this thing
@@ -309,7 +309,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	createPipelines();
 
 	for (int i = 0; i < concurrent; i ++) {
-		frames.emplace_back(allocator, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
+		frames.emplace_back(*this, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
 	}
 }
 
@@ -336,7 +336,7 @@ void RenderSystem::reloadAssets() {
 		frames.clear();
 
 		for (int i = 0; i < concurrent; i ++) {
-			frames.emplace_back(allocator, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
+			frames.emplace_back(*this, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
 		}
 	}).milliseconds(), "ms");
 

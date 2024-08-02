@@ -6,7 +6,8 @@
 #include "client/renderer.hpp"
 
 // for now
-#include "world.hpp"
+#include "world/world.hpp"
+#include "world/renderer.hpp"
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
@@ -24,11 +25,11 @@ int main() {
 	RenderSystem system {window, 1};
 
 	// for now
-	Allocator& allocator = system.allocator;
 	Swapchain& swapchain = system.swapchain;
 	RenderPass& pass = system.render_pass;
 
-	World world(8888);
+	World world;
+	WorldRenderer world_renderer;
 
 	ScreenStack stack;
 	ImmediateRenderer renderer {system.assets};
@@ -46,7 +47,6 @@ int main() {
 		camera.update();
 		profiler.next();
 		
-		std::list<ChunkBuffer>& buffers = world.getBuffers();
 		Frame& frame = system.getFrame();
 
 		frame.data.model = glm::identity<glm::mat4>();
@@ -54,32 +54,33 @@ int main() {
 		frame.data.view = camera.getView();
 
 		frame.wait();
+		frame.execute();
 		frame.map.write(&frame.data, sizeof(UBO));
-
-		// BEGIN THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
-		world.closeBuffers();
-		world.generateAround(camera.getPosition(), 5);
-		world.draw(system.assets.getAtlas(), pool, allocator, camera.getPosition(), 8);
-		// END THE "AH YES LET'S JUST OPENGL STYLE IT" SECTION
 
 		renderer.prepare(swapchain.vk_extent);
 		stack.draw(renderer, window.getInputContext(), camera);
-		renderer.write(allocator, frame.immediate_3d, frame.immediate_2d);
 
 		Framebuffer& framebuffer = system.acquireFramebuffer();
 		VkExtent2D extent = system.swapchain.vk_extent;
 
 		// record commands
-		CommandRecorder commandRecorder = frame.buffer.record()
-			.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f)
-			.bindPipeline(system.pipeline_3d_mix)
-			.bindDescriptorSet(frame.set);
+		CommandRecorder recorder = frame.buffer.record();
 
-		for (auto& buffer : buffers) {
-			commandRecorder.bindBuffer(buffer.buffer).draw(buffer.size);
-		}
+		world_renderer.prepare(renderer, world, system, recorder);
+		world.update(camera.getPosition(), 8);
 
-		commandRecorder.bindPipeline(system.pipeline_3d_tint)
+		renderer.write(system, frame.immediate_3d, frame.immediate_2d);
+		frame.immediate_2d.upload(recorder);
+		frame.immediate_3d.upload(recorder);
+
+		recorder.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
+		recorder.bindPipeline(system.pipeline_3d_mix);
+		recorder.bindDescriptorSet(frame.set);
+
+		world_renderer.draw(recorder);
+		world_renderer.eraseOutside(camera.getPosition(), 12);
+
+		recorder.bindPipeline(system.pipeline_3d_tint)
 			.bindBuffer(frame.immediate_3d.getBuffer())
 			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)
