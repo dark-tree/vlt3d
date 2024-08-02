@@ -6,12 +6,14 @@
 #include "util/direction.hpp"
 #include "util/bits.hpp"
 
-struct AccessError {
+struct AccessError : std::exception {
 
 	const int x, y, z;
 
 	AccessError(int x, int y, int z)
 	: x(x), y(y), z(z) {}
+
+	const char * what() const noexcept override;
 
 };
 

@@ -2,6 +2,18 @@
 #include "world.hpp"
 #include "generator.hpp"
 
+/*
+ * AccessError
+ */
+
+const char* AccessError::what() const noexcept {
+	return "World Access Error";
+}
+
+/*
+ * World
+ */
+
 bool World::isChunkRenderReady(glm::ivec3 chunk) const {
 	if (!chunks.contains(chunk)) {
 		return false;
@@ -84,6 +96,13 @@ void World::setBlock(int x, int y, int z, uint32_t block) {
 	int cz = z >> Chunk::bits;
 
 	if (auto chunk = getChunk(cx, cy, cz).lock()) {
+
+		// TODO this can be more optimal ofc
+		//   1) don't push an update if the block did not change
+		//   2) setting non-air blocks doesn't require updating neighbours
+		//   3) when neighbours are to be updated only update the ones touching the block (possibly none)
+		pushChunkUpdate({cx, cy, cz}, Direction::ALL);
+
 		return chunk->setBlock(x & Chunk::mask, y & Chunk::mask, z & Chunk::mask, block);
 	}
 

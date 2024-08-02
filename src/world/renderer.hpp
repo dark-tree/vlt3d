@@ -97,7 +97,7 @@ class WorldRenderer {
 	public:
 
 		/// Must be called before draw, collects chunks to remesh from the world and uploads pending vertex data
-		void prepare(ImmediateRenderer& immediate, World& world, RenderSystem& system, CommandRecorder& recorder);
+		void prepare(World& world, RenderSystem& system, CommandRecorder& recorder);
 
 		/// Render all the chunk buffers, both static and just uploaded
 		void draw(CommandRecorder& recorder);

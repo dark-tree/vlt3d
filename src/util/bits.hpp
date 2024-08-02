@@ -67,7 +67,7 @@ class Bits {
 				: bitfield(bitfield) {}
 
 				Iterator<T> begin() const {
-					return {bitfield, 0x80}; // start with the highest bit
+					return {bitfield, Bits::msb(bitfield)}; // start with the highest bit
 				}
 
 				Iterator<T> end() const {

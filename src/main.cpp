@@ -34,7 +34,7 @@ int main() {
 	WorldGenerator world_generator {8888};
 
 	ScreenStack stack;
-	ImmediateRenderer renderer {system.assets};
+	ImmediateRenderer immediate {system.assets};
 	Camera camera {window};
 	camera.move({0, 5, 0});
 	window.setRootInputConsumer(&stack);
@@ -59,8 +59,8 @@ int main() {
 		frame.execute();
 		frame.map.write(&frame.data, sizeof(UBO));
 
-		renderer.prepare(swapchain.vk_extent);
-		stack.draw(renderer, window.getInputContext(), camera);
+		immediate.prepare(swapchain.vk_extent);
+		stack.draw(immediate, window.getInputContext(), camera);
 
 		Framebuffer& framebuffer = system.acquireFramebuffer();
 		VkExtent2D extent = system.swapchain.vk_extent;
@@ -68,10 +68,10 @@ int main() {
 		// record commands
 		CommandRecorder recorder = frame.buffer.record();
 
-		world_renderer.prepare(renderer, world, system, recorder);
+		world_renderer.prepare(world, system, recorder);
 		world.update(world_generator, camera.getPosition(), 8);
 
-		renderer.write(system, frame.immediate_3d, frame.immediate_2d);
+		immediate.write(system, frame.immediate_3d, frame.immediate_2d);
 		frame.immediate_2d.upload(recorder);
 		frame.immediate_3d.upload(recorder);
 

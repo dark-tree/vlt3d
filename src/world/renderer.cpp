@@ -1,6 +1,57 @@
 
 #include "renderer.hpp"
 
+class WorldRenderView {
+
+	private:
+
+		bool failed_to_lock = false;
+		std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
+
+	public:
+
+		WorldRenderView(World& world, std::shared_ptr<Chunk>& center, uint8_t directions) {
+			if (!center) {
+				failed_to_lock = true;
+				return;
+			}
+
+			glm::ivec3 origin = center->pos;
+			chunks.emplace(origin, center);
+
+			for (uint8_t direction : Bits::decompose(directions)) {
+				glm::ivec3 key = origin + Direction::offset(direction);
+				std::shared_ptr<Chunk> lock = world.getChunk(key.x, key.y, key.z).lock();
+
+				// terrain got unloaded, we are no longer in the view distance
+				if (!lock) {
+					failed_to_lock = true;
+					return;
+				}
+
+				chunks.emplace(key, std::move(lock));
+			}
+
+		}
+
+		bool failed() const {
+			return failed_to_lock;
+		}
+
+		uint32_t getBlock(int x, int y, int z) {
+			int cx = x >> Chunk::bits;
+			int cy = y >> Chunk::bits;
+			int cz = z >> Chunk::bits;
+
+			return chunks[{cx, cy, cz}]->getBlock(x & Chunk::mask, y & Chunk::mask, z & Chunk::mask);
+		}
+
+		void close() {
+			chunks.clear();
+		}
+
+};
+
 /*
  * ChunkBuffer
  */
@@ -83,12 +134,20 @@ void WorldRenderer::erase(glm::ivec3 pos) {
 }
 
 void WorldRenderer::emitMesh(RenderSystem& system, const Atlas& atlas, World& world, std::shared_ptr<Chunk> chunk) {
-	pool.enqueue([&, chunk] () {
-		std::vector<Vertex3D> mesh;
+	if (!chunk || chunk->empty()) {
+		return;
+	}
 
-		if (chunk->empty()) {
-			goto skip; // :P
+	pool.enqueue([&, chunk] () mutable {
+		WorldRenderView view {world, chunk, Direction::ALL};
+
+		// failed to lock the view, this chunk must have fallen outside the render distance
+		if (view.failed()) {
+			return;
 		}
+
+		std::vector<Vertex3D> mesh;
+		mesh.reserve(4096);
 
 		for (int x = 0; x < Chunk::size; x++) {
 			for (int y = 0; y < Chunk::size; y++) {
@@ -99,18 +158,20 @@ void WorldRenderer::emitMesh(RenderSystem& system, const Atlas& atlas, World& wo
 						BakedSprite sprite = (block % 2 == 1) ? atlas.getBakedSprite("vkblob") : atlas.getBakedSprite("digital");
 						float shade = std::clamp((chunk->pos.y * Chunk::size + y) / (Chunk::size * 2.0f) + 0.2f, 0.0f, 1.0f);
 
+						glm::ivec3 wpos = chunk->pos * Chunk::size + glm::ivec3 {x, y, z};
+
 						emitCube(
 							mesh,
-							chunk->pos.x * Chunk::size + x,
-							chunk->pos.y * Chunk::size + y,
-							chunk->pos.z * Chunk::size + z,
+							wpos.x,
+							wpos.y,
+							wpos.z,
 							shade, shade, shade,
-							(y >= Chunk::size - 1) || !chunk->getBlock(x, y + 1, z),
-							(y <= 0) || !chunk->getBlock(x, y - 1, z),
-							(x >= Chunk::size - 1) || !chunk->getBlock(x + 1, y, z),
-							(x <= 0) || !chunk->getBlock(x - 1, y, z),
-							(z >= Chunk::size - 1) || !chunk->getBlock(x, y, z + 1),
-							(z <= 0) || !chunk->getBlock(x, y, z - 1),
+							view.getBlock(wpos.x, wpos.y + 1, wpos.z) == 0,
+							view.getBlock(wpos.x, wpos.y - 1, wpos.z) == 0,
+							view.getBlock(wpos.x + 1, wpos.y, wpos.z) == 0,
+							view.getBlock(wpos.x - 1, wpos.y, wpos.z) == 0,
+							view.getBlock(wpos.x, wpos.y, wpos.z + 1) == 0,
+							view.getBlock(wpos.x, wpos.y, wpos.z - 1) == 0,
 							sprite
 						);
 					}
@@ -118,12 +179,12 @@ void WorldRenderer::emitMesh(RenderSystem& system, const Atlas& atlas, World& wo
 			}
 		}
 
-		skip:
+		view.close();
 		submitChunk(new ChunkBuffer(system, chunk->pos, mesh));
 	});
 }
 
-void WorldRenderer::prepare(ImmediateRenderer& immediate, World& world, RenderSystem& system, CommandRecorder& recorder) {
+void WorldRenderer::prepare(World& world, RenderSystem& system, CommandRecorder& recorder) {
 
 	// this whole section is locked both the `unused` vector
 	// and `awaiting` double buffered vector are used during submitting
@@ -158,19 +219,9 @@ void WorldRenderer::prepare(ImmediateRenderer& immediate, World& world, RenderSy
 		}
 	});
 
-//	// uncomment to see empty chunks
-//	for (auto& [pos, chunk] : buffers) {
-//		immediate.setTint(255, 255, 255);
-//		immediate.drawCircle(pos.x * 32 + 16, pos.y * 32 + 16, pos.z * 32 + 16, 0.4);
-//	}
-
 	// first upload all awaiting meshes so that the PCI has something to do
 	for (ChunkBuffer* chunk : awaiting.read()) {
 		chunk->buffer.upload(recorder);
-
-//		// uncomment to see "to be uploaded" chunks
-//		immediate.setTint(0, 0, 255);
-//		immediate.drawCircle(chunk->pos.x * 32 + 16, chunk->pos.y * 32 + 16, chunk->pos.z * 32 + 16, 1);
 	}
 
 }
