@@ -16,39 +16,22 @@ class Chunk {
 
 		uint32_t (*blocks)[size * size * size] = nullptr;
 
-		uint32_t& ref(int x, int y, int z) {
-			return (*blocks)[x + y * size + z * size * size];
-		}
+		uint32_t& ref(int x, int y, int z);
 
 	public:
 
-		int cx, cy, cz;
+		READONLY glm::ivec3 pos;
 
-		Chunk(glm::ivec3 pos)
-		: cx(pos.x), cy(pos.y), cz(pos.z) {}
+		Chunk(glm::ivec3 pos);
+		~Chunk();
 
-		~Chunk() {
-			delete[] blocks;
-		}
+		/// Sets a block at the given chunk position
+		void setBlock(int x, int y, int z, uint32_t block);
 
-		void setBlock(int x, int y, int z, uint32_t block) {
-			if (!blocks) {
-				blocks = (uint32_t (*)[size * size * size]) std::calloc(size * size * size, sizeof(uint32_t));
-			}
+		/// Gets the block at the given chunk position
+		uint32_t getBlock(int x, int y, int z);
 
-			ref(x, y, z) = block;
-		}
-
-		uint32_t getBlock(int x, int y, int z) {
-			if (!blocks) {
-				return 0;
-			}
-
-			return ref(x, y, z);
-		}
-
-		bool isEmpty() {
-			return blocks == nullptr;
-		}
+		/// Checks if this chunks contains no blocks in O(1) time
+		bool empty();
 
 };
