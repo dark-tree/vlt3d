@@ -124,6 +124,9 @@ class CommandRecorder {
 
 		CommandRecorder& transitionLayout(Image image, VkImageLayout dst, VkImageLayout src) {
 
+			VkPipelineStageFlags src_stage = 0;
+			VkPipelineStageFlags dst_stage = 0;
+
 			VkImageMemoryBarrier barrier {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 			barrier.oldLayout = src;
@@ -139,10 +142,26 @@ class CommandRecorder {
 			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 
-			barrier.srcAccessMask = 0; // TODO
-			barrier.dstAccessMask = 0; // TODO
+			if (src == VK_IMAGE_LAYOUT_UNDEFINED && dst == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-			vkCmdPipelineBarrier(vk_buffer, 0 /* TODO */, 0 /* TODO */, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+				src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			}
+
+			if (src == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && dst == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+				src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+				dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			}
+
+			// allow reading from already written to sections (the whole thing doesn't need to finish)
+			VkDependencyFlags flags = VK_DEPENDENCY_BY_REGION_BIT;
+
+			vkCmdPipelineBarrier(vk_buffer, src_stage, dst_stage, flags, 0, nullptr, 0, nullptr, 1, &barrier);
 			return *this;
 		}
 
@@ -156,9 +175,8 @@ class CommandRecorder {
 			VkPipelineStageFlags src = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			VkPipelineStageFlags dst = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
-			// idk what to put here we are synchronizing vertex data,
-			// while all examples talk about fragments and stuff, 0 is universal (strongest) (i think)
-			VkDependencyFlags flags = 0;
+			// allow reading from already written to sections (the whole thing doesn't need to finish)
+			VkDependencyFlags flags = VK_DEPENDENCY_BY_REGION_BIT;
 
 			vkCmdPipelineBarrier(vk_buffer, src, dst, flags, 1, &barrier, 0, nullptr, 0, nullptr);
 			return *this;
@@ -167,7 +185,7 @@ class CommandRecorder {
 
 		void done() {
 			if (vkEndCommandBuffer(vk_buffer) != VK_SUCCESS) {
-				throw std::runtime_error("vkEndCommandBuffer: Failed to record a command buffer!");
+				throw Exception {"Failed to record a command buffer!"};
 			}
 		}
 
