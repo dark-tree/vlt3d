@@ -51,6 +51,16 @@ int main() {
 		
 		Frame& frame = system.getFrame();
 
+		if (window.isKeyPressed(GLFW_KEY_C)) {
+			glm::vec3 pos = camera.getPosition() + camera.getDirection() * 30.0f;
+			world.setBlock(pos.x, pos.y, pos.z, 0);
+		}
+
+		if (window.isKeyPressed(GLFW_KEY_V)) {
+			glm::vec3 pos = camera.getPosition() + camera.getDirection() * 30.0f;
+			world.setBlock(pos.x, pos.y, pos.z, 1);
+		}
+
 		frame.data.model = glm::identity<glm::mat4>();
 		frame.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 		frame.data.view = camera.getView();

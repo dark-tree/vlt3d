@@ -31,6 +31,7 @@ bool World::isChunkRenderReady(glm::ivec3 chunk) const {
 }
 
 void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t directions) {
+	logger::debug("Updating ", chunk.x, " ", chunk.y, " ", chunk.z, " and ", std::popcount(directions), " neighbours");
 	updates[chunk] |= directions;
 }
 
@@ -57,7 +58,7 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 				if (glm::length(glm::vec3(cx, cy, cz)) < radius) {
 					if (it == chunks.end()) {
 						chunks[key].reset(generator.get(key));
-						pushChunkUpdate(key, 0b00111111);
+						pushChunkUpdate(key, Direction::ALL);
 
 						continue;
 					}
@@ -96,14 +97,14 @@ void World::setBlock(int x, int y, int z, uint32_t block) {
 	int cz = z >> Chunk::bits;
 
 	if (auto chunk = getChunk(cx, cy, cz).lock()) {
+		int mx = x & Chunk::mask;
+		int my = y & Chunk::mask;
+		int mz = z & Chunk::mask;
 
-		// TODO this can be more optimal ofc
-		//   1) don't push an update if the block did not change
-		//   2) setting non-air blocks doesn't require updating neighbours
-		//   3) when neighbours are to be updated only update the ones touching the block (possibly none)
-		pushChunkUpdate({cx, cy, cz}, Direction::ALL);
+		// setting non-air blocks doesn't require updating neighbours (for now)
+		pushChunkUpdate({cx, cy, cz}, block ? Direction::NONE : Chunk::getNeighboursMask(mx, my, mz));
 
-		return chunk->setBlock(x & Chunk::mask, y & Chunk::mask, z & Chunk::mask, block);
+		return chunk->setBlock(mx, my, mz, block);
 	}
 
 	throw AccessError {x, y, z};

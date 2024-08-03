@@ -1,6 +1,21 @@
 
 #include "chunk.hpp"
 
+Direction::field_type Chunk::getNeighboursMask(int x, int y, int z) {
+	Direction::field_type directions = Direction::NONE;
+
+	if (x == 0) directions |= Direction::WEST;
+	else if (x == mask) directions |= Direction::EAST;
+
+	if (y == 0) directions |= Direction::DOWN;
+	else if (y == mask) directions |= Direction::UP;
+
+	if (z == 0) directions |= Direction::NORTH;
+	else if (z == mask) directions |= Direction::SOUTH;
+
+	return directions;
+}
+
 uint32_t& Chunk::ref(int x, int y, int z) {
 	return (*blocks)[x + y * size + z * size * size];
 }
