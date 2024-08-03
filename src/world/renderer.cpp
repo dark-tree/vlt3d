@@ -61,8 +61,14 @@ WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, co
 	buffer.write(mesh.data(), mesh.size());
 }
 
-void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder) {
-	buffer.draw(recorder);
+void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder, Frustum& frustum) {
+	if (!buffer.empty()) {
+		glm::ivec3 world_pos {pos * Chunk::size};
+
+		if (frustum.testBox3D(world_pos, world_pos + Chunk::size)) {
+			buffer.draw(recorder);
+		}
+	}
 }
 
 /*
@@ -225,17 +231,17 @@ void WorldRenderer::prepare(World& world, RenderSystem& system, CommandRecorder&
 
 }
 
-void WorldRenderer::draw(CommandRecorder& recorder) {
+void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 	// begin rendering chunks that did not change, to not waste time during the upload from `prepare()`
 	for (auto& [pos, chunk] : buffers) {
-		chunk->draw(recorder);
+		chunk->draw(recorder, frustum);
 	}
 
 	// render all new chunks and copy them into static chunk map
 	for (ChunkBuffer* chunk : awaiting.read()) {
 		buffers[chunk->pos] = chunk;
-		chunk->draw(recorder);
+		chunk->draw(recorder, frustum);
 	}
 
 }

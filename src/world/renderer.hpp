@@ -6,6 +6,7 @@
 #include "client/renderer.hpp"
 #include "command/recorder.hpp"
 #include "client/immediate.hpp"
+#include "client/frustum.hpp"
 
 // move this somewhere else?
 template <typename T>
@@ -63,7 +64,7 @@ class WorldRenderer {
 			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<Vertex3D>& mesh);
 
 			/// draw this buffer
-			void draw(CommandRecorder& recorder);
+			void draw(CommandRecorder& recorder, Frustum& frustum);
 		};
 
 		/// emit cube geometry into the given mesh vector
@@ -99,7 +100,7 @@ class WorldRenderer {
 		void prepare(World& world, RenderSystem& system, CommandRecorder& recorder);
 
 		/// Render all the chunk buffers, both static and just uploaded
-		void draw(CommandRecorder& recorder);
+		void draw(CommandRecorder& recorder, Frustum& frustum);
 
 		/// Submit a buffer, the pointer will be managed by this class
 		void submitChunk(ChunkBuffer* chunk);

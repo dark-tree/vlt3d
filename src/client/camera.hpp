@@ -3,6 +3,7 @@
 #include "external.hpp"
 #include "object.hpp"
 #include "window/window.hpp"
+#include "frustum.hpp"
 
 class Camera : public WorldObject {
 
@@ -20,6 +21,10 @@ class Camera : public WorldObject {
 		float speed;
 		double last_time;
 
+		// debug things
+		glm::mat4 view;
+		bool locked = false;
+
 		float getTimeDelta();
 		glm::vec2 getMouseDelta();
 
@@ -34,5 +39,6 @@ class Camera : public WorldObject {
 		glm::vec3 getDirection() const override;
 		glm::vec3 getUp() const;
 		glm::mat4 getView() const;
+		Frustum getFrustum(glm::mat4& projection) const;
 
 };

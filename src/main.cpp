@@ -9,6 +9,7 @@
 #include "world/world.hpp"
 #include "world/renderer.hpp"
 #include "world/generator.hpp"
+#include "client/frustum.hpp"
 #include "client/gui/stack.hpp"
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
@@ -64,6 +65,7 @@ int main() {
 		frame.data.model = glm::identity<glm::mat4>();
 		frame.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 		frame.data.view = camera.getView();
+		Frustum frustum = camera.getFrustum(frame.data.proj);
 
 		frame.wait();
 		frame.execute();
@@ -96,7 +98,7 @@ int main() {
 		recorder.bindPipeline(system.pipeline_3d_mix);
 		recorder.bindDescriptorSet(frame.set);
 
-		world_renderer.draw(recorder);
+		world_renderer.draw(recorder, frustum);
 		world_renderer.eraseOutside(camera.getPosition(), 12);
 
 		recorder.bindPipeline(system.pipeline_3d_tint)

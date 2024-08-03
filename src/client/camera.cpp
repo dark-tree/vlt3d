@@ -1,5 +1,6 @@
 
 #include "camera.hpp"
+#include "util/logger.hpp"
 
 void Camera::update() {
 	
@@ -42,6 +43,23 @@ void Camera::update() {
 	if (window.isKeyPressed(GLFW_KEY_A)) {
 		glm::vec3 vec = glm::cross(this->direction, glm::vec3(0, 1, 0));
 		this->pos += glm::normalize(vec) * multiplier;
+	}
+
+	// save current view
+	if (window.isKeyPressed(GLFW_KEY_B)) {
+		view = getView();
+	}
+
+	// enter saved view
+	if (window.isKeyPressed(GLFW_KEY_N) && !locked) {
+		logger::info("[Camera] Entering saved view");
+		locked = true;
+	}
+
+	// exit saved view
+	if (window.isKeyPressed(GLFW_KEY_M) && locked) {
+		logger::info("[Camera] Exiting saved view");
+		locked = false;
 	}
 
 	this->pos.y -= window.isKeyPressed(GLFW_KEY_Q) ? multiplier : 0;
@@ -96,7 +114,15 @@ glm::vec3 Camera::getUp() const {
 }
 
 glm::mat4 Camera::getView() const {
+	if (locked) {
+		return view;
+	}
+
 	return glm::lookAt(this->pos, this->pos + this->direction, glm::vec3(0.0f, -1.0f, 0.0f));
+}
+
+Frustum Camera::getFrustum(glm::mat4& projection) const {
+	return {projection * glm::lookAt(this->pos, this->pos + this->direction, glm::vec3(0.0f, -1.0f, 0.0f))};
 }
 
 
