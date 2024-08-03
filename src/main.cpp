@@ -68,12 +68,19 @@ int main() {
 		// record commands
 		CommandRecorder recorder = frame.buffer.record();
 
-		world_renderer.prepare(world, system, recorder);
-		world.update(world_generator, camera.getPosition(), 8);
-
 		immediate.write(system, frame.immediate_3d, frame.immediate_2d);
 		frame.immediate_2d.upload(recorder);
 		frame.immediate_3d.upload(recorder);
+		world_renderer.prepare(world, system, recorder);
+
+		// TODO?
+		// wait for all pending buffer uploads, doing it here maybe is stupid, hard to tell
+		// it sounds like it would be better to do it after the static buffer have been drawn
+		// just before we actually need the transfers to finish but then it would be inside a render pass
+		// so we would need some internal subpass dependency stuff that i know nothing about
+		recorder.bufferTransferBarrier();
+
+		world.update(world_generator, camera.getPosition(), 8);
 
 		recorder.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
 		recorder.bindPipeline(system.pipeline_3d_mix);

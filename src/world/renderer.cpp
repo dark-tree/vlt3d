@@ -125,11 +125,23 @@ void WorldRenderer::emitCube(std::vector<Vertex3D>& mesh, float x, float y, floa
 	}
 }
 
-void WorldRenderer::erase(glm::ivec3 pos) {
+void WorldRenderer::eraseBuffer(RenderSystem& system, glm::ivec3 pos) {
 	auto it = buffers.find(pos);
 
 	if (it != buffers.end()) {
-		unused.push_back(buffers.extract(it).mapped());
+		ChunkBuffer* chunk = buffers.extract(it).mapped();
+
+		// empty buffers can just be tossed away, they don't actually hold
+		// any vulkan resources and never were actually passed to the GPU
+		if (chunk->buffer.empty()) {
+			delete chunk;
+			return;
+		}
+
+		system.defer([chunk]() {
+			chunk->buffer.close();
+			delete chunk;
+		});
 	}
 }
 
@@ -192,24 +204,11 @@ void WorldRenderer::prepare(World& world, RenderSystem& system, CommandRecorder&
 		std::lock_guard lock {submit_mutex};
 		awaiting.swap();
 
-		// cleanup, send all the now unused buffers to
-		// the frame task queue to be deallocated when unused
-		for (ChunkBuffer* chunk : unused) {
-
-			// empty buffers can just be tossed away, they don't actually hold
-			// any vulkan resources and never were actually passed to the GPU
-			if (chunk->buffer.empty()) {
-				delete chunk;
-				continue;
-			}
-
-			system.defer([chunk]() {
-				chunk->buffer.close();
-				delete chunk;
-			});
+		for (glm::ivec3 pos : erasures) {
+			eraseBuffer(system, pos);
 		}
 
-		unused.clear();
+		erasures.clear();
 	}
 
 	// iterate all chunks that were updated this frame and need to be re-meshed
@@ -228,15 +227,12 @@ void WorldRenderer::prepare(World& world, RenderSystem& system, CommandRecorder&
 
 void WorldRenderer::draw(CommandRecorder& recorder) {
 
-	std::lock_guard lock {submit_mutex};
-
 	// begin rendering chunks that did not change, to not waste time during the upload from `prepare()`
 	for (auto& [pos, chunk] : buffers) {
 		chunk->draw(recorder);
 	}
 
-	// copy all awaiting chunks, and render them
-	// TODO introduce barriers to check if they did copy in time
+	// render all new chunks and copy them into static chunk map
 	for (ChunkBuffer* chunk : awaiting.read()) {
 		buffers[chunk->pos] = chunk;
 		chunk->draw(recorder);
@@ -247,26 +243,21 @@ void WorldRenderer::draw(CommandRecorder& recorder) {
 void WorldRenderer::submitChunk(ChunkBuffer* chunk) {
 	std::lock_guard lock {submit_mutex};
 	awaiting.write().push_back(chunk);
-	erase(chunk->pos);
+	erasures.emplace_back(chunk->pos);
 }
 
 void WorldRenderer::eraseChunk(glm::ivec3 pos) {
 	std::lock_guard lock {submit_mutex};
-	erase(pos);
+	erasures.emplace_back(pos);
 }
 
 void WorldRenderer::eraseOutside(glm::ivec3 origin, float radius) {
 	glm::vec3 viewer = {origin.x / Chunk::size, origin.y / Chunk::size, origin.z / Chunk::size};
-	std::vector<glm::ivec3> outside;
 	std::lock_guard lock {submit_mutex};
 
 	for (auto& [pos, chunk] : buffers) {
 		if (glm::length(glm::vec3(pos) - viewer) > radius) {
-			outside.push_back(pos);
+			erasures.emplace_back(pos);
 		}
-	}
-
-	for (auto pos : outside) {
-		erase(pos);
 	}
 }

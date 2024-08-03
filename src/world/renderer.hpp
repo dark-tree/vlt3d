@@ -42,13 +42,12 @@ class DoubleBuffered {
  *    1) This consumes a list of updates from the World using `consumeUpdates()`
  *    2) Each update (remesh) is started on thread pool by calling `emitMesh()`
  *       Once each mesh is done a `submitChunk()` is called from the worker thread
- *    3) A list of recently submitted chunks is copied and iterated, each new chunk
- *       is now uploaded to the GPU
+ *    3) A list of recently submitted chunks is iterated and each new chunk is now
+ *       uploaded to the GPU
  *
  * 2. Call draw()
- *    1) All non-changed chunks are now rendered, while the new ones are being
- *       copied to the GPU
- *    2) Draw all the new chunks
+ *    1) All non-changed chunks are now rendered
+ *    2) Draw all the new chunks that are now uploaded to the GPU
  */
 class WorldRenderer {
 
@@ -71,7 +70,7 @@ class WorldRenderer {
 		static void emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite);
 
 		/// erase vertex buffer and mark it for deletion
-		void erase(glm::ivec3 pos);
+		void eraseBuffer(RenderSystem& system, glm::ivec3 pos);
 
 		/// emit the mesh of the given chunk into the render system, @Note this method internally uses threading
 		void emitMesh(RenderSystem& system, const Atlas& atlas, World& world, std::shared_ptr<Chunk> chunk);
@@ -90,9 +89,9 @@ class WorldRenderer {
 		// but are not yet uploaded (copied from staging to device)
 		DoubleBuffered<ChunkBuffer*> awaiting;
 
-		// this holds the buffers that are not used anymore
-		// either by being replaced by a new mesh or falling outside the render distance
-		std::vector<ChunkBuffer*> unused;
+		// this holds the list of chunks that should be erased from the `buffers` map,
+		// either because they are outside view or because new buffer was created
+		std::vector<glm::ivec3> erasures;
 
 	public:
 

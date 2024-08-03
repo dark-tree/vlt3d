@@ -28,7 +28,9 @@ class logger {
 
 		template <typename... Args>
 		static void debug(Args... args) {
+			#if !defined(NDEBUG)
 			print(0, "DEBUG", args...);
+			#endif
 		}
 
 		template <typename... Args>
