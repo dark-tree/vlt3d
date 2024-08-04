@@ -31,7 +31,6 @@ bool World::isChunkRenderReady(glm::ivec3 chunk) const {
 }
 
 void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t directions) {
-	logger::debug("Updating ", chunk.x, " ", chunk.y, " ", chunk.z, " and ", std::popcount(directions), " neighbours");
 	updates[chunk] |= directions;
 }
 

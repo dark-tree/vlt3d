@@ -57,6 +57,7 @@ class World {
 
 			// call once for each updated chunk
 			for (auto pos : set) {
+				logger::debug("Updating chunk ", pos);
 				func(pos);
 			}
 		}

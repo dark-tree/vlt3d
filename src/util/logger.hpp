@@ -2,6 +2,21 @@
 
 #include "external.hpp"
 
+template <typename T>
+std::ostream& operator<< (std::ostream& out, const glm::vec<2, T>& vec) {
+	return out << vec[0] << " " << vec[1];
+}
+
+template <typename T>
+std::ostream& operator<< (std::ostream& out, const glm::vec<3, T>& vec) {
+	return out << glm::vec2(vec) << " " << vec[2];
+}
+
+template <typename T>
+std::ostream& operator<< (std::ostream& out, const glm::vec<4, T>& vec) {
+	return out << glm::vec3(vec) << " " << vec[3];
+}
+
 class logger {
 
 	private:
