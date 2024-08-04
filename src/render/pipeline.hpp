@@ -60,6 +60,10 @@ class GraphicsPipelineBuilder {
 		VkPipelineColorBlendStateCreateInfo blending {};
 		VkPipelineDepthStencilStateCreateInfo depth {};
 
+		// push constants
+		uint32_t push_offset = 0;
+		std::vector<VkPushConstantRange> ranges;
+
 		VkViewport vk_viewport {};
 		VkRect2D vk_scissor {};
 		VkRenderPass vk_pass;
@@ -77,8 +81,10 @@ class GraphicsPipelineBuilder {
 			dynamic.dynamicStateCount = (uint32_t) dynamics.size();
 			dynamic.pDynamicStates = dynamics.data();
 
-			layout.setLayoutCount = (uint32_t) sets.size();
+			layout.setLayoutCount = sets.size();
 			layout.pSetLayouts = sets.data();
+			layout.pushConstantRangeCount = ranges.size();
+			layout.pPushConstantRanges = ranges.data();
 
 			view.viewportCount = 1;
 			view.pViewports = &vk_viewport;
@@ -108,7 +114,6 @@ class GraphicsPipelineBuilder {
 			layout.pSetLayouts = nullptr;
 			layout.pushConstantRangeCount = 0;
 			layout.pPushConstantRanges = nullptr;
-			// TODO
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineInputAssemblyStateCreateInfo.html
 			assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -126,6 +131,7 @@ class GraphicsPipelineBuilder {
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineMultisampleStateCreateInfo.html
 			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.flags = 0;
 			multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 			// TODO
 
@@ -195,7 +201,15 @@ class GraphicsPipelineBuilder {
 
 	// layout configuration
 
-		// TODO https://registry.khronos.org/vulkan/site/guide/latest/push_constants.html
+		GraphicsPipelineBuilder& withPushConstantLayout(Kind shader, uint32_t bytes) {
+			VkPushConstantRange range {};
+			range.stageFlags = shader.vulkan;
+			range.size = bytes;
+			range.offset = this->push_offset;
+
+			ranges.push_back(range);
+			return *this;
+		}
 
 		GraphicsPipelineBuilder& withDescriptorSetLayout(DescriptorSetLayout layout) {
 			sets.push_back(layout.vk_layout);

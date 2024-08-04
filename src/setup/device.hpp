@@ -55,7 +55,7 @@ class DeviceBuilder {
 
 	private:
 
-		VkPhysicalDevice info;
+		VkPhysicalDevice vk_device;
 		std::vector<QueueFamily> families;
 
 		DeviceExtensionPicker device_extensions;
@@ -87,7 +87,7 @@ class DeviceBuilder {
 			// we can't just do it one by one, all queues for a family need to be requested at once
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDeviceCreateInfo.html#VUID-VkDeviceCreateInfo-queueFamilyIndex-02802
 
-			QueueFamilyConfig config = predicate.pick(families)->configure(count, priority);
+			QueueFamilyConfig config = predicate.pick(vk_device, families)->configure(count, priority);
 
 			// only one config per family, if two predicates matched the same queue we need to deduplicate
 			if (!util::contains(configured, config)) {
@@ -122,11 +122,11 @@ class DeviceBuilder {
 			create_info.enabledLayerCount = 0;
 
 			VkDevice device;
-			if (vkCreateDevice(info, &create_info, nullptr, &device) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateDevice: Failed to create logical device!");
+			if (vkCreateDevice(vk_device, &create_info, nullptr, &device) != VK_SUCCESS) {
+				throw Exception {"Failed to create logical device!"};
 			}
 
-			return {info, device, view};
+			return {vk_device, device, view};
 
 		}
 
@@ -134,8 +134,8 @@ class DeviceBuilder {
 
 		friend class DeviceInfo;
 
-		DeviceBuilder(VkPhysicalDevice& info, std::vector<QueueFamily>& families, FeatureSet features)
-		: info(info), families(families), device_extensions(info), features(features) {}
+		DeviceBuilder(VkPhysicalDevice& vk_device, std::vector<QueueFamily>& families, FeatureSet features)
+		: vk_device(vk_device), families(families), device_extensions(vk_device), features(features) {}
 
 };
 
@@ -143,26 +143,26 @@ class DeviceInfo {
 
 	private:
 
-		VkPhysicalDevice info;
-		VkPhysicalDeviceProperties properties;
-		VkPhysicalDeviceFeatures features;
+		VkPhysicalDevice vk_device;
+		VkPhysicalDeviceProperties vk_properties;
+		VkPhysicalDeviceFeatures vk_features;
 		std::vector<QueueFamily> families;
 
 	public:
 
-		DeviceInfo(VkPhysicalDevice& info)
-		: info(info) {
+		DeviceInfo(VkPhysicalDevice& vk_device)
+		: vk_device(vk_device) {
 
 			// load info about this device into structs
-			vkGetPhysicalDeviceProperties(info, &properties);
-			vkGetPhysicalDeviceFeatures(info, &features);
+			vkGetPhysicalDeviceProperties(vk_device, &vk_properties);
+			vkGetPhysicalDeviceFeatures(vk_device, &vk_features);
 
 			// create a list of queue families supported
 			uint32_t count = 0, index = 0;
-			vkGetPhysicalDeviceQueueFamilyProperties(info, &count, nullptr);
+			vkGetPhysicalDeviceQueueFamilyProperties(vk_device, &count, nullptr);
 
 			std::vector<VkQueueFamilyProperties> entires {count};
-			vkGetPhysicalDeviceQueueFamilyProperties(info, &count, entires.data());
+			vkGetPhysicalDeviceQueueFamilyProperties(vk_device, &count, entires.data());
 
 			for (VkQueueFamilyProperties& family : entires) {
 				families.emplace_back(family, index ++);
@@ -173,21 +173,21 @@ class DeviceInfo {
 		 * @see VkPhysicalDeviceType
 		 */
 		VkPhysicalDeviceType getType() {
-			return properties.deviceType;
+			return vk_properties.deviceType;
 		}
 
 		/**
 		 * @see https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceProperties.html
 		 */
 		VkPhysicalDeviceProperties getProperties() {
-			return properties;
+			return vk_properties;
 		}
 
 		/**
 		 * @see https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
 		 */
 		FeatureSetView getFeatures() {
-			return FeatureSet {features}.view();
+			return FeatureSet {vk_features}.view();
 		}
 
 		/**
@@ -198,8 +198,8 @@ class DeviceInfo {
 			uint32_t formats, modes;
 
 			// load structure describing capabilities of a surface
-			vkGetPhysicalDeviceSurfaceFormatsKHR(info, surface.vk_surface, &formats, nullptr);
-			vkGetPhysicalDeviceSurfacePresentModesKHR(info, surface.vk_surface, &modes, nullptr);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(vk_device, surface.vk_surface, &formats, nullptr);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(vk_device, surface.vk_surface, &modes, nullptr);
 
 			return formats != 0 && modes != 0;
 		}
@@ -209,11 +209,11 @@ class DeviceInfo {
 		 * a single family can be returned for different queue types
 		 */
 		const QueueFamily* getQueueFamily(const QueueFamilyPredicate& predicate) {
-			return predicate.pick(families);
+			return predicate.pick(vk_device, families);
 		}
 
 		DeviceBuilder builder() {
-			return {info, families, features};
+			return {vk_device, families, vk_features};
 		}
 
 };
