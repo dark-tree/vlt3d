@@ -11,10 +11,8 @@
 #include "util/threads.hpp"
 #include "resources.hpp"
 
-struct UBO {
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
+struct Uniforms {
+	glm::mat4 mvp;
 };
 
 class Frame {
@@ -47,9 +45,7 @@ class Frame {
 		/// and waited on using `wait()` before starting the rendering of a frame, it is used to keep CPU and GPU in sync
 		Fence flight_fence;
 
-		UBO data;
-		Buffer ubo;
-		MemoryMap map;
+		Uniforms uniforms;
 		DescriptorSet set;
 
 	public:
@@ -109,8 +105,10 @@ class RenderSystem {
 		GraphicsPipeline pipeline_3d_mix;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;
-
 		DescriptorPool descriptor_pool;
+
+		PushConstantLayout constant_layout;
+		PushConstant vertex_constant;
 
 	private:
 

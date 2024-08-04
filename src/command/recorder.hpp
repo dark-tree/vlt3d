@@ -76,6 +76,11 @@ class CommandRecorder {
 			vkCmdSetScissor(vk_buffer, 0, 1, &scissor);
 			return *this;
 		}
+
+		CommandRecorder& writePushConstant(const PushConstant& constant, const void* data) {
+			vkCmdPushConstants(vk_buffer, vk_layout, constant.flags, constant.offset, constant.size, data);
+			return *this;
+		}
 		
 		CommandRecorder& bindBuffer(const Buffer& buffer) {
 			VkDeviceSize offsets[] = {0};

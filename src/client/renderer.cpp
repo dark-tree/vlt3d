@@ -10,16 +10,16 @@
 Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler)
 : buffer(pool.allocate()), immediate_2d(system, 1024), immediate_3d(system, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
 
-	BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
-	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+//	// leaving this here as it may prove useful later
+//	BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
+//	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+//	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+//
+//	ubo = system.allocator.allocateBuffer(buffer_builder);
+//	map = ubo.access().map();
 
-	ubo = system.allocator.allocateBuffer(buffer_builder);
-	map = ubo.access().map();
 	set = descriptor;
-
-	descriptor.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ubo, sizeof(UBO));
-	descriptor.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
+	set.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
 }
 
 Frame::~Frame() {
@@ -27,9 +27,6 @@ Frame::~Frame() {
 	available_semaphore.close();
 	finished_semaphore.close();
 	flight_fence.close();
-
-	map.unmap();
-	ubo.close();
 }
 
 void Frame::wait() {
@@ -186,6 +183,7 @@ void RenderSystem::createPipelines() {
 		.withShaders(assets.state->vert_3d, assets.state->frag_mix)
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 		.withBindingLayout(binding_3d)
+		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(descriptor_layout)
 		.build();
 
@@ -200,6 +198,7 @@ void RenderSystem::createPipelines() {
 		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBindingLayout(binding_3d)
+		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(descriptor_layout)
 		.build();
 
@@ -212,6 +211,7 @@ void RenderSystem::createPipelines() {
 		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBindingLayout(binding_2d)
+		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(descriptor_layout)
 		.build();
 
@@ -262,8 +262,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	// Create this thing
 	descriptor_layout = DescriptorSetLayoutBuilder::begin()
-		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
 	// 3D binding layout
@@ -284,6 +283,10 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.add(concurrent, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
 		.add(concurrent, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 		.done(device, concurrent);
+
+	constant_layout = PushConstantLayoutBuilder::begin()
+		.add(Kind::VERTEX, 64, &vertex_constant)
+		.done();
 
 	// Phase 2
 	// this step needs to be more or less repeated every time the window size changes

@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 1) uniform sampler2D uSampler;
+layout(binding = 0) uniform sampler2D uSampler;
 
 layout(location = 0) in vec4 vColor;
 layout(location = 1) in vec2 vTexture;

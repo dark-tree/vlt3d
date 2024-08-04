@@ -62,14 +62,15 @@ int main() {
 			world.setBlock(pos.x, pos.y, pos.z, 1);
 		}
 
-		frame.data.model = glm::identity<glm::mat4>();
-		frame.data.proj = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
-		frame.data.view = camera.getView();
-		Frustum frustum = camera.getFrustum(frame.data.proj);
+		glm::mat4 model = glm::identity<glm::mat4>();
+		glm::mat4 view = camera.getView();
+		glm::mat4 projection = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
+
+		frame.uniforms.mvp = projection * view * model;
+		Frustum frustum = camera.getFrustum(projection);
 
 		frame.wait();
 		frame.execute();
-		frame.map.write(&frame.data, sizeof(UBO));
 
 		immediate.prepare(swapchain.vk_extent);
 		stack.draw(immediate, window.getInputContext(), camera);
@@ -96,6 +97,7 @@ int main() {
 
 		recorder.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
 		recorder.bindPipeline(system.pipeline_3d_mix);
+		recorder.writePushConstant(system.vertex_constant, &frame.uniforms);
 		recorder.bindDescriptorSet(frame.set);
 
 		world_renderer.draw(recorder, frustum);
