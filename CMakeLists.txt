@@ -22,16 +22,16 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	find_program(MOLD_PROGRAM mold)
 
 	if (MOLD_PROGRAM)
-		message(NOTICE "The MOLD linker was found: ${MOLD_PROGRAM}")
+		message(STATUS "The MOLD linker was found: ${MOLD_PROGRAM}")
 		set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=mold")
 		set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=mold")
 	else()
-		message(NOTICE "The MOLD linker was NOT found, consider installing it to!")
+		message(STATUS "The MOLD linker was NOT found, consider installing it to!")
 	endif()
 endif()
 
 if (NOT OpenAL_FOUND)
-	message(NOTICE "OpenAL was NOT found, falling back to OpenAL-Soft!")
+	message(STATUS "OpenAL was NOT found, falling back to OpenAL-Soft!")
 
 	FetchContent_Declare(
 			openal-soft
@@ -86,6 +86,13 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+		vstl
+		GIT_REPOSITORY https://github.com/magistermaks/lib-vstl
+		GIT_TAG v3.1
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
 		shaderc
 		GIT_REPOSITORY https://github.com/google/shaderc
 		GIT_TAG v2023.4
@@ -94,7 +101,7 @@ FetchContent_Declare(
 
 # Time for some mental gymnastics for shaderc ...
 FetchContent_Populate(shaderc)
-message("Fetching external dependencies for target 'shaderc'...")
+message(STATUS "Fetching external dependencies for target 'shaderc'...")
 
 # Invoke their very special dependency python script
 execute_process(
@@ -116,7 +123,7 @@ set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
 # ... And finally add shaderc!
 add_subdirectory(${shaderc_SOURCE_DIR} ${shaderc_BINARY_DIR})
-FetchContent_MakeAvailable(glfw vma stb glm siv format)
+FetchContent_MakeAvailable(glfw vma stb glm siv format vstl)
 
 include_directories(
 		src/
@@ -129,11 +136,15 @@ include_directories(
 		${OpenAL_INCLUDE_DIRS}                   # Headers in ./AL
 		${siv_SOURCE_DIR}                        # Headers in ./
 		${format_SOURCE_DIR}/src                 # Headers in ./
+		${vstl_SOURCE_DIR}                       # Headers in ./
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES
 		"src/*.cpp"
 )
+
+# basic unit test are build as a separate target
+list(FILTER VLT3D_SOURCES EXCLUDE REGEX "src[\\/]test\\.cpp$")
 
 add_library(external
 		lib/stb_image.cpp
@@ -146,7 +157,11 @@ add_executable(main
 		${VLT3D_SOURCES}
 )
 
-target_link_libraries(main
+add_executable(test
+		"src/test.cpp"
+)
+
+set(VLT3D_LIBS
 		OpenAL::OpenAL
 		Threads::Threads
 		Vulkan::Vulkan
@@ -157,9 +172,11 @@ target_link_libraries(main
 		external
 )
 
-target_compile_definitions(main
-		PRIVATE "SOURCE_ROOT=\"${CMAKE_SOURCE_DIR}\""
-)
+target_link_libraries(main PRIVATE ${VLT3D_LIBS})
+target_compile_definitions(main PRIVATE "SOURCE_ROOT=\"${CMAKE_SOURCE_DIR}\"")
+
+target_link_libraries(test PRIVATE ${VLT3D_LIBS})
+target_compile_definitions(test PRIVATE "SOURCE_ROOT=\"${CMAKE_SOURCE_DIR}\"")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 

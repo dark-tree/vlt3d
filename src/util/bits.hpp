@@ -11,7 +11,7 @@ class Bits {
 
 	public:
 
-		template <typename T>
+		template <std::unsigned_integral T>
 		class Iterator {
 
 			private:
@@ -21,14 +21,14 @@ class Bits {
 
 			public:
 
-				using value_type = uint8_t;
-				using pointer = uint8_t*;
-				using reference = uint8_t&;
+				using value_type = T;
+				using pointer = T*;
+				using reference = T&;
 
-				Iterator(uint8_t bitfield, uint8_t current)
+				Iterator(T bitfield, T current)
 				: bitfield(bitfield), current(current) {}
 
-				uint8_t operator*() const {
+				T operator*() const {
 					return current;
 				}
 
@@ -54,7 +54,7 @@ class Bits {
 				}
 		};
 
-		template <typename T>
+		template <std::unsigned_integral T>
 		class Range {
 
 			private:
@@ -67,7 +67,7 @@ class Bits {
 				: bitfield(bitfield) {}
 
 				Iterator<T> begin() const {
-					return {bitfield, Bits::msb(bitfield)}; // start with the highest bit
+					return {bitfield, Bits::msb<T>(bitfield)}; // start with the highest bit
 				}
 
 				Iterator<T> end() const {
@@ -77,7 +77,7 @@ class Bits {
 
 	public:
 
-		template <std::integral T>
+		template <std::unsigned_integral T>
 		static Range<T> decompose(T bitfield) {
 			return {bitfield};
 		}
@@ -112,34 +112,6 @@ class Bits {
 			}
 
 			return x ^ (x >> 1);
-		}
-
-		/**
-		 * Returns the number of leading zeros in the binary
-		 * representation of the given number, so for 0b0010'0011 will return 2
-		 */
-		template <std::unsigned_integral T>
-		static inline constexpr T clz(T v) {
-			static_assert(Bits::width<T>() <= 32, "Bits::clz() works for at most 32 bit types");
-
-			T c = Bits::width<T>();
-			v &= - static_cast<decltype(std::make_signed<T>())>(v);
-
-			if (v) c--;
-
-			if constexpr (Bits::width<T>() >= 32) {
-				if (v & std::bit_cast<T>(0x0000FFFF)) c -= 16;
-			}
-
-			if constexpr (Bits::width<T>() >= 16) {
-				if (v & std::bit_cast<T>(0x00FF00FF)) c -= 8;
-			}
-
-			if (v & std::bit_cast<T>(0x0F0F0F0F)) c -= 4;
-			if (v & std::bit_cast<T>(0x33333333)) c -= 2;
-			if (v & std::bit_cast<T>(0x55555555)) c -= 1;
-
-			return c;
 		}
 
 };

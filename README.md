@@ -30,6 +30,9 @@ cmake --build build/ --target main -j $(($(nproc --all) + 1))
 cd build && ./main
 ```
 
+You can also build and run the `test` target,  
+that runs some simple unit tests of the internal utilities and systems
+
 ### Code Style
 VLT3D uses a quite unique code style that focuses on clarity and simplicity. As such, prefer short
 and unique names in place of long and overly descriptive ones, and try to limit the number of words:
