@@ -56,7 +56,7 @@ class CommandSubmiter {
 			info.pSignalSemaphores = reset_semaphores.data();
 
 			if (vkQueueSubmit(queue.vk_queue, 1, &info, finished_fence) != VK_SUCCESS) {
-				throw std::runtime_error("failed to submit draw command buffer!");
+				throw Exception {"Failed to submit command buffer!"};
 			}
 
 		}

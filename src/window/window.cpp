@@ -14,7 +14,7 @@ void Window::glfwButtonCallback(GLFWwindow* glfw_window, int button, int action,
 	Window* window = (Window*) glfwGetWindowUserPointer(glfw_window);
 
 	if (window && window->root) {
-		window->root->onEvent(window->input, MouseEvent {button, mods, action});
+		window->root->onEvent(window->input, ButtonEvent {button, mods, action});
 	}
 }
 
@@ -57,6 +57,13 @@ Window::Window(uint32_t w, uint32_t h, const char* title)
 	if (!glfwVulkanSupported()) {
 		throw Exception {"Failed to find vulkan loader!"};
 	}
+
+//	// introduce as a setting?
+//	if (glfwRawMouseMotionSupported()) {
+//		glfwSetInputMode(glfw_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+//	} else {
+//		logger::warn("Enabling raw mouse motion is unsupported!");
+//	}
 
 	// send events to the root input consumer
 	glfwSetKeyCallback(glfw_window, glfwKeyCallback);

@@ -17,7 +17,7 @@ class GroupScreen : public Screen {
 			( this->screens.emplace_back(screens), ... );
 		}
 
-		InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& key);
-		void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused);
+		InputResult onEvent(ScreenStack& stack, InputContext& input, const InputEvent& key) override;
+		void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) override;
 
 };

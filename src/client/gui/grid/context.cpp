@@ -6,7 +6,7 @@ bool GridContext::shouldAccept(Box2D box, InputContext& input, const InputEvent&
 		return true;
 	}
 
-	if (event.getType() == InputEvent::MOUSE) {
+	if (event.getType() == InputEvent::BUTTON) {
 		return input.isMouseWithin(box);
 	}
 

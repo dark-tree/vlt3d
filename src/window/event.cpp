@@ -1,6 +1,10 @@
 
 #include "event.hpp"
 
+/*
+ * KeycodeInputEvent
+ */
+
 KeycodeInputEvent::KeycodeInputEvent(int identifier, int mods, int action) {
 	this->identifier = identifier;
 	this->mods = mods;
@@ -27,28 +31,36 @@ bool KeycodeInputEvent::isShiftHeld() const {
 	return mods & GLFW_MOD_SHIFT;
 }
 
-MouseEvent::MouseEvent(int button, int mods, int action)
+/*
+ * ButtonEvent
+ */
+
+ButtonEvent::ButtonEvent(int button, int mods, int action)
 : KeycodeInputEvent(button, mods, action) {}
 
-bool MouseEvent::isLeft() const {
+bool ButtonEvent::isLeft() const {
 	return identifier == GLFW_MOUSE_BUTTON_LEFT;
 }
 
-bool MouseEvent::isRight() const {
+bool ButtonEvent::isRight() const {
 	return identifier == GLFW_MOUSE_BUTTON_RIGHT;
 }
 
-bool MouseEvent::hasLeftClicked() const {
+bool ButtonEvent::hasLeftClicked() const {
 	return isLeft() && isReleased();
 }
 
-bool MouseEvent::hasRightClicked() const {
+bool ButtonEvent::hasRightClicked() const {
 	return isRight() && isReleased();
 }
 
-InputEvent::Type MouseEvent::getType() const {
-	return MouseEvent::self_type;
+InputEvent::Type ButtonEvent::getType() const {
+	return ButtonEvent::self_type;
 }
+
+/*
+ * KeyboardEvent
+ */
 
 KeyboardEvent::KeyboardEvent(int key, int mods, int action)
 : KeycodeInputEvent(key, mods, action) {}
@@ -64,6 +76,10 @@ bool KeyboardEvent::isKeyReleased(int key) const {
 InputEvent::Type KeyboardEvent::getType() const {
 	return KeyboardEvent::self_type;
 }
+
+/*
+ * ScrollEvent
+ */
 
 ScrollEvent::ScrollEvent(float scroll)
 : scroll(scroll) {}

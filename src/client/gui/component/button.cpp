@@ -47,7 +47,7 @@ bool GuiButton::onEvent(GridContext& grid, ScreenStack& stack, InputContext& inp
 		return false;
 	}
 
-	if (auto* mouse = event.as<MouseEvent>()) {
+	if (auto* mouse = event.as<ButtonEvent>()) {
 		if (mouse->hasLeftClicked() ) {
 			callback(stack);
 			return true;

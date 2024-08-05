@@ -29,7 +29,7 @@ void GuiCheck::draw(GridContext& grid, InputContext& input, ImmediateRenderer& r
 	renderer.drawText(box.x2 + 4, box.y1, label, {-1, box.height()});
 
 	// draw main checkbox
-	BakedSprite checkbox = renderer.getSprite("assets/sprites/checkbox.png");
+	BakedSprite checkbox = renderer.getSprite("checkbox");
 	renderer.drawSprite(box.begin(), extend.x, extend.y, checkbox.grid(4, 4, row, column));
 
 	// draw navigator outline
@@ -47,7 +47,7 @@ bool GuiCheck::onEvent(GridContext& grid, ScreenStack& stack, InputContext& inpu
 		return false;
 	}
 
-	if (auto* mouse = event.as<MouseEvent>()) {
+	if (auto* mouse = event.as<ButtonEvent>()) {
 		if (mouse->hasLeftClicked()) {
 			state = !state;
 			callback(state);

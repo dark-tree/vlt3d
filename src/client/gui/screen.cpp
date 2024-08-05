@@ -3,6 +3,7 @@
 
 Screen::Screen() {
 	this->state = OPEN;
+	this->replacement = nullptr;
 }
 
 void Screen::remove() {

@@ -8,7 +8,7 @@ class InputEvent {
 
 		enum Type {
 			KEYBOARD,
-			MOUSE,
+			BUTTON,
 			SCROLL
 		};
 
@@ -44,15 +44,15 @@ class KeycodeInputEvent : public InputEvent {
 
 };
 
-class MouseEvent : public KeycodeInputEvent {
+class ButtonEvent : public KeycodeInputEvent {
 
 	public:
 
-		static constexpr Type self_type = InputEvent::MOUSE;
+		static constexpr Type self_type = InputEvent::BUTTON;
 
 	public:
 
-		MouseEvent(int button, int mods, int action);
+		ButtonEvent(int button, int mods, int action);
 
 		bool isLeft() const;
 		bool isRight() const;

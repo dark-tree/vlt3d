@@ -14,6 +14,7 @@
 #include "client/gui/screen/test.hpp"
 #include "client/gui/screen/group.hpp"
 #include "window/profiler.hpp"
+#include "client/gui/screen/play.hpp"
 
 int main() {
 
@@ -41,26 +42,13 @@ int main() {
 	window.setRootInputConsumer(&stack);
 
 	Profiler profiler;
-
-	// Open the cluster-fuck screen :D
-	stack.open(new TestScreen {profiler});
+	stack.open(new GroupScreen {new PlayScreen {world, camera}, new TestScreen {profiler}});
 
 	while (!window.shouldClose()) {
 		window.poll();
-		camera.update();
 		profiler.next();
 		
 		Frame& frame = system.getFrame();
-
-		if (window.isKeyPressed(GLFW_KEY_C)) {
-			glm::vec3 pos = camera.getPosition() + camera.getDirection() * 30.0f;
-			world.setBlock(pos.x, pos.y, pos.z, 0);
-		}
-
-		if (window.isKeyPressed(GLFW_KEY_V)) {
-			glm::vec3 pos = camera.getPosition() + camera.getDirection() * 30.0f;
-			world.setBlock(pos.x, pos.y, pos.z, 1);
-		}
 
 		glm::mat4 model = glm::identity<glm::mat4>();
 		glm::mat4 view = camera.getView();
