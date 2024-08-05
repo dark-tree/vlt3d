@@ -78,7 +78,7 @@ std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {
 	return it->second;
 }
 
-uint32_t World::getBlock(int x, int y, int z) {
+Block World::getBlock(int x, int y, int z) {
 	int cx = x >> Chunk::bits;
 	int cy = y >> Chunk::bits;
 	int cz = z >> Chunk::bits;
@@ -90,7 +90,7 @@ uint32_t World::getBlock(int x, int y, int z) {
 	throw AccessError {x, y, z};
 }
 
-void World::setBlock(int x, int y, int z, uint32_t block) {
+void World::setBlock(int x, int y, int z, Block block) {
 	int cx = x >> Chunk::bits;
 	int cy = y >> Chunk::bits;
 	int cz = z >> Chunk::bits;
@@ -101,7 +101,7 @@ void World::setBlock(int x, int y, int z, uint32_t block) {
 		int mz = z & Chunk::mask;
 
 		// setting non-air blocks doesn't require updating neighbours (for now)
-		pushChunkUpdate({cx, cy, cz}, block ? Direction::NONE : Chunk::getNeighboursMask(mx, my, mz));
+		pushChunkUpdate({cx, cy, cz}, block.isAir() ? Chunk::getNeighboursMask(mx, my, mz) : Direction::NONE);
 
 		return chunk->setBlock(mx, my, mz, block);
 	}

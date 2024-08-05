@@ -23,9 +23,9 @@ Chunk* WorldGenerator::get(glm::ivec3 pos) {
 				for (int y = 0; y < local_height; y++) {
 
 					if (y + ypos < height - 2) {
-						chunk->setBlock(x, y, z, 1);
+						chunk->setBlock(x, y, z, Block {1});
 					} else {
-						chunk->setBlock(x, y, z, 2);
+						chunk->setBlock(x, y, z, Block {2});
 					}
 
 				}

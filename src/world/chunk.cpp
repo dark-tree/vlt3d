@@ -16,7 +16,7 @@ Direction::field_type Chunk::getNeighboursMask(int x, int y, int z) {
 	return directions;
 }
 
-uint32_t& Chunk::ref(int x, int y, int z) {
+Block& Chunk::ref(int x, int y, int z) {
 	return (*blocks)[x + y * size + z * size * size];
 }
 
@@ -27,17 +27,17 @@ Chunk::~Chunk() {
 	delete[] blocks;
 }
 
-void Chunk::setBlock(int x, int y, int z, uint32_t block) {
+void Chunk::setBlock(int x, int y, int z, Block block) {
 	if (!blocks) {
-		blocks = (uint32_t (*)[size * size * size]) std::calloc(size * size * size, sizeof(uint32_t));
+		blocks = (Block (*)[size * size * size]) std::calloc(size * size * size, sizeof(Block));
 	}
 
 	ref(x, y, z) = block;
 }
 
-uint32_t Chunk::getBlock(int x, int y, int z) {
+Block Chunk::getBlock(int x, int y, int z) {
 	if (!blocks) {
-		return 0;
+		return Block {0};
 	}
 
 	return ref(x, y, z);

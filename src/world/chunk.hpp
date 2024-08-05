@@ -2,6 +2,7 @@
 
 #include "external.hpp"
 #include "util/direction.hpp"
+#include "block.hpp"
 
 class Chunk {
 
@@ -17,9 +18,9 @@ class Chunk {
 
 	private:
 
-		uint32_t (*blocks)[size * size * size] = nullptr;
+		Block (*blocks)[size * size * size] = nullptr;
 
-		uint32_t& ref(int x, int y, int z);
+		Block& ref(int x, int y, int z);
 
 	public:
 
@@ -29,10 +30,10 @@ class Chunk {
 		~Chunk();
 
 		/// Sets a block at the given chunk position
-		void setBlock(int x, int y, int z, uint32_t block);
+		void setBlock(int x, int y, int z, Block block);
 
 		/// Gets the block at the given chunk position
-		uint32_t getBlock(int x, int y, int z);
+		Block getBlock(int x, int y, int z);
 
 		/// Checks if this chunks contains no blocks in O(1) time
 		bool empty();

@@ -15,14 +15,18 @@ void PlayScreen::draw(ImmediateRenderer& immediate, InputContext& input, Camera&
 		camera.update();
 
 		if (input.isRightPressed()) {
-			if (world.getBlock(pos.x, pos.y, pos.z) != 0) {
-				world.setBlock(pos.x, pos.y, pos.z, 0);
+			Block air {0};
+
+			if (world.getBlock(pos.x, pos.y, pos.z) != air) {
+				world.setBlock(pos.x, pos.y, pos.z, air);
 			}
 		}
 
 		if (input.isLeftPressed()) {
-			if (world.getBlock(pos.x, pos.y, pos.z) != 1) {
-				world.setBlock(pos.x, pos.y, pos.z, 1);
+			Block idk {0};
+
+			if (world.getBlock(pos.x, pos.y, pos.z) != idk) {
+				world.setBlock(pos.x, pos.y, pos.z, idk);
 			}
 		}
 	}

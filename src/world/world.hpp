@@ -76,10 +76,10 @@ class World {
 
 		/// returns the block at the specified world coordinates,
 		/// if the containing chunk is not loaded throws AccessError
-		uint32_t getBlock(int x, int y, int z);
+		Block getBlock(int x, int y, int z);
 
 		/// returns the block at the specified world coordinates,
 		/// if the containing chunk is not loaded throws AccessError
-		void setBlock(int x, int y, int z, uint32_t block);
+		void setBlock(int x, int y, int z, Block block);
 
 };

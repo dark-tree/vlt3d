@@ -38,7 +38,7 @@ class WorldRenderView {
 			return failed_to_lock;
 		}
 
-		uint32_t getBlock(int x, int y, int z) {
+		Block getBlock(int x, int y, int z) {
 			int cx = x >> Chunk::bits;
 			int cy = y >> Chunk::bits;
 			int cz = z >> Chunk::bits;
@@ -170,10 +170,10 @@ void WorldRenderer::emitMesh(RenderSystem& system, const Atlas& atlas, World& wo
 		for (int x = 0; x < Chunk::size; x++) {
 			for (int y = 0; y < Chunk::size; y++) {
 				for (int z = 0; z < Chunk::size; z++) {
-					uint32_t block = chunk->getBlock(x, y, z);
+					Block block = chunk->getBlock(x, y, z);
 
-					if (block) {
-						BakedSprite sprite = (block % 2 == 1) ? atlas.getBakedSprite("vkblob") : atlas.getBakedSprite("digital");
+					if (!block.isAir()) {
+						BakedSprite sprite = (block.block_type % 2 == 1) ? atlas.getBakedSprite("vkblob") : atlas.getBakedSprite("digital");
 						float shade = std::clamp((chunk->pos.y * Chunk::size + y) / (Chunk::size * 2.0f) + 0.2f, 0.0f, 1.0f);
 
 						glm::ivec3 wpos = chunk->pos * Chunk::size + glm::ivec3 {x, y, z};
@@ -184,12 +184,12 @@ void WorldRenderer::emitMesh(RenderSystem& system, const Atlas& atlas, World& wo
 							wpos.y,
 							wpos.z,
 							shade, shade, shade,
-							view.getBlock(wpos.x, wpos.y + 1, wpos.z) == 0,
-							view.getBlock(wpos.x, wpos.y - 1, wpos.z) == 0,
-							view.getBlock(wpos.x + 1, wpos.y, wpos.z) == 0,
-							view.getBlock(wpos.x - 1, wpos.y, wpos.z) == 0,
-							view.getBlock(wpos.x, wpos.y, wpos.z + 1) == 0,
-							view.getBlock(wpos.x, wpos.y, wpos.z - 1) == 0,
+							view.getBlock(wpos.x, wpos.y + 1, wpos.z).isAir(),
+							view.getBlock(wpos.x, wpos.y - 1, wpos.z).isAir(),
+							view.getBlock(wpos.x + 1, wpos.y, wpos.z).isAir(),
+							view.getBlock(wpos.x - 1, wpos.y, wpos.z).isAir(),
+							view.getBlock(wpos.x, wpos.y, wpos.z + 1).isAir(),
+							view.getBlock(wpos.x, wpos.y, wpos.z - 1).isAir(),
 							sprite
 						);
 					}
