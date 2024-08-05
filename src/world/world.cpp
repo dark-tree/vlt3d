@@ -108,3 +108,59 @@ void World::setBlock(int x, int y, int z, Block block) {
 
 	throw AccessError {x, y, z};
 }
+
+Raycast World::raycast(glm::vec3 from, glm::vec3 direction, float distance) {
+
+	const float magnitude = distance * distance;
+	glm::vec3 diff = direction * distance;
+	glm::ivec3 sign = glm::sign(diff);
+	glm::ivec3 pos = glm::round(from);
+	glm::vec3 inv = glm::abs(1.0f / diff);
+
+	glm::vec3 max {
+		inv.x * (sign.x > 0 ? (pos.x + (0.5f - from.x)) : (from.x - (pos.x - 0.5f))),
+		inv.y * (sign.y > 0 ? (pos.y + (0.5f - from.y)) : (from.y - (pos.y - 0.5f))),
+		inv.z * (sign.z > 0 ? (pos.z + (0.5f - from.z)) : (from.z - (pos.z - 0.5f)))
+	};
+
+	try {
+		Block block = getBlock(pos.x, pos.y, pos.z);
+
+		if (!block.isAir()) {
+			return {pos, pos};
+		}
+
+		while (glm::length2(from - glm::vec3(pos)) <= magnitude) {
+			glm::ivec3 last = pos;
+
+			if (max.x < max.y) {
+				if (max.x < max.z) {
+					pos.x += sign.x;
+					max.x += inv.x;
+				} else {
+					pos.z += sign.z;
+					max.z += inv.z;
+				}
+			} else {
+				if (max.y < max.z) {
+					pos.y += sign.y;
+					max.y += inv.y;
+				} else {
+					pos.z += sign.z;
+					max.z += inv.z;
+				}
+			}
+
+			block = getBlock(pos.x, pos.y, pos.z);
+			if (!block.isAir()) {
+				return {pos, last};
+			}
+		}
+
+		// If we reach here, we've traveled the full distance without hitting anything
+		return {};
+
+	} catch (AccessError& error) {
+		return {};
+	}
+}

@@ -11,3 +11,14 @@ glm::ivec3 Direction::offset(field_type direction) {
 
 	return {0, 0, 0};
 }
+
+Direction::field_type Direction::opposite(Direction::field_type direction) {
+	if (direction & WEST) return EAST;
+	if (direction & EAST) return WEST;
+	if (direction & DOWN) return UP;
+	if (direction & UP) return DOWN;
+	if (direction & NORTH) return SOUTH;
+	if (direction & SOUTH) return NORTH;
+
+	return NONE;
+}

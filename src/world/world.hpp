@@ -5,6 +5,7 @@
 #include "util/logger.hpp"
 #include "util/direction.hpp"
 #include "util/bits.hpp"
+#include "raycast.hpp"
 
 struct AccessError : std::exception {
 
@@ -18,6 +19,7 @@ struct AccessError : std::exception {
 };
 
 class WorldGenerator;
+class Raycast;
 
 class World {
 
@@ -81,5 +83,9 @@ class World {
 		/// returns the block at the specified world coordinates,
 		/// if the containing chunk is not loaded throws AccessError
 		void setBlock(int x, int y, int z, Block block);
+
+		/// Casts a ray from the given position until the
+		/// distance limit, a block, or an unloaded chunk is encountered
+		Raycast raycast(glm::vec3 from, glm::vec3 direction, float distance);
 
 };
