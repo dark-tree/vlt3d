@@ -13,6 +13,7 @@ class BindingLayout {
 
 	public:
 
+		BindingLayout() = default;
 		BindingLayout(uint32_t stride, std::vector<VkVertexInputAttributeDescription> attributes, VkVertexInputRate rate)
 		: stride(stride), attributes(attributes), vk_rate(rate) {}
 

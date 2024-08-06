@@ -8,6 +8,8 @@
 #include "binding.hpp"
 #include "descriptor/layout.hpp"
 #include "util/timer.hpp"
+#include "shader/module.hpp"
+#include "descriptor/push.hpp"
 
 #define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw Exception {"Feature '" #feature "' not enabled on this device!"}; }
 
@@ -27,6 +29,7 @@ class GraphicsPipeline {
 
 	public:
 
+		GraphicsPipeline() = default;
 		GraphicsPipeline(VkPipeline vk_pipeline, VkPipelineLayout vk_layout, VkDevice vk_device)
 		: vk_pipeline(vk_pipeline), vk_layout(vk_layout), vk_device(vk_device) {}
 
@@ -45,7 +48,7 @@ class GraphicsPipelineBuilder {
 		std::vector<VkDynamicState> dynamics;
 		std::vector<VkVertexInputBindingDescription> bindings;
 		std::vector<VkVertexInputAttributeDescription> attributes;
-		std::vector<std::shared_future<ShaderModule>> stages;
+		std::vector<ShaderModule> stages;
 
 		VkPipelineViewportStateCreateInfo view {};
 		VkPipelineDynamicStateCreateInfo dynamic {};
@@ -57,6 +60,7 @@ class GraphicsPipelineBuilder {
 		VkPipelineColorBlendAttachmentState attachment {};
 		VkPipelineColorBlendStateCreateInfo blending {};
 		VkPipelineDepthStencilStateCreateInfo depth {};
+		PushConstantLayout push {};
 
 		VkViewport vk_viewport {};
 		VkRect2D vk_scissor {};
@@ -75,8 +79,10 @@ class GraphicsPipelineBuilder {
 			dynamic.dynamicStateCount = (uint32_t) dynamics.size();
 			dynamic.pDynamicStates = dynamics.data();
 
-			layout.setLayoutCount = (uint32_t) sets.size();
+			layout.setLayoutCount = sets.size();
 			layout.pSetLayouts = sets.data();
+			layout.pushConstantRangeCount = push.size();
+			layout.pPushConstantRanges = push.data();
 
 			view.viewportCount = 1;
 			view.pViewports = &vk_viewport;
@@ -106,7 +112,6 @@ class GraphicsPipelineBuilder {
 			layout.pSetLayouts = nullptr;
 			layout.pushConstantRangeCount = 0;
 			layout.pPushConstantRanges = nullptr;
-			// TODO
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineInputAssemblyStateCreateInfo.html
 			assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -124,6 +129,7 @@ class GraphicsPipelineBuilder {
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineMultisampleStateCreateInfo.html
 			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.flags = 0;
 			multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 			// TODO
 
@@ -193,7 +199,10 @@ class GraphicsPipelineBuilder {
 
 	// layout configuration
 
-		// TODO https://registry.khronos.org/vulkan/site/guide/latest/push_constants.html
+		GraphicsPipelineBuilder& withPushConstantLayout(const PushConstantLayout& push) {
+			this->push = push;
+			return *this;
+		}
 
 		GraphicsPipelineBuilder& withDescriptorSetLayout(DescriptorSetLayout layout) {
 			sets.push_back(layout.vk_layout);
@@ -340,7 +349,7 @@ class GraphicsPipelineBuilder {
 
 	public:
 
-		GraphicsPipeline build(const char* name = "Untitled") {
+		GraphicsPipeline build() {
 
 			Timer timer;
 
@@ -360,8 +369,8 @@ class GraphicsPipelineBuilder {
 
 			std::vector<VkPipelineShaderStageCreateInfo> shaders;
 
-			for (std::shared_future<ShaderModule>& future : stages) {
-				shaders.push_back(future.get().getStageConfig());
+			for (ShaderModule& stage : stages) {
+				shaders.push_back(stage.getStageConfig());
 			}
 
 			VkGraphicsPipelineCreateInfo create_info {};
@@ -397,7 +406,6 @@ class GraphicsPipelineBuilder {
 				throw Exception {"Failed to create graphics pipeline!"};
 			}
 
-			logger::info("Pipeline '", name, "' creation took: ", timer.milliseconds(), "ms");
 			return {pipeline, pipeline_layout, device.vk_device};
 
 		}

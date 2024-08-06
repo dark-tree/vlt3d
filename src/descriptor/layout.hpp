@@ -9,6 +9,7 @@ class DescriptorSetLayout {
 
 	public:
 
+		DescriptorSetLayout() = default;
 		DescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout)
 		: vk_device(device), vk_layout(layout) {}
 
@@ -41,7 +42,7 @@ class DescriptorSetLayoutBuilder {
 			return *this;
 		}
 
-		DescriptorSetLayout build(Device device) const {
+		DescriptorSetLayout done(Device device) const {
 			VkDescriptorSetLayout layout;
 
 			VkDescriptorSetLayoutCreateInfo create_info {};
@@ -51,9 +52,14 @@ class DescriptorSetLayoutBuilder {
 			create_info.pBindings = bindings.data();
 
 			if (vkCreateDescriptorSetLayout(device.vk_device, &create_info, nullptr, &layout) != VK_SUCCESS) {
-				throw std::runtime_error {"vkCreateDescriptorSetLayout: Failed to create descriptor set!"};
+				throw Exception {"Failed to create descriptor set!"};
 			}
 
 			return {device.vk_device, layout};
 		}
+
+		inline static DescriptorSetLayoutBuilder begin() {
+			return {};
+		}
+
 };

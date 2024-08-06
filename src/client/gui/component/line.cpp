@@ -1,7 +1,7 @@
 
 #include "line.hpp"
 #include "client/gui/grid/context.hpp"
-#include "client/renderer.hpp"
+#include "client/immediate.hpp"
 
 GuiLine::GuiLine(Box2D box, Color color, float weight)
 : GuiComponent(box), color(color), weight(weight) {}

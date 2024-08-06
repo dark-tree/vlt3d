@@ -9,14 +9,11 @@ class FeatureSetView {
 
 		READONLY VkPhysicalDeviceFeatures vk_features;
 
-	private:
-
-		friend class FeatureSet;
-
-		explicit FeatureSetView(const VkPhysicalDeviceFeatures& vk_features)
-		: vk_features(vk_features) {}
-
 	public:
+
+		FeatureSetView() = default;
+		FeatureSetView(const VkPhysicalDeviceFeatures& vk_features)
+		: vk_features(vk_features) {}
 
 		bool hasRobustBufferAccess() const {
 			return vk_features.robustBufferAccess;

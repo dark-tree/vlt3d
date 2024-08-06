@@ -84,6 +84,7 @@ class MemoryInfo {
 
 	public:
 
+		MemoryInfo() = default;
 		MemoryInfo(VkPhysicalDevice vk_physical_device, VkDevice vk_device)
 		: vk_device(vk_device) {
 			vkGetPhysicalDeviceMemoryProperties(vk_physical_device, &vk_properties);

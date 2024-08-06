@@ -21,13 +21,14 @@ class Instance {
 
 	private:
 
-		DebugMessanger messenger;
+		DebugMessenger messenger;
 		bool validation;
 		std::vector<DeviceInfo> devices;
 
 	public:
 
-		Instance(VkInstance vk_instance, DebugMessanger messenger, bool validation)
+		Instance() = default;
+		Instance(VkInstance vk_instance, DebugMessenger messenger, bool validation)
 		: vk_instance(vk_instance), messenger(messenger), validation(validation) {
 
 			uint32_t count = 0;
@@ -68,12 +69,13 @@ class InstanceBuilder {
 
 	private:
 
+		uint32_t version = VK_API_VERSION_1_0;
 		const char* name = "Unknown";
 		uint16_t major = 0, minor = 0, patch = 0;
 
 		InstanceExtensionPicker instance_extensions;
 		ValidationLayerPicker validation_layers;
-		DebugMessangerConfig messenger;
+		DebugMessengerConfig messenger;
 
 	private:
 
@@ -86,8 +88,16 @@ class InstanceBuilder {
 	public:
 
 		/**
+		 * Set the required Vulkan API version
+		 * Use the `VK_API_VERSION_*` defines, defaults to VK_API_VERSION_1_0
+		 */
+		void setVulkanVersion(uint32_t version) {
+			this->version = version;
+		}
+
+		/**
 		 * Provide a basic and optional description of the application.
-		 * This information COULD be used by the graphics driver
+		 * This information CAN be used by the graphics driver
 		 */
 		void addApplicationInfo(const char* name, uint16_t major = 1, uint16_t minor = 0, uint16_t patch = 0) {
 			this->name = name;
@@ -100,7 +110,7 @@ class InstanceBuilder {
 		 * Set a error handler for when a Vulkan API is incorrectly used,
 		 * some validation layer should be enabled for this call to be useful
 		 */
-		void addDebugMessenger(const DebugMessangerConfig::CallbackFunction& callback = DebugMessangerConfig::DefaultExt) {
+		void addDebugMessenger(const DebugMessengerConfig::CallbackFunction& callback = DebugMessengerConfig::DefaultExt) {
 			messenger.configure(callback);
 		}
 
@@ -149,9 +159,9 @@ class InstanceBuilder {
 			app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 			app_info.pApplicationName = name;
 			app_info.applicationVersion = VK_MAKE_VERSION(major, minor, patch);
-			app_info.pEngineName = "GLPH";
+			app_info.pEngineName = "VLT3D";
 			app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-			app_info.apiVersion = VK_API_VERSION_1_0;
+			app_info.apiVersion = this->version;
 
 			// information required for creating an instance
 			VkInstanceCreateInfo create_info {};
@@ -169,8 +179,11 @@ class InstanceBuilder {
 
 			VkInstance instance;
 			if (vkCreateInstance(&create_info, nullptr, &instance) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateInstance: Failed to create instance!");
+				throw Exception {"Failed to create Vulkan instance"};
 			}
+
+			// we need to fetch the functions and this is the earliest point we have the VkInstance
+			initProxyInstance(instance);
 
 			return Instance {instance, messenger.attach(instance), validation_layers.isAnySelected()};
 

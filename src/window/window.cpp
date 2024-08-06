@@ -1,5 +1,6 @@
 
 #include "window.hpp"
+#include "util/logger.hpp"
 
 void Window::glfwKeyCallback(GLFWwindow* glfw_window, int key, int scancode, int action, int mods) {
 	Window* window = (Window*) glfwGetWindowUserPointer(glfw_window);
@@ -13,7 +14,7 @@ void Window::glfwButtonCallback(GLFWwindow* glfw_window, int button, int action,
 	Window* window = (Window*) glfwGetWindowUserPointer(glfw_window);
 
 	if (window && window->root) {
-		window->root->onEvent(window->input, MouseEvent {button, mods, action});
+		window->root->onEvent(window->input, ButtonEvent {button, mods, action});
 	}
 }
 
@@ -25,17 +26,24 @@ void Window::glfwScrollCallback(GLFWwindow* glfw_window, double x_scroll, double
 	}
 }
 
+void Window::glfwErrorCallback(int code, const char* description) {
+	logger::error("[GLFW] ", description);
+}
+
 Window::Window(uint32_t w, uint32_t h, const char* title)
 : input(*this), root(nullptr) {
 	// one-of init
 	static auto init = [] {
-		return glfwInit();
+		bool init = glfwInit();
+		glfwSetErrorCallback(glfwErrorCallback);
+		return init;
 	} ();
 
 	if (!init) {
 		throw Exception {"Failed to initialize!"};
 	}
 
+	glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	glfw_window = glfwCreateWindow(w, h, title, nullptr, nullptr);
@@ -50,16 +58,17 @@ Window::Window(uint32_t w, uint32_t h, const char* title)
 		throw Exception {"Failed to find vulkan loader!"};
 	}
 
+//	// introduce as a setting?
+//	if (glfwRawMouseMotionSupported()) {
+//		glfwSetInputMode(glfw_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+//	} else {
+//		logger::warn("Enabling raw mouse motion is unsupported!");
+//	}
+
 	// send events to the root input consumer
 	glfwSetKeyCallback(glfw_window, glfwKeyCallback);
 	glfwSetMouseButtonCallback(glfw_window, glfwButtonCallback);
 	glfwSetScrollCallback(glfw_window, glfwScrollCallback);
-
-	//glfwSwapInterval(0);
-}
-
-bool Window::isPressed(int key) const {
-	return isKeyPressed(key);
 }
 
 void Window::poll() const {

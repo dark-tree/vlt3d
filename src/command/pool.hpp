@@ -14,6 +14,7 @@ class CommandPool {
 
 	public:
 
+		CommandPool() = default;
 		CommandPool(VkCommandPool vk_pool, VkDevice vk_device)
 		: vk_pool(vk_pool), vk_device(vk_device) {}
 

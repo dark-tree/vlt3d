@@ -11,7 +11,7 @@ class Atlas {
 
 		ImageData atlas;
 		PairedSprite fallback;
-		std::unordered_map<std::string, PairedSprite> sprites;
+		mutable std::unordered_map<std::string, PairedSprite> sprites;
 		friend class AtlasBuilder;
 
 		Atlas(ImageData atlas, const std::unordered_map<std::string, UnbakedSprite>& unbaked, PairedSprite fallback);
@@ -19,8 +19,7 @@ class Atlas {
 
 	public:
 
-		[[deprecated("Use Atlas::getBakedSprite")]]
-		BakedSprite getSprite(const std::string& identifier) const;
+		Atlas() = default;
 
 		BakedSprite getBakedSprite(const std::string& identifier) const;
 		UnbakedSprite getUnbakedSprite(const std::string& identifier) const;
@@ -48,15 +47,14 @@ class AtlasBuilder {
 
 		AtlasBuilder();
 
-		void submitDirectory(const std::string& identifier);
-		void submitFile(const std::string& identifier);
+		void submitFile(const std::string& identifier, const std::string& path);
 		void submitImage(const std::string& identifier, ImageData image);
 		void submitFallback(ImageData image);
 		Atlas build();
 
 	public:
 
-		static Atlas createSimpleAtlas(const std::string& identifier);
+		static Atlas createSimpleAtlas(const std::string& identifier, ImageData fallback);
 		static Atlas createIdentityAtlas(ImageData atlas);
 
 };

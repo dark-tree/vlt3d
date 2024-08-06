@@ -12,10 +12,13 @@ class ImageSampler {
 
 	public:
 
-		ImageSampler() {}
-
+		ImageSampler() = default;
 		ImageSampler(VkSampler sampler, VkImageView view)
 		: vk_sampler(sampler), vk_view(view) {}
+
+		void close(Device& device) {
+			vkDestroySampler(device.vk_device, vk_sampler, nullptr);
+		}
 
 };
 
@@ -100,6 +103,10 @@ class ImageView {
 
 		ImageSamplerBuilder getSamplerBuilder() {
 			return {vk_view};
+		}
+
+		void close(Device& device) {
+			vkDestroyImageView(device.vk_device, vk_view, nullptr);
 		}
 
 };

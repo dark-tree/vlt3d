@@ -29,6 +29,9 @@ void GuiComponent::drawDebugOutline(GridContext& grid, InputContext& input, Imme
 			renderer.setAlignment(VerticalAlignment::TOP);
 			renderer.setTint(255, 255, 255);
 			renderer.setFontSize(1);
+
+			// this emits a bogus warning caused by a compiler bug on GCC 12
+			// see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
 			renderer.drawText(screen.x1 + 3, screen.y1 + 3, "#" + std::to_string(i));
 		}
 	}

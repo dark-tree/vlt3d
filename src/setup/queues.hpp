@@ -6,11 +6,12 @@ class QueueInfo {
 
 	public:
 
-		READONLY const uint32_t index;
-		READONLY const uint32_t count;
+		READONLY uint32_t index;
+		READONLY uint32_t count;
 
 	public:
 
+		QueueInfo() = default;
 		QueueInfo(uint32_t index, uint32_t count)
 		: index(index), count(count) {}
 
@@ -81,10 +82,9 @@ class QueueFamily {
 			return properties.queueCount;
 		}
 
-		// TODO implement
-		bool canPresentTo(WindowSurface& surface) const {
+		bool canPresentTo(VkPhysicalDevice device, WindowSurface& surface) const {
 			VkBool32 supported = true;
-			//vkGetPhysicalDeviceSurfaceSupportKHR(device, index, surface, &supported);
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, index, surface.vk_surface, &supported);
 			return supported;
 		}
 
@@ -113,18 +113,18 @@ class QueueFamilyPredicate {
 
 	private:
 
-		const std::function<bool (QueueFamily&)> tester;
+		const std::function<bool (VkPhysicalDevice device, QueueFamily&)> tester;
 
 	public:
 
 		QueueFamilyPredicate(QueueType flags)
-		: tester([flags] (QueueFamily& family) { return (family.getFlags() & (VkQueryControlFlagBits) flags); }) {}
+		: tester([flags] (auto device, auto& family) { return (family.getFlags() & (VkQueryControlFlagBits) flags); }) {}
 
 		QueueFamilyPredicate(WindowSurface& surface)
-		: tester([&] (QueueFamily& family) { return family.canPresentTo(surface); }) {}
+		: tester([&] (auto device, auto& family) { return family.canPresentTo(device, surface); }) {}
 
-		bool test(QueueFamily& family) const {
-			return tester(family);
+		bool test(VkPhysicalDevice device, QueueFamily& family) const {
+			return tester(device, family);
 		}
 
 	public:
@@ -132,13 +132,28 @@ class QueueFamilyPredicate {
 		/**
 		 * Picks a matching QueueFamily from a vector and returns it, otherwise returns a nullptr
 		 */
-		QueueFamily* pick(std::vector<QueueFamily>& families) const {
+		QueueFamily* pick(VkPhysicalDevice device, std::vector<QueueFamily>& families) const {
 
 			for (QueueFamily& family : families) {
-				if (test(family)) return &family;
+				if (test(device, family)) return &family;
 			}
 
 			return nullptr;
 		}
+
+};
+
+class Queue {
+
+	public:
+
+		READONLY VkQueue vk_queue;
+		READONLY QueueInfo info;
+
+	public:
+
+		Queue() = default;
+		Queue(VkQueue vk_queue, QueueInfo& info)
+		: vk_queue(vk_queue), info(info) {}
 
 };

@@ -2,6 +2,7 @@
 
 #include "util/util.hpp"
 #include "util/logger.hpp"
+#include "util/exception.hpp"
 
 /**
  * An optional-like class representing the result of certain operations
@@ -31,7 +32,7 @@ class Result {
 		 * If the result is unsuccessful throw an error
 		 */
 		void orFail() {
-			if (!successful) throw std::runtime_error(what());
+			if (!successful) throw Exception {what()};
 		}
 
 		/**

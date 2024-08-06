@@ -1,5 +1,9 @@
+#pragma once
 
-class DebugMessanger {
+#include "external.hpp"
+#include "util/exception.hpp"
+
+class DebugMessenger {
 
 	private:
 
@@ -9,21 +13,21 @@ class DebugMessanger {
 
 	public:
 
-		DebugMessanger(VkInstance instance, VkDebugUtilsMessengerEXT& messenger)
+		DebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT& messenger)
 		: instance(instance), messenger(messenger), attached(true) {}
 
-		DebugMessanger()
+		DebugMessenger()
 		: messenger(nullptr), attached(false) {}
 
 		void close() {
 			if (attached) {
-				ProxyDestroyDebugUtilsMessengerEXT(instance, messenger, nullptr);
+				vkDestroyDebugUtilsMessengerEXT(instance, messenger, nullptr);
 				attached = false;
 			}
 		}
 };
 
-class DebugMessangerConfig {
+class DebugMessengerConfig {
 
 	public:
 
@@ -77,12 +81,12 @@ class DebugMessangerConfig {
 
 		friend class InstanceBuilder;
 
-		DebugMessanger attach(VkInstance instance) {
+		DebugMessenger attach(VkInstance instance) {
 
 			if (enabled) {
 				VkDebugUtilsMessengerEXT messenger;
-				if (ProxyCreateDebugUtilsMessengerEXT(instance, &create_info, nullptr, &messenger) != VK_SUCCESS) {
-					throw std::runtime_error("CreateDebugUtilsMessengerEXT: Failed to set up debug messenger!");
+				if (vkCreateDebugUtilsMessengerEXT(instance, &create_info, nullptr, &messenger) != VK_SUCCESS) {
+					throw Exception {"Failed to create debug messenger"};
 				}
 
 				return {instance, messenger};

@@ -37,7 +37,7 @@ struct FormatInfo {
 
 };
 
-FormatInfo getFormatInfo(VkFormat format) {
+inline FormatInfo getFormatInfo(VkFormat format) {
 	static std::unordered_map<VkFormat, FormatInfo> table = {
 		{VK_FORMAT_UNDEFINED,                   {0, 0}},
 		{VK_FORMAT_R4G4_UNORM_PACK8,            {1, 2}},

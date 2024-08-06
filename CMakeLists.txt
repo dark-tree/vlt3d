@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(FETCHCONTENT_QUIET OFF)
 
+find_package(Python REQUIRED COMPONENTS Interpreter)
 find_package(Threads REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(OpenAL)
@@ -16,8 +17,21 @@ if (CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
 	message(FATAL_ERROR "In source building is deprecated, select another build directory!")
 endif()
 
+# Use the mold linker automatically for GCC if available
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	find_program(MOLD_PROGRAM mold)
+
+	if (MOLD_PROGRAM)
+		message(STATUS "The MOLD linker was found: ${MOLD_PROGRAM}")
+		set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=mold")
+		set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=mold")
+	else()
+		message(STATUS "The MOLD linker was NOT found, consider installing it to!")
+	endif()
+endif()
+
 if (NOT OpenAL_FOUND)
-	message(NOTICE "OpenAL was NOT found, falling back to OpenAL-Soft!")
+	message(STATUS "OpenAL was NOT found, falling back to OpenAL-Soft!")
 
 	FetchContent_Declare(
 			openal-soft
@@ -65,6 +79,20 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+		format
+		GIT_REPOSITORY https://github.com/magistermaks/lib-format
+		GIT_TAG v0.1.1
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
+		vstl
+		GIT_REPOSITORY https://github.com/magistermaks/lib-vstl
+		GIT_TAG v3.1
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
 		shaderc
 		GIT_REPOSITORY https://github.com/google/shaderc
 		GIT_TAG v2023.4
@@ -73,12 +101,12 @@ FetchContent_Declare(
 
 # Time for some mental gymnastics for shaderc ...
 FetchContent_Populate(shaderc)
-message("Fetching external dependencies for target 'shaderc'...")
+message(STATUS "Fetching external dependencies for target 'shaderc'...")
 
 # Invoke their very special dependency python script
 execute_process(
-		COMMAND python3 ${shaderc_SOURCE_DIR}/utils/git-sync-deps
-		COMMAND_ECHO STDOUT # TODO this doesn't work (no real-time output)
+		COMMAND ${Python_EXECUTABLE} -u ${shaderc_SOURCE_DIR}/utils/git-sync-deps
+		COMMAND_ECHO STDOUT
 		WORKING_DIRECTORY ${shaderc_SOURCE_DIR}
 		RESULT_VARIABLE GIT_SYNC_DEPS_RESULT
 )
@@ -95,7 +123,7 @@ set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
 # ... And finally add shaderc!
 add_subdirectory(${shaderc_SOURCE_DIR} ${shaderc_BINARY_DIR})
-FetchContent_MakeAvailable(glfw vma stb glm siv)
+FetchContent_MakeAvailable(glfw vma stb glm siv format vstl)
 
 include_directories(
 		src/
@@ -107,11 +135,16 @@ include_directories(
 		${Vulkan_INCLUDE_DIRS}                   # Headers in ./vulcan
 		${OpenAL_INCLUDE_DIRS}                   # Headers in ./AL
 		${siv_SOURCE_DIR}                        # Headers in ./
+		${format_SOURCE_DIR}/src                 # Headers in ./
+		${vstl_SOURCE_DIR}                       # Headers in ./
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES
 		"src/*.cpp"
 )
+
+# basic unit test are build as a separate target
+list(FILTER VLT3D_SOURCES EXCLUDE REGEX "src[\\/]test\\.cpp$")
 
 add_library(external
 		lib/stb_image.cpp
@@ -124,14 +157,26 @@ add_executable(main
 		${VLT3D_SOURCES}
 )
 
-target_link_libraries(main
+add_executable(test
+		"src/test.cpp"
+)
+
+set(VLT3D_LIBS
 		OpenAL::OpenAL
 		Threads::Threads
 		Vulkan::Vulkan
 		glfw
+		lib-format-tt
+		lib-format-bt
 		shaderc
 		external
 )
+
+target_link_libraries(main PRIVATE ${VLT3D_LIBS})
+target_compile_definitions(main PRIVATE "SOURCE_ROOT=\"${CMAKE_SOURCE_DIR}\"")
+
+target_link_libraries(test PRIVATE ${VLT3D_LIBS})
+target_compile_definitions(test PRIVATE "SOURCE_ROOT=\"${CMAKE_SOURCE_DIR}\"")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
@@ -152,6 +197,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 endif()
 
 # Copy assets if any exist
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
-	file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+	# This seams to work or at least be better but if there are still issues
+	# consider doing it like this: https://stackoverflow.com/a/77075253
+
+	add_custom_target(copy-assets ALL
+			COMMAND ${CMAKE_COMMAND} -E copy_directory
+			"${CMAKE_SOURCE_DIR}/assets"
+			"${CMAKE_BINARY_DIR}/assets"
+	)
+
+	add_dependencies(main copy-assets)
 endif()

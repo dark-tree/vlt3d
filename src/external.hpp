@@ -15,6 +15,7 @@
 #include <array>
 #include <functional>
 #include <set>
+#include <unordered_set>
 #include <list>
 #include <queue>
 #include <thread>
@@ -54,11 +55,18 @@
 // GLM
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/hash.hpp>
+#include <glm/gtx/norm.hpp>
+
+// Lib Format
+#include "tt.hpp"
+#include "bt.hpp"
 
 // Perlin noise
 #include "PerlinNoise.hpp"

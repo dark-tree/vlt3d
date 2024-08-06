@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external.hpp"
+#include "render/view.hpp"
 
 class DescriptorSet {
 
@@ -36,7 +37,7 @@ class DescriptorSet {
 
 		}
 
-		void sampler(int binding, VkDescriptorType type, ImageSampler& sampler) {
+		void sampler(int binding, VkDescriptorType type, const ImageSampler& sampler) {
 
 			VkDescriptorImageInfo info {};
 			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

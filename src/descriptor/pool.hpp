@@ -13,6 +13,7 @@ class DescriptorPool {
 
 	public:
 
+		DescriptorPool() = default;
 		DescriptorPool(VkDescriptorPool vk_pool, VkDevice vk_device)
 		: vk_pool(vk_pool), vk_device(vk_device) {}
 
@@ -30,10 +31,14 @@ class DescriptorPool {
 			alloc_info.descriptorPool = vk_pool;
 
 			if (vkAllocateDescriptorSets(vk_device, &alloc_info, &set) != VK_SUCCESS) {
-				throw std::runtime_error("vkAllocateDescriptorSets: Failed to allocate descriptor set!");
+				throw Exception {"Failed to allocate descriptor set!"};
 			}
 
 			return {vk_device, set};
+		}
+
+		void reset() {
+			vkResetDescriptorPool(vk_device, vk_pool, 0);
 		}
 
 };
@@ -55,7 +60,7 @@ class DescriptorPoolBuilder {
 			return *this;
 		}
 
-		DescriptorPool build(Device device, uint32_t sets) const {
+		DescriptorPool done(Device device, uint32_t sets) const {
 			VkDescriptorPoolCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			create_info.poolSizeCount = sizes.size();
@@ -65,10 +70,14 @@ class DescriptorPoolBuilder {
 			VkDescriptorPool pool;
 
 			if (vkCreateDescriptorPool(device.vk_device, &create_info, nullptr, &pool) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateDescriptorPool: Failed to create descriptor pool!");
+				throw Exception {"Failed to create descriptor pool!"};
 			}
 
 			return {pool, device.vk_device};
+		}
+
+		inline static DescriptorPoolBuilder begin() {
+			return {};
 		}
 
 };
