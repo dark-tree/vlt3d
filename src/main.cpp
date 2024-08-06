@@ -32,7 +32,7 @@ int main() {
 	RenderPass& pass = system.render_pass;
 
 	World world;
-	WorldRenderer world_renderer;
+	WorldRenderer world_renderer {system, world};
 	WorldGenerator world_generator {8888};
 
 	ScreenStack stack;
@@ -72,7 +72,7 @@ int main() {
 		immediate.write(system, frame.immediate_3d, frame.immediate_2d);
 		frame.immediate_2d.upload(recorder);
 		frame.immediate_3d.upload(recorder);
-		world_renderer.prepare(world, system, recorder);
+		world_renderer.prepare(recorder);
 
 		// TODO?
 		// wait for all pending buffer uploads, doing it here maybe is stupid, hard to tell

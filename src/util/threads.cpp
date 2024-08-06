@@ -65,7 +65,7 @@ void TaskPool::run() {
 		{
 			std::unique_lock<std::mutex> lock(queue_mutex);
 
-			// wait for task to appear in tasks queue or for the stop sequance to begin
+			// wait for task to appear in tasks queue or for the stop sequence to begin
 			condition.wait(lock, [this] { return this->stop || !this->tasks.empty(); });
 			if (stop && tasks.empty()) return;
 

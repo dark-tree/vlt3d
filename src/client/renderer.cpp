@@ -226,8 +226,12 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	// instance configuration
 	InstanceBuilder builder;
 	builder.addApplicationInfo("My Funny Vulkan Application");
+
+	#if !defined(NDEBUG)
+	logger::debug("Running in debug mode");
 	builder.addValidationLayer("VK_LAYER_KHRONOS_validation").orFail();
 	builder.addDebugMessenger();
+	#endif
 
 	// instance and surface creation, and device selection
 	instance = builder.build();

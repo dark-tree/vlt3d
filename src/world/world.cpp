@@ -30,16 +30,17 @@ bool World::isChunkRenderReady(glm::ivec3 chunk) const {
 	return true;
 }
 
-void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t directions) {
-	updates[chunk] |= directions;
+void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t flags) {
+	updates[chunk] |= flags;
 }
 
 void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 	glm::ivec3 pos = {origin.x / Chunk::size, origin.y / Chunk::size, origin.z / Chunk::size};
+	float magnitude = radius * radius;
 
 	// chunk unloading
 	for (auto it = chunks.begin(); it != chunks.end();) {
-		if (glm::distance(glm::vec3(it->first), glm::vec3(pos)) >= radius) {
+		if (glm::distance2(glm::vec3(it->first), glm::vec3(pos)) >= magnitude) {
 			it = chunks.erase(it);
 		} else {
 			it ++;
@@ -54,10 +55,10 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 				glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
 				auto it = chunks.find(key);
 
-				if (glm::length(glm::vec3(cx, cy, cz)) < radius) {
+				if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
 					if (it == chunks.end()) {
 						chunks[key].reset(generator.get(key));
-						pushChunkUpdate(key, Direction::ALL);
+						pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
 
 						continue;
 					}
@@ -101,7 +102,7 @@ void World::setBlock(int x, int y, int z, Block block) {
 		int mz = z & Chunk::mask;
 
 		// setting non-air blocks doesn't require updating neighbours (for now)
-		pushChunkUpdate({cx, cy, cz}, block.isAir() ? Chunk::getNeighboursMask(mx, my, mz) : Direction::NONE);
+		pushChunkUpdate({cx, cy, cz}, ChunkUpdate::IMPORTANT | (block.isAir() ? Chunk::getNeighboursMask(mx, my, mz) : Direction::NONE));
 
 		return chunk->setBlock(mx, my, mz, block);
 	}

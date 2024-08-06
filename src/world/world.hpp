@@ -25,6 +25,34 @@ class World {
 
 	private:
 
+		struct ChunkUpdate {
+
+			static constexpr uint8_t UNIMPORTANT  = 0b00'000000;
+			static constexpr uint8_t IMPORTANT    = 0b10'000000;
+
+			/// the flag set used for newly loaded chunks
+			static constexpr uint8_t INITIAL_LOAD = UNIMPORTANT | Direction::ALL;
+
+			static_assert((IMPORTANT & Direction::ALL) == 0, "The ChunkUpdate and Direction flags need to be able to be combined");
+
+			struct Hasher {
+				std::size_t operator()(const ChunkUpdate& update) const {
+					return std::hash<glm::ivec3>()(update.pos);
+				}
+			};
+
+			glm::ivec3 pos;
+			bool important;
+
+			bool operator ==(ChunkUpdate other) const {
+				return pos == other.pos;
+			}
+
+			ChunkUpdate(glm::ivec3 pos, bool important)
+			: pos(pos), important(important) {}
+
+		};
+
 		std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
 		std::unordered_map<glm::ivec3, uint8_t> updates;
 
@@ -37,36 +65,36 @@ class World {
 		template <typename Func>
 		void consumeUpdates(Func func) {
 
-			std::unordered_set<glm::ivec3> set;
+			std::unordered_set<ChunkUpdate, ChunkUpdate::Hasher> set;
 			set.reserve(updates.size() * 2);
 
 			// propagate updates
-			for (auto& [pos, directions] : updates) {
-				for (uint8_t direction : Bits::decompose(directions)) {
+			for (auto& [pos, flags] : updates) {
+				for (uint8_t direction : Bits::decompose<Direction::field_type>(flags & Direction::ALL)) {
 					glm::ivec3 neighbour = Direction::offset(direction) + pos;
 
 					if (isChunkRenderReady(neighbour)) {
-						set.insert(neighbour);
+						set.emplace(neighbour, flags & ChunkUpdate::IMPORTANT);
 					}
 				}
 
 				if (isChunkRenderReady(pos)) {
-					set.insert(pos);
+					set.emplace(pos, flags & ChunkUpdate::IMPORTANT);
 				}
 			}
 
 			updates.clear();
 
 			// call once for each updated chunk
-			for (auto pos : set) {
-				logger::debug("Updating chunk ", pos);
-				func(pos);
+			for (auto update : set) {
+				logger::debug("Updating chunk ", update.pos, " important: ", update.important);
+				func(update.pos, update.important);
 			}
 		}
 
 		/// Notifies the world that the content of the `chunk` changed
 		/// and which neighbours are also affected and also needs to be remeshed
-		void pushChunkUpdate(glm::ivec3 chunk, uint8_t directions);
+		void pushChunkUpdate(glm::ivec3 chunk, uint8_t flags);
 
 		/// Update the world
 		/// manages chunk loading and unloading

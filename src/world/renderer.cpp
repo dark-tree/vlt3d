@@ -1,56 +1,6 @@
 
 #include "renderer.hpp"
-
-class WorldRenderView {
-
-	private:
-
-		bool failed_to_lock = false;
-		std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
-
-	public:
-
-		WorldRenderView(World& world, std::shared_ptr<Chunk>& center, uint8_t directions) {
-			if (!center) {
-				failed_to_lock = true;
-				return;
-			}
-
-			glm::ivec3 origin = center->pos;
-			chunks.emplace(origin, center);
-
-			for (uint8_t direction : Bits::decompose(directions)) {
-				glm::ivec3 key = origin + Direction::offset(direction);
-				std::shared_ptr<Chunk> lock = world.getChunk(key.x, key.y, key.z).lock();
-
-				// terrain got unloaded, we are no longer in the view distance
-				if (!lock) {
-					failed_to_lock = true;
-					return;
-				}
-
-				chunks.emplace(key, std::move(lock));
-			}
-
-		}
-
-		bool failed() const {
-			return failed_to_lock;
-		}
-
-		Block getBlock(int x, int y, int z) {
-			int cx = x >> Chunk::bits;
-			int cy = y >> Chunk::bits;
-			int cz = z >> Chunk::bits;
-
-			return chunks[{cx, cy, cz}]->getBlock(x & Chunk::mask, y & Chunk::mask, z & Chunk::mask);
-		}
-
-		void close() {
-			chunks.clear();
-		}
-
-};
+#include "mesher.hpp"
 
 /*
  * ChunkBuffer
@@ -75,63 +25,7 @@ void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder, Frustum& frustu
  * WorldRenderer
  */
 
-void WorldRenderer::emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite) {
-	if (west) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-	}
-
-	if (east) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if (north) {
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-	}
-
-	if (south) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if (up) {
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-	}
-
-	if (down) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-	}
-}
-
-void WorldRenderer::eraseBuffer(RenderSystem& system, glm::ivec3 pos) {
+void WorldRenderer::eraseBuffer(glm::ivec3 pos) {
 	auto it = buffers.find(pos);
 
 	if (it != buffers.end()) {
@@ -151,77 +45,27 @@ void WorldRenderer::eraseBuffer(RenderSystem& system, glm::ivec3 pos) {
 	}
 }
 
-void WorldRenderer::emitMesh(RenderSystem& system, const Atlas& atlas, World& world, std::shared_ptr<Chunk> chunk) {
-	if (!chunk || chunk->empty()) {
-		return;
-	}
+WorldRenderer::WorldRenderer(RenderSystem& system, World& world)
+: system(system), world(world), mesher(*this, system, world) {}
 
-	pool.enqueue([&, chunk] () mutable {
-		WorldRenderView view {world, chunk, Direction::ALL};
+void WorldRenderer::prepare(CommandRecorder& recorder) {
 
-		// failed to lock the view, this chunk must have fallen outside the render distance
-		if (view.failed()) {
-			return;
-		}
-
-		std::vector<Vertex3D> mesh;
-		mesh.reserve(4096);
-
-		for (int x = 0; x < Chunk::size; x++) {
-			for (int y = 0; y < Chunk::size; y++) {
-				for (int z = 0; z < Chunk::size; z++) {
-					Block block = chunk->getBlock(x, y, z);
-
-					if (!block.isAir()) {
-						BakedSprite sprite = (block.block_type % 2 == 1) ? atlas.getBakedSprite("vkblob") : atlas.getBakedSprite("digital");
-						float shade = std::clamp((chunk->pos.y * Chunk::size + y) / (Chunk::size * 2.0f) + 0.2f, 0.0f, 1.0f);
-
-						glm::ivec3 wpos = chunk->pos * Chunk::size + glm::ivec3 {x, y, z};
-
-						emitCube(
-							mesh,
-							wpos.x,
-							wpos.y,
-							wpos.z,
-							shade, shade, shade,
-							view.getBlock(wpos.x, wpos.y + 1, wpos.z).isAir(),
-							view.getBlock(wpos.x, wpos.y - 1, wpos.z).isAir(),
-							view.getBlock(wpos.x + 1, wpos.y, wpos.z).isAir(),
-							view.getBlock(wpos.x - 1, wpos.y, wpos.z).isAir(),
-							view.getBlock(wpos.x, wpos.y, wpos.z + 1).isAir(),
-							view.getBlock(wpos.x, wpos.y, wpos.z - 1).isAir(),
-							sprite
-						);
-					}
-				}
-			}
-		}
-
-		view.close();
-		submitChunk(new ChunkBuffer(system, chunk->pos, mesh));
-	});
-}
-
-void WorldRenderer::prepare(World& world, RenderSystem& system, CommandRecorder& recorder) {
-
-	// this whole section is locked both the `unused` vector
+	// this whole section is locked as both the `erasures` vector
 	// and `awaiting` double buffered vector are used during submitting
 	{
 		std::lock_guard lock {submit_mutex};
 		awaiting.swap();
 
 		for (glm::ivec3 pos : erasures) {
-			eraseBuffer(system, pos);
+			eraseBuffer(pos);
 		}
 
 		erasures.clear();
 	}
 
 	// iterate all chunks that were updated this frame and need to be re-meshed
-	world.consumeUpdates([&] (glm::ivec3 pos) {
-		if (const auto chunk = world.getChunk(pos.x, pos.y, pos.z).lock()) {
-			emitMesh(system, system.assets.getAtlas(), world, chunk);
-		}
+	world.consumeUpdates([&] (glm::ivec3 pos, bool important) {
+		mesher.push(pos, important);
 	});
 
 	// first upload all awaiting meshes so that the PCI has something to do
@@ -246,7 +90,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 }
 
-void WorldRenderer::submitChunk(ChunkBuffer* chunk) {
+void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<Vertex3D>& mesh) {
+	auto* chunk = new ChunkBuffer(system, pos, mesh);
 	std::lock_guard lock {submit_mutex};
 	awaiting.write().push_back(chunk);
 	erasures.emplace_back(chunk->pos);

@@ -2,6 +2,7 @@
 
 #include "chunk.hpp"
 #include "world.hpp"
+#include "mesher.hpp"
 #include "client/vertices.hpp"
 #include "client/renderer.hpp"
 #include "command/recorder.hpp"
@@ -54,8 +55,9 @@ class WorldRenderer {
 
 	private:
 
-		// the thread pool used for meshing
-		TaskPool pool;
+		RenderSystem& system;
+		World& world;
+		ChunkRenderPool mesher;
 
 		struct ChunkBuffer {
 			glm::ivec3 pos;
@@ -67,14 +69,8 @@ class WorldRenderer {
 			void draw(CommandRecorder& recorder, Frustum& frustum);
 		};
 
-		/// emit cube geometry into the given mesh vector
-		static void emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite);
-
 		/// erase vertex buffer and mark it for deletion
-		void eraseBuffer(RenderSystem& system, glm::ivec3 pos);
-
-		/// emit the mesh of the given chunk into the render system, @Note this method internally uses threading
-		void emitMesh(RenderSystem& system, const Atlas& atlas, World& world, std::shared_ptr<Chunk> chunk);
+		void eraseBuffer(glm::ivec3 pos);
 
 	private:
 
@@ -96,14 +92,16 @@ class WorldRenderer {
 
 	public:
 
+		WorldRenderer(RenderSystem& system, World& world);
+
 		/// Must be called before draw, collects chunks to remesh from the world and uploads pending vertex data
-		void prepare(World& world, RenderSystem& system, CommandRecorder& recorder);
+		void prepare(CommandRecorder& recorder);
 
 		/// Render all the chunk buffers, both static and just uploaded
 		void draw(CommandRecorder& recorder, Frustum& frustum);
 
-		/// Submit a buffer, the pointer will be managed by this class
-		void submitChunk(ChunkBuffer* chunk);
+		/// Submit a buffer, mesh can be empty
+		void submitChunk(glm::ivec3 pos, std::vector<Vertex3D>& mesh);
 
 		/// Discard the chunk at the given coordinates
 		void eraseChunk(glm::ivec3 pos);
