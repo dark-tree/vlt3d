@@ -21,19 +21,13 @@ class WorldRenderView {
 			return dx + dz * 3 + dy * 9;
 		}
 
-		struct Hasher {
-			uint64_t operator() (glm::ivec3 vec) const {
-				return (vec.x & 0b1111) | ((vec.z & 0b1111) << 4) | ((vec.y & 0b1111) << 8);
-			}
-		};
-
 		glm::ivec3 origin;
 		bool failed_to_lock = false;
 		std::shared_ptr<Chunk> chunks[3*3*3];
 
 	public:
 
-		WorldRenderView(World& world, std::shared_ptr<Chunk>& center, uint8_t directions);
+		WorldRenderView(World& world, std::shared_ptr<Chunk>& center, Direction directions);
 
 		bool failed() const;
 		Block getBlock(int x, int y, int z);
@@ -77,7 +71,7 @@ class ChunkRenderPool {
 		bool empty();
 
 		/// emit cube geometry into the given mesh vector
-		void emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite);
+		void emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool west, bool east, bool down, bool up, bool north, bool south, BakedSprite sprite);
 
 		/// emit the mesh of the given chunk into the render system, @Note this method internally uses threading
 		void emitChunk(std::vector<Vertex3D>& mesh, std::shared_ptr<Chunk> chunk);

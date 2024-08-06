@@ -19,7 +19,7 @@ bool World::isChunkRenderReady(glm::ivec3 chunk) const {
 		return false;
 	}
 
-	for (uint8_t direction : Bits::decompose(Direction::ALL)) {
+	for (Direction direction : Bits::decompose(Direction::ALL)) {
 		glm::ivec3 neighbour = Direction::offset(direction) + chunk;
 
 		if (!chunks.contains(neighbour)) {

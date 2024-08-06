@@ -13,9 +13,10 @@ WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, co
 
 void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder, Frustum& frustum) {
 	if (!buffer.empty()) {
-		glm::ivec3 world_pos {pos * Chunk::size};
+		glm::vec3 world_pos {pos * Chunk::size};
+		world_pos -= 0.5f;
 
-		if (frustum.testBox3D(world_pos, world_pos + Chunk::size)) {
+		if (frustum.testBox3D(world_pos, world_pos + (float) Chunk::size)) {
 			buffer.draw(recorder);
 		}
 	}

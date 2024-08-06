@@ -6,7 +6,7 @@
  * WorldRenderView
  */
 
-WorldRenderView::WorldRenderView(World& world, std::shared_ptr<Chunk>& center, uint8_t directions) {
+WorldRenderView::WorldRenderView(World& world, std::shared_ptr<Chunk>& center, Direction directions) {
 	if (!center) {
 		failed_to_lock = true;
 		return;
@@ -15,7 +15,7 @@ WorldRenderView::WorldRenderView(World& world, std::shared_ptr<Chunk>& center, u
 	this->origin = center->pos;
 	chunks[indexOf(origin.x, origin.y, origin.z)] = center;
 
-	for (uint8_t direction : Bits::decompose(directions)) {
+	for (Direction direction : Bits::decompose<Direction::field_type>(directions)) {
 		glm::ivec3 key = origin + Direction::offset(direction);
 		std::shared_ptr<Chunk> lock = world.getChunk(key.x, key.y, key.z).lock();
 
@@ -80,8 +80,8 @@ bool ChunkRenderPool::empty() {
 	return set.empty();
 }
 
-void ChunkRenderPool::emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool up, bool down, bool north, bool south, bool west, bool east, BakedSprite sprite) {
-	if (west) {
+void ChunkRenderPool::emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool west, bool east, bool down, bool up, bool north, bool south, BakedSprite sprite) {
+	if (south) {
 		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
 		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
 		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
@@ -90,7 +90,7 @@ void ChunkRenderPool::emitCube(std::vector<Vertex3D>& mesh, float x, float y, fl
 		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
 	}
 
-	if (east) {
+	if (north) {
 		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
 		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v2);
 		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
@@ -99,7 +99,7 @@ void ChunkRenderPool::emitCube(std::vector<Vertex3D>& mesh, float x, float y, fl
 		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
 	}
 
-	if (north) {
+	if (east) {
 		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
 		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
 		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
@@ -108,7 +108,7 @@ void ChunkRenderPool::emitCube(std::vector<Vertex3D>& mesh, float x, float y, fl
 		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
 	}
 
-	if (south) {
+	if (west) {
 		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
 		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
 		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
@@ -158,13 +158,13 @@ void ChunkRenderPool::emitChunk(std::vector<Vertex3D>& mesh, std::shared_ptr<Chu
 					emitCube(
 						mesh,
 						pos.x, pos.y, pos.z,
-						shade, shade, shade, // TODO wtf happened to directions here
-						view.getBlock(pos.x, pos.y + 1, pos.z).isAir(),
-						view.getBlock(pos.x, pos.y - 1, pos.z).isAir(),
-						view.getBlock(pos.x + 1, pos.y, pos.z).isAir(),
+						shade, shade, shade,
 						view.getBlock(pos.x - 1, pos.y, pos.z).isAir(),
-						view.getBlock(pos.x, pos.y, pos.z + 1).isAir(),
+						view.getBlock(pos.x + 1, pos.y, pos.z).isAir(),
+						view.getBlock(pos.x, pos.y - 1, pos.z).isAir(),
+						view.getBlock(pos.x, pos.y + 1, pos.z).isAir(),
 						view.getBlock(pos.x, pos.y, pos.z - 1).isAir(),
+						view.getBlock(pos.x, pos.y, pos.z + 1).isAir(),
 						sprite
 					);
 				}

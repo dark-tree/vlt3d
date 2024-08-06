@@ -34,6 +34,7 @@ class World {
 			static constexpr uint8_t INITIAL_LOAD = UNIMPORTANT | Direction::ALL;
 
 			static_assert((IMPORTANT & Direction::ALL) == 0, "The ChunkUpdate and Direction flags need to be able to be combined");
+			static_assert(sizeof(uint8_t) >= sizeof(Direction::field_type), "The ChunkUpdate and Direction flags need to be able to be combined");
 
 			struct Hasher {
 				std::size_t operator()(const ChunkUpdate& update) const {

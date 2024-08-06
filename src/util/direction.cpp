@@ -1,7 +1,14 @@
 
 #include "direction.hpp"
 
-glm::ivec3 Direction::offset(field_type direction) {
+Direction::Direction(field_type value)
+: value(value) {}
+
+Direction::operator field_type() const {
+	return value;
+}
+
+glm::ivec3 Direction::offset(Direction direction) {
 	if (direction & WEST) return {-1, 0, 0};
 	if (direction & EAST) return {+1, 0, 0};
 	if (direction & DOWN) return {0, -1, 0};
@@ -12,7 +19,7 @@ glm::ivec3 Direction::offset(field_type direction) {
 	return {0, 0, 0};
 }
 
-Direction::field_type Direction::opposite(Direction::field_type direction) {
+Direction Direction::opposite(Direction direction) {
 	if (direction & WEST) return EAST;
 	if (direction & EAST) return WEST;
 	if (direction & DOWN) return UP;

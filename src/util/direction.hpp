@@ -2,12 +2,7 @@
 #pragma once
 #include "external.hpp"
 
-// TODO Make it so we can type `Direction` in place of `Direction::field_type`
 class Direction {
-
-	private:
-
-		Direction() = default;
 
 	public:
 
@@ -33,16 +28,29 @@ class Direction {
 		static constexpr field_type NONE       = 0b00'00'00;
 		static constexpr field_type ALL        = 0b11'11'11;
 
+	private:
+
+		field_type value = NONE;
+
 	public:
+
+		Direction() = default;
+		Direction(field_type value);
+		operator field_type() const;
 
 		/**
 		 * Returns the 3D offset (as unit int vector) of a given direction.
-		 * Please note that this function accepts a singular direction, you may need to
-		 * use `Bits::decompose()` before calling this function
+		 * Please note that this function accepts a singular direction, so
+		 * you may need to use `Bits::decompose()` before calling it
 		 */
-		static glm::ivec3 offset(field_type direction);
+		static glm::ivec3 offset(Direction direction);
 
-		static field_type opposite(field_type direction);
+		/**
+		 * Returns a direction along the same axis but of
+		 * opposite facing, Please note that this function accepts a singular direction, so
+		 * you may need to use `Bits::decompose()` before calling it
+		 */
+		static Direction opposite(Direction direction);
 
 };
 

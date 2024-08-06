@@ -36,7 +36,7 @@ class ImmediateRenderer {
 		ImmediateRenderer(const ResourceManager& assets);
 
 		// TODO this will be done differently later using
-		// TODO static sprite arrays, so for example, Sprites::VK_BLOB
+		//      static sprite arrays, so for example, Sprites::VK_BLOB
 		NinePatch getNinePatch(const std::string& identifier, int margin);
 		BakedSprite getSprite(const std::string& identifier);
 
