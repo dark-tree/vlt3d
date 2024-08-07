@@ -72,9 +72,13 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.setAlignment(HorizontalAlignment::LEFT);
 	renderer.setAlignment(VerticalAlignment::TOP);
 	renderer.setTint(255, 255, 0);
+
+	glm::vec3 pos = camera.getPosition();
 	renderer.drawText(10, 10, "FPS: " + std::to_string(profiler.getCountPerSecond()));
-	renderer.drawText(10, 10 + 9 * 2, "Press [SPACE] to hide");
-	renderer.drawText(10, 10 + 9 * 4, "Press [ESCAPE] to close");
+	renderer.drawText(10, 10 + 9 * 2, "X: " + std::to_string(pos.x) + ", Y: " + std::to_string(pos.y) + ", Y: " + std::to_string(pos.z));
+
+	renderer.drawText(10, 10 + 9 * 4, "Press [SPACE] to hide");
+	renderer.drawText(10, 10 + 9 * 6, "Press [ESCAPE] to close");
 
 	renderer.setTint(10, 100, 220);
 	renderer.drawLine(50, 200, 50, 550);
