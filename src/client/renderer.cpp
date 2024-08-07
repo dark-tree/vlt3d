@@ -297,7 +297,8 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.done(device, concurrent);
 
 	constant_layout = PushConstantLayoutBuilder::begin()
-		.add(Kind::VERTEX, 64, &vertex_constant)
+		.add(Kind::VERTEX, 64, &mvp_vertex_constant)
+		.add(Kind::FRAGMENT, 16, &sun_vertex_constant)
 		.done();
 
 	// Phase 2

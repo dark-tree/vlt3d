@@ -33,13 +33,14 @@ glm::vec2 Skybox::toHorizontal(glm::vec2 equatorial, float latitude) const {
 	// It depends on the declination of the sun, the observer's latitude, and the hour angle
 	float sin_alt = sin_dec * sin_lat + cos_dec * cos_lat * cos(hour_angle);
 	float altitude = asin(sin_alt);
-	float cos_alt = cos(altitude);
 
 	if (altitude < -M_PI / 2.0f) {
 		altitude = -M_PI / 2.0f;
 	} else if (altitude > M_PI / 2.0f) {
 		altitude = M_PI / 2.0f;
 	}
+
+	float cos_alt = cos(altitude);
 
 	// The azimuth is the compass direction of the sun, measured from North
 	// It tells us where the sun is located horizontally
@@ -113,6 +114,26 @@ void Skybox::drawSphere(ImmediateRenderer& immediate, glm::vec3 pos, float radiu
 	}
 }
 
+glm::vec3 Skybox::getSunPos(float observer_latitude) const {
+
+	glm::vec2 equ = getSun((float) glfwGetTime() / 2.0f, glfwGetTime() / 2);
+	glm::vec2 hor = toHorizontal(equ, observer_latitude);
+
+	float longitude = hor.x;
+	float latitude = hor.y;
+
+	float equator_x = cos(longitude);
+	float equator_z = sin(longitude);
+	float y = sin(latitude);
+	float multiplier = cos(latitude);
+	float x = multiplier * equator_x;
+	float z = multiplier * equator_z;
+
+	// inverted to align with world directions as defined in Direction class
+	return glm::normalize(glm::vec3 {z, y, x});
+
+}
+
 void Skybox::draw(ImmediateRenderer& immediate, Camera& camera) const {
 
 	glm::vec3 observer = camera.getPosition();
@@ -140,22 +161,11 @@ void Skybox::draw(ImmediateRenderer& immediate, Camera& camera) const {
 	immediate.setTint(255, 255, 255, 50);
 	drawSphere(immediate, observer, radius, 10, 10, immediate.getSprite("skybox-simple"));
 
-	// 3. DRAW SPHERE
+	// 3. DRAW SUN
 
-	glm::vec2 equ = getSun((float) glfwGetTime() / 2.0f, glfwGetTime() / 2);
-	glm::vec2 hor = toHorizontal(equ, camera.getPosition().x / 100);
-
-	float longitude = hor.x;
-	float latitude = hor.y;
-
-	float equator_x = cos(longitude);
-	float equator_z = sin(longitude);
-	float y = sin(latitude);
-	float multiplier = cos(latitude);
-	float x = multiplier * equator_x;
-	float z = multiplier * equator_z;
+	glm::vec3 sun = getSunPos(camera.getPosition().x / 100);
 
 	immediate.setTint(255, 255, 255, 255);
-	immediate.drawSprite(observer + glm::normalize(glm::vec3 {z, y, x}) * 450.0f, 64, 64, immediate.getSprite("sun"));
+	immediate.drawSprite(observer + sun * 450.0f, 64, 64, immediate.getSprite("sun"));
 
 }

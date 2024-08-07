@@ -109,7 +109,8 @@ class RenderSystem {
 		DescriptorPool descriptor_pool;
 
 		PushConstantLayout constant_layout;
-		PushConstant vertex_constant;
+		PushConstant mvp_vertex_constant;
+		PushConstant sun_vertex_constant;
 
 	private:
 

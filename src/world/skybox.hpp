@@ -4,6 +4,11 @@
 #include "client/immediate.hpp"
 #include "util/random.hpp"
 
+struct Sun {
+	glm::vec3 pos;
+	uint8_t r, g, b, v;
+};
+
 class Skybox {
 
 	private:
@@ -22,6 +27,19 @@ class Skybox {
 		void drawSphere(ImmediateRenderer& immediate, glm::vec3 pos, float radius, int longs, int lats, BakedSprite sprite) const;
 
 	public:
+
+		glm::vec3 getSunPos(float observer_latitude) const;
+
+		inline Sun getSunData(float observer_latitude) const {
+			Sun sun;
+			sun.pos = getSunPos(observer_latitude);
+			int s = std::max(0, (int) -(sun.pos.y * 200));
+
+			sun.r = std::max(0, 155 - (int) s);
+			sun.g = std::max(0, 50 - (int) s);
+			sun.b = std::max(0, 50 - (int) s);
+			return sun;
+		}
 
 		void draw(ImmediateRenderer& immediate, Camera& camera) const;
 

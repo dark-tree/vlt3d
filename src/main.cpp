@@ -15,6 +15,7 @@
 #include "client/gui/screen/group.hpp"
 #include "window/profiler.hpp"
 #include "client/gui/screen/play.hpp"
+#include "world/skybox.hpp"
 
 int main() {
 
@@ -83,9 +84,13 @@ int main() {
 
 		world.update(world_generator, camera.getPosition(), 8);
 
+		Skybox skybox;
+		Sun sun = skybox.getSunData(camera.getPosition().x / 100);
+
 		recorder.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
 		recorder.bindPipeline(system.pipeline_3d_terrain);
-		recorder.writePushConstant(system.vertex_constant, &frame.uniforms);
+		recorder.writePushConstant(system.mvp_vertex_constant, &frame.uniforms);
+		recorder.writePushConstant(system.sun_vertex_constant, &sun);
 		recorder.bindDescriptorSet(frame.set);
 
 		world_renderer.draw(recorder, frustum);
