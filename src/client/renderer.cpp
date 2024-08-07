@@ -164,7 +164,7 @@ void RenderSystem::recreateSwapchain() {
 	createFramebuffers(render_pass);
 
 	pipeline_2d_tint.close();
-	pipeline_3d_mix.close();
+	pipeline_3d_terrain.close();
 	pipeline_3d_tint.close();
 
 	createPipelines();
@@ -175,14 +175,14 @@ void RenderSystem::createPipelines() {
 
 	VkExtent2D extent = swapchain.vk_extent;
 
-	pipeline_3d_mix = GraphicsPipelineBuilder::of(device)
+	pipeline_3d_terrain = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
 		.withRenderPass(render_pass)
-		.withShaders(assets.state->vert_3d, assets.state->frag_mix)
+		.withShaders(assets.state->vert_terrain, assets.state->frag_terrain)
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
-		.withBindingLayout(binding_3d)
+		.withBindingLayout(binding_terrain)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(descriptor_layout)
 		.build();
@@ -269,18 +269,26 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.descriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
+	// binding layout used by world renderer
+	binding_terrain = BindingLayoutBuilder::begin()
+		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
+		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
+		.attribute(2, VK_FORMAT_R8G8B8_UNORM)
+		.attribute(3, VK_FORMAT_R8_UINT)
+		.done();
+
 	// 3D binding layout
 	binding_3d = BindingLayoutBuilder::begin()
 		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
 		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
-		.attribute(2, VK_FORMAT_R32_UINT)
+		.attribute(2, VK_FORMAT_R8G8B8A8_UNORM)
 		.done();
 
 	// 2D binding layout
 	binding_2d = BindingLayoutBuilder::begin()
 		.attribute(0, VK_FORMAT_R32G32_SFLOAT)
 		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
-		.attribute(2, VK_FORMAT_R32_UINT)
+		.attribute(2, VK_FORMAT_R8G8B8A8_UNORM)
 		.done();
 
 	descriptor_pool = DescriptorPoolBuilder::begin()
@@ -334,7 +342,7 @@ void RenderSystem::reloadAssets() {
 		buffer.close();
 
 		pipeline_2d_tint.close();
-		pipeline_3d_mix.close();
+		pipeline_3d_terrain.close();
 		pipeline_3d_tint.close();
 
 		createPipelines();

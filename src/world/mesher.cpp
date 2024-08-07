@@ -80,63 +80,63 @@ bool ChunkRenderPool::empty() {
 	return set.empty();
 }
 
-void ChunkRenderPool::emitCube(std::vector<Vertex3D>& mesh, float x, float y, float z, float r, float g, float b, bool west, bool east, bool down, bool up, bool north, bool south, BakedSprite sprite) {
+void ChunkRenderPool::emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, bool west, bool east, bool down, bool up, bool north, bool south, BakedSprite sprite) {
 	if (south) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, sprite.u1, sprite.v1, r, g, b, Normal::SOUTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::SOUTH);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v2, r, g, b, Normal::SOUTH);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, sprite.u1, sprite.v1, r, g, b, Normal::SOUTH);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, sprite.u2, sprite.v1, r, g, b, Normal::SOUTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::SOUTH);
 	}
 
 	if (north) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::NORTH);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, sprite.u1, sprite.v2, r, g, b, Normal::NORTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, sprite.u2, sprite.v2, r, g, b, Normal::NORTH);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::NORTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, sprite.u2, sprite.v2, r, g, b, Normal::NORTH);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, sprite.u2, sprite.v1, r, g, b, Normal::NORTH);
 	}
 
 	if (east) {
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, sprite.u1, sprite.v2, r, g, b, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, sprite.u2, sprite.v1, r, g, b, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::EAST);
 	}
 
 	if (west) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::WEST);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, sprite.u1, sprite.v2, r, g, b, Normal::WEST);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::WEST);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::WEST);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::WEST);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, sprite.u2, sprite.v1, r, g, b, Normal::WEST);
 	}
 
 	if (up) {
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::UP);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v2, r, g, b, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::UP);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, sprite.u2, sprite.v1, r, g, b, Normal::UP);
 	}
 
 	if (down) {
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, r, g, b, sprite.u1, sprite.v2);
-		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, r, g, b, sprite.u1, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, r, g, b, sprite.u2, sprite.v1);
-		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, r, g, b, sprite.u2, sprite.v2);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::DOWN);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::DOWN);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, sprite.u1, sprite.v2, r, g, b, Normal::DOWN);
+		mesh.emplace_back(x + -0.5, y + -0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::DOWN);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + -0.5, sprite.u2, sprite.v1, r, g, b, Normal::DOWN);
+		mesh.emplace_back(x + 0.5, y + -0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::DOWN);
 	}
 }
 
-void ChunkRenderPool::emitChunk(std::vector<Vertex3D>& mesh, std::shared_ptr<Chunk> chunk) {
+void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, std::shared_ptr<Chunk> chunk) {
 	WorldRenderView view {world, chunk, Direction::ALL};
 	const Atlas& atlas = system.assets.getAtlas();
 
@@ -152,13 +152,12 @@ void ChunkRenderPool::emitChunk(std::vector<Vertex3D>& mesh, std::shared_ptr<Chu
 
 				if (!block.isAir()) {
 					BakedSprite sprite = (block.block_type % 2 == 1) ? atlas.getBakedSprite("vkblob") : atlas.getBakedSprite("digital");
-					float shade = std::clamp((chunk->pos.y * Chunk::size + y) / (Chunk::size * 2.0f) + 0.2f, 0.0f, 1.0f);
 					glm::ivec3 pos = chunk->pos * Chunk::size + glm::ivec3 {x, y, z};
 
 					emitCube(
 						mesh,
 						pos.x, pos.y, pos.z,
-						shade, shade, shade,
+						255, 255, 255,
 						view.getBlock(pos.x - 1, pos.y, pos.z).isAir(),
 						view.getBlock(pos.x + 1, pos.y, pos.z).isAir(),
 						view.getBlock(pos.x, pos.y - 1, pos.z).isAir(),
@@ -179,7 +178,7 @@ void ChunkRenderPool::run() {
 
 	bool got = false;
 	glm::ivec3 pos;
-	std::vector<Vertex3D> mesh;
+	std::vector<VertexTerrain> mesh;
 	mesh.reserve(4096);
 
 	while (true) {

@@ -22,7 +22,8 @@ class ResourceManager {
 
 			ShaderModule vert_2d;
 			ShaderModule vert_3d;
-			ShaderModule frag_mix;
+			ShaderModule vert_terrain;
+			ShaderModule frag_terrain;
 			ShaderModule frag_tint;
 
 			State(Device& device, Allocator& allocator, CommandRecorder& recorder);

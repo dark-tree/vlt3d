@@ -6,8 +6,8 @@
  * ChunkBuffer
  */
 
-WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<Vertex3D>& mesh)
-: pos(pos), buffer(system, mesh.size() * sizeof(Vertex3D)) {
+WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh)
+: pos(pos), buffer(system, mesh.size() * sizeof(VertexTerrain)) {
 	buffer.write(mesh.data(), mesh.size());
 }
 
@@ -91,7 +91,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 }
 
-void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<Vertex3D>& mesh) {
+void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
 	auto* chunk = new ChunkBuffer(system, pos, mesh);
 	std::lock_guard lock {submit_mutex};
 	awaiting.write().push_back(chunk);

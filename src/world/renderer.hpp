@@ -63,7 +63,7 @@ class WorldRenderer {
 			glm::ivec3 pos;
 			BasicBuffer buffer;
 
-			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<Vertex3D>& mesh);
+			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh);
 
 			/// draw this buffer
 			void draw(CommandRecorder& recorder, Frustum& frustum);
@@ -101,7 +101,7 @@ class WorldRenderer {
 		void draw(CommandRecorder& recorder, Frustum& frustum);
 
 		/// Submit a buffer, mesh can be empty
-		void submitChunk(glm::ivec3 pos, std::vector<Vertex3D>& mesh);
+		void submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh);
 
 		/// Discard the chunk at the given coordinates
 		void eraseChunk(glm::ivec3 pos);

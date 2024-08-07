@@ -100,9 +100,10 @@ class RenderSystem {
 		ResourceManager assets;
 
 		DescriptorSetLayout descriptor_layout;
+		BindingLayout binding_terrain;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;
-		GraphicsPipeline pipeline_3d_mix;
+		GraphicsPipeline pipeline_3d_terrain;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;
 		DescriptorPool descriptor_pool;

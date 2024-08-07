@@ -84,7 +84,7 @@ int main() {
 		world.update(world_generator, camera.getPosition(), 8);
 
 		recorder.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
-		recorder.bindPipeline(system.pipeline_3d_mix);
+		recorder.bindPipeline(system.pipeline_3d_terrain);
 		recorder.writePushConstant(system.vertex_constant, &frame.uniforms);
 		recorder.bindDescriptorSet(frame.set);
 

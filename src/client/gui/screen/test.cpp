@@ -44,7 +44,7 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	float oy = cos(t);
 
 	renderer.setTint(255, 255, 255);
-	renderer.drawPatch(renderer.getWidth() - 160 - 32, 32, 10, 10, 16, renderer.getNinePatch("gui-smol", 8));
+	renderer.drawPatch(renderer.getWidth() - 160 - 32, 32, 10, 10, 16, renderer.getNinePatch("gui", 8));
 
 	renderer.setTint(50, 255, 50);
 	renderer.setFontSize(2);
@@ -67,11 +67,8 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 
 	renderer.setFacing(camera);
 
-	renderer.setTint(255, 255, 255);
 	renderer.setFontSize(2);
 	renderer.setLineSize(4);
-	renderer.drawSprite(10, 10, 100, 100, renderer.getSprite("vkblob"));
-
 	renderer.setAlignment(HorizontalAlignment::LEFT);
 	renderer.setAlignment(VerticalAlignment::TOP);
 	renderer.setTint(255, 255, 0);
@@ -109,12 +106,6 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.drawLine(0 - 0.5, 0 - 0.5, 32 - 0.5, 32 - 0.5, 0 - 0.5, 32 - 0.5);
 	renderer.drawLine(32 - 0.5, -32 - 0.5, 0 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
 	renderer.drawLine(0 - 0.5, -32 - 0.5, 32 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
-
-	renderer.setTint(255, 0, 0);
-	renderer.drawCircle(16, +40, 16, 8);
-
-	renderer.setTint(0, 255, 0);
-	renderer.drawCircle(16, -40, 16, 8);
 
 	renderer.setTint(255, 255, 255);
 	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, 1, renderer.getSprite("button"), 4, 4, 0, 32);
