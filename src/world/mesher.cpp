@@ -80,7 +80,7 @@ bool ChunkRenderPool::empty() {
 	return set.empty();
 }
 
-void ChunkRenderPool::emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, bool west, bool east, bool down, bool up, bool north, bool south, BakedSprite sprite) {
+void ChunkRenderPool::emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, bool west, bool east, bool down, bool up, bool north, bool south, BakedSprite sprite, BakedSprite top_sprite) {
 	if (south) {
 		mesh.emplace_back(x + -0.5, y + -0.5, z + 0.5, sprite.u1, sprite.v1, r, g, b, Normal::SOUTH);
 		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::SOUTH);
@@ -118,12 +118,12 @@ void ChunkRenderPool::emitCube(std::vector<VertexTerrain>& mesh, float x, float 
 	}
 
 	if (up) {
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::UP);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v2, r, g, b, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::UP);
-		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, sprite.u1, sprite.v1, r, g, b, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, r, g, b, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, sprite.u2, sprite.v1, r, g, b, Normal::UP);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, top_sprite.u1, top_sprite.v1, r, g, b, Normal::UP);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + 0.5, top_sprite.u1, top_sprite.v2, r, g, b, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, top_sprite.u2, top_sprite.v2, r, g, b, Normal::UP);
+		mesh.emplace_back(x + -0.5, y + 0.5, z + -0.5, top_sprite.u1, top_sprite.v1, r, g, b, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, top_sprite.u2, top_sprite.v2, r, g, b, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + -0.5, top_sprite.u2, top_sprite.v1, r, g, b, Normal::UP);
 	}
 
 	if (down) {
@@ -151,7 +151,7 @@ void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, std::shared_pt
 				Block block = chunk->getBlock(x, y, z);
 
 				if (!block.isAir()) {
-					BakedSprite sprite = (block.block_type % 2 == 1) ? atlas.getBakedSprite("vkblob") : atlas.getBakedSprite("digital");
+					BakedSprite sprite = (block.block_type % 2 == 1) ? atlas.getBakedSprite("gray") : atlas.getBakedSprite("clay");
 					glm::ivec3 pos = chunk->pos * Chunk::size + glm::ivec3 {x, y, z};
 
 					emitCube(
@@ -164,7 +164,7 @@ void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, std::shared_pt
 						view.getBlock(pos.x, pos.y + 1, pos.z).isAir(),
 						view.getBlock(pos.x, pos.y, pos.z - 1).isAir(),
 						view.getBlock(pos.x, pos.y, pos.z + 1).isAir(),
-						sprite
+						sprite, (block.block_type % 2 == 0) ? atlas.getBakedSprite("moss") : sprite
 					);
 				}
 			}

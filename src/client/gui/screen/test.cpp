@@ -34,8 +34,8 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 		renderer.setAlignment(VerticalAlignment::TOP);
 		renderer.setTint(255, 255, 0);
 		renderer.setFontSize(2);
-		renderer.drawText(10, 10 + 9 * 2, "Press [SPACE] to show");
-		renderer.drawText(10, 10 + 9 * 4, "Press [ESCAPE] to close");
+		renderer.drawText(10, 10 + 9 * 0, "Press [SPACE] to show");
+		renderer.drawText(10, 10 + 9 * 2, "Press [ESCAPE] to close");
 		return;
 	}
 
@@ -79,12 +79,6 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 
 	renderer.drawText(10, 10 + 9 * 4, "Press [SPACE] to hide");
 	renderer.drawText(10, 10 + 9 * 6, "Press [ESCAPE] to close");
-
-	renderer.setTint(10, 100, 220);
-	renderer.drawLine(50, 200, 50, 550);
-	renderer.drawLine(50, 550, 150, 650);
-	renderer.drawLine(150, 650, 900, 650);
-	renderer.drawLine(300, 300, 300 + ox * 150, 300 + oy * 150);
 
 	renderer.setTint(255, 255, 255);
 	renderer.setFontSize(0.05);

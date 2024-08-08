@@ -18,21 +18,21 @@ glm::vec2 Skybox::getSun(float hour, float day) const {
 }
 
 /// Translates Equatorial Coordinates to observer's Horizontal Coordinates
-glm::vec2 Skybox::toHorizontal(glm::vec2 equatorial, float latitude) const {
+glm::vec2 Skybox::adjustForLatitude(glm::vec2 equatorial, float latitude) const {
 
 	const float hour_angle = equatorial.x;
 	const float declination = equatorial.y;
 
 	// precompute reused values
-	const float sin_lat = sin(latitude);
-	const float cos_lat = cos(latitude);
-	const float sin_dec = sin(declination);
-	const float cos_dec = cos(declination);
+	const float sin_lat = std::sin(latitude);
+	const float cos_lat = std::cos(latitude);
+	const float sin_dec = std::sin(declination);
+	const float cos_dec = std::cos(declination);
 
 	// The altitude is the angle of the sun above or below the horizon
 	// It depends on the declination of the sun, the observer's latitude, and the hour angle
-	float sin_alt = sin_dec * sin_lat + cos_dec * cos_lat * cos(hour_angle);
-	float altitude = asin(sin_alt);
+	const float sin_alt = sin_dec * sin_lat + cos_dec * cos_lat * std::cos(hour_angle);
+	float altitude = std::asin(sin_alt);
 
 	if (altitude < -M_PI / 2.0f) {
 		altitude = -M_PI / 2.0f;
@@ -44,15 +44,33 @@ glm::vec2 Skybox::toHorizontal(glm::vec2 equatorial, float latitude) const {
 
 	// The azimuth is the compass direction of the sun, measured from North
 	// It tells us where the sun is located horizontally
-	float sin_azimuth = -cos_dec * sin(hour_angle) / cos_alt;
-	float cos_azimuth = (sin_dec - sin_lat * sin_alt) / (cos_lat * cos_alt);
-	float azimuth = atan2(sin_azimuth, cos_azimuth);
+	const float sin_azimuth = -cos_dec * std::sin(hour_angle) / cos_alt;
+	const float cos_azimuth = (sin_dec - sin_lat * sin_alt) / (cos_lat * cos_alt);
+	float azimuth = std::atan2(sin_azimuth, cos_azimuth);
 
 	if (azimuth < 0) {
 		azimuth += 2.0f * M_PI;
 	}
 
 	return glm::vec2(azimuth, altitude);
+}
+
+glm::vec3 Skybox::projectOntoSphere(glm::vec2 horizontal) const {
+
+	const float longitude = horizontal.x;
+	const float latitude = horizontal.y;
+
+	const float equator_x = std::cos(longitude);
+	const float equator_z = std::sin(longitude);
+	const float y = std::sin(latitude);
+
+	const float multiplier = std::cos(latitude);
+	const float x = multiplier * equator_x;
+	const float z = multiplier * equator_z;
+
+	// X and Z inverted to align with world directions as defined in the Direction class
+	return glm::normalize(glm::vec3 {z, y, x});
+
 }
 
 void Skybox::drawSphere(ImmediateRenderer& immediate, glm::vec3 pos, float radius, int longs, int lats, BakedSprite sprite) const {
@@ -116,30 +134,34 @@ void Skybox::drawSphere(ImmediateRenderer& immediate, glm::vec3 pos, float radiu
 
 glm::vec3 Skybox::getSunPos(float observer_latitude) const {
 
-	glm::vec2 equ = getSun((float) glfwGetTime() / 2.0f, glfwGetTime() / 2);
-	glm::vec2 hor = toHorizontal(equ, observer_latitude);
+	glm::vec2 equatorial = getSun((float) glfwGetTime() / 12.0f + 7, glfwGetTime() / 20);
+	glm::vec2 horizontal = adjustForLatitude(equatorial, observer_latitude);
 
-	float longitude = hor.x;
-	float latitude = hor.y;
-
-	float equator_x = cos(longitude);
-	float equator_z = sin(longitude);
-	float y = sin(latitude);
-	float multiplier = cos(latitude);
-	float x = multiplier * equator_x;
-	float z = multiplier * equator_z;
-
-	// inverted to align with world directions as defined in Direction class
-	return glm::normalize(glm::vec3 {z, y, x});
+	return projectOntoSphere(horizontal);
 
 }
+
+//float doubleSigmoidClamp(float value, float start, float end, float mean) {
+//	const float va = value - start;
+//	const float vb = value - end;
+//
+//	// normalization factors
+//	const float mx = (start + end) / 2;
+//	const float ma = mx - start;
+//	const float mb = mx - end;
+//
+//	const float n = (va / (mean + std::abs(va))) * - (vb / (mean + std::abs(vb))) + 1;
+//	const float d = (ma / (mean + std::abs(ma))) * - (mb / (mean + std::abs(mb))) + 1;
+//
+//	return n / d;
+//}
 
 void Skybox::draw(ImmediateRenderer& immediate, Camera& camera) const {
 
 	glm::vec3 observer = camera.getPosition();
 	float radius = 500;
 
-	// 1. DRAW STARS
+	// 1. Draw Star Field
 
 	Random random {100};
 	BakedSprite sprites[3];
@@ -156,16 +178,22 @@ void Skybox::draw(ImmediateRenderer& immediate, Camera& camera) const {
 		immediate.drawSprite(observer + glm::normalize(glm::vec3 {x, y, z}) * radius, 4, 4, sprites[random.uniformInt(2)]);
 	}
 
-	// 2. DRAW SKY
+	glm::vec2 sun_equatorial = getSun((float) glfwGetTime() / 12.0f + 7, glfwGetTime() / 20);
+	glm::vec2 sun_horizontal = adjustForLatitude(sun_equatorial, camera.getPosition().x / 100);
 
-	immediate.setTint(255, 255, 255, 50);
-	drawSphere(immediate, observer, radius, 10, 10, immediate.getSprite("skybox-simple"));
+	float sun_height = sun_horizontal.y / (M_PI / 2);
 
-	// 3. DRAW SUN
+	float night = std::clamp(sun_height * 2.5f + 0.3f + std::max(0.0f, (sun_height + 0.1f) * 2.0f), 0.0f, 1.0f);
+	float day = (sun_height / (0.02f + std::abs(sun_height))) / 2 + 0.5f;
 
-	glm::vec3 sun = getSunPos(camera.getPosition().x / 100);
+	// 2. Draw Sky Sphere
+
+	immediate.setTint(0, 255 * std::min(1.0f, day / 2), 255 * day, 255 * night);
+	drawSphere(immediate, observer, radius, 10, 10, immediate.getSprite("blank"));
+
+	// 3. Draw Satellites
 
 	immediate.setTint(255, 255, 255, 255);
-	immediate.drawSprite(observer + sun * 450.0f, 64, 64, immediate.getSprite("sun"));
+	immediate.drawSprite(observer + projectOntoSphere(sun_horizontal) * 450.0f, 64, 64, immediate.getSprite("sun"));
 
 }

@@ -22,8 +22,12 @@ class Skybox {
 		glm::vec2 getSun(float hour, float day) const;
 
 		/// Translates Equatorial Coordinates to observer's Horizontal Coordinates
-		glm::vec2 toHorizontal(glm::vec2 equatorial, float latitude) const;
+		glm::vec2 adjustForLatitude(glm::vec2 equatorial, float latitude) const;
 
+		/// Projects Horizontal Coordinates onto a unit sphere
+		glm::vec3 projectOntoSphere(glm::vec2 horizontal) const;
+
+		/// Renders a simple sphere geometry
 		void drawSphere(ImmediateRenderer& immediate, glm::vec3 pos, float radius, int longs, int lats, BakedSprite sprite) const;
 
 	public:
@@ -35,9 +39,9 @@ class Skybox {
 			sun.pos = getSunPos(observer_latitude);
 			int s = std::max(0, (int) -(sun.pos.y * 200));
 
-			sun.r = std::max(0, 155 - (int) s);
-			sun.g = std::max(0, 50 - (int) s);
-			sun.b = std::max(0, 50 - (int) s);
+			sun.r = std::max(0, 100 - (int) s);
+			sun.g = std::max(0, 90 - (int) s);
+			sun.b = std::max(0, 80 - (int) s);
 			return sun;
 		}
 

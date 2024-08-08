@@ -23,7 +23,7 @@ int main() {
 
 	SoundSystem sound_system;
 	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
-	sound_system.add(buffer).loop().play();
+//	sound_system.add(buffer).loop().play();
 
 	Window window {1000, 700, "Funny Vulkan App"};
 	RenderSystem system {window, 1};
