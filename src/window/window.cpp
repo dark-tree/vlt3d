@@ -46,7 +46,13 @@ Window::Window(uint32_t w, uint32_t h, const char* title)
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-	glfw_window = glfwCreateWindow(w, h, title, nullptr, nullptr);
+	std::string title_string {title};
+
+	#if !defined(NDEBUG)
+	title_string += " (Debug Build)";
+	#endif
+
+	glfw_window = glfwCreateWindow(w, h, title_string.c_str(), nullptr, nullptr);
 	if (glfw_window == nullptr) {
 		throw Exception {"Failed to create a window!"};
 	}
