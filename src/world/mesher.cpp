@@ -160,7 +160,8 @@ void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, std::shared_pt
 					BakedSprite sprite = (block.block_type % 2 == 1) ? gray_sprite : clay_sprite;
 					glm::ivec3 pos = chunk->pos * Chunk::size + glm::ivec3 {x, y, z};
 
-					bool draw_top_and_mossy_dirt = view.getBlock(pos.x, pos.y + 1, pos.z).isAir();
+					bool draw_top = view.getBlock(pos.x, pos.y + 1, pos.z).isAir();
+					bool draw_mossy = block.block_type % 2 == 0;
 
 					emitCube(
 						mesh,
@@ -169,10 +170,10 @@ void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, std::shared_pt
 						view.getBlock(pos.x - 1, pos.y, pos.z).isAir(),
 						view.getBlock(pos.x + 1, pos.y, pos.z).isAir(),
 						view.getBlock(pos.x, pos.y - 1, pos.z).isAir(),
-						draw_top_and_mossy_dirt,
+						draw_top,
 						view.getBlock(pos.x, pos.y, pos.z - 1).isAir(),
 						view.getBlock(pos.x, pos.y, pos.z + 1).isAir(),
-						sprite, draw_top_and_mossy_dirt ? moss_sprite : sprite, draw_top_and_mossy_dirt ? side_sprite : sprite
+						sprite, (draw_top && draw_mossy) ? moss_sprite : sprite, (draw_top && draw_mossy) ? side_sprite : sprite
 					);
 				}
 			}

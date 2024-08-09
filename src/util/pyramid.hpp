@@ -36,7 +36,7 @@ class Pyramid {
 				 * Returns a set of all the elements in the current layer
 				 * and in all layers above it
 				 */
-				std::set<T> collect() {
+				std::set<T> collect() const {
 					std::set<T> values;
 
 					for (int i = index; i < pyramid.size(); i ++) {
