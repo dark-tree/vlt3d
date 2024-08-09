@@ -46,11 +46,11 @@ class Frame {
 		Fence flight_fence;
 
 		Uniforms uniforms;
-		DescriptorSet set;
+		DescriptorSet set1, set2;
 
 	public:
 
-		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler);
+		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor1, DescriptorSet descriptor2, const ImageSampler& sampler, const ImageSampler& albedo_sampler, const ImageSampler& normal_sampler, const ImageSampler& position_sampler);
 
 		/**
 		 * This class is fully managed by the RenderSystem so it uses
@@ -95,14 +95,23 @@ class RenderSystem {
 		RenderPass render_pass;
 		Image depth_image;
 		ImageView depth_view;
+		Image albedo_image;
+		ImageView albedo_view;
+		Image normal_image;
+		ImageView normal_view;
+		Image position_image;
+		ImageView position_view;
 		std::vector<Framebuffer> framebuffers;
 
 		ResourceManager assets;
 
 		DescriptorSetLayout descriptor_layout;
+		DescriptorSetLayout composition_layout;
 		BindingLayout binding_terrain;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;
+		BindingLayout binding_null;
+		GraphicsPipeline pipeline_2d_compose;
 		GraphicsPipeline pipeline_3d_terrain;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;

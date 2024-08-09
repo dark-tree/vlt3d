@@ -31,14 +31,23 @@ class CommandRecorder {
 			info.renderArea.extent = extent;
 
 			// TODO set clear color
-			VkClearValue clearColor[2] = {0};
-			clearColor[0].color = {r, g, b, a};
-			clearColor[1].depthStencil = {1.0f, 0};
+			VkClearValue clears[8] = {0};
 
-			info.clearValueCount = 2;
-			info.pClearValues = clearColor;
+			for (auto& clear : clears) {
+				clear.color = {{ 0.0f, 0.0f, 0.0f, 0.0f }};
+			}
+
+			clears[4].depthStencil = {1.0f, 0};
+
+			info.clearValueCount = 5;
+			info.pClearValues = clears;
 
 			vkCmdBeginRenderPass(vk_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+			return *this;
+		}
+
+		CommandRecorder& nextSubpass() {
+			vkCmdNextSubpass(vk_buffer, VK_SUBPASS_CONTENTS_INLINE);
 			return *this;
 		}
 
@@ -53,6 +62,7 @@ class CommandRecorder {
 			return *this;
 		}
 
+		[[deprecated("Use withViewport() during pipeline creation")]]
 		CommandRecorder& setDynamicViewport(int x, int y, uint32_t width, uint32_t height, float min_depth = 0.0f, float max_depth = 1.0f) {
 
 			VkViewport viewport {};
@@ -67,6 +77,7 @@ class CommandRecorder {
 			return *this;
 		}
 
+		[[deprecated("Use withScissors() during pipeline creation")]]
 		CommandRecorder& setDynamicScissors(int x, int y, uint32_t width, uint32_t height) {
 
 			VkRect2D scissor {};

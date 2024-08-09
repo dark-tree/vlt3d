@@ -48,6 +48,8 @@ class GraphicsPipelineBuilder {
 		std::vector<VkDynamicState> dynamics;
 		std::vector<VkVertexInputBindingDescription> bindings;
 		std::vector<VkVertexInputAttributeDescription> attributes;
+		std::vector<VkPipelineColorBlendAttachmentState> attachments;
+
 		std::vector<ShaderModule> stages;
 
 		VkPipelineViewportStateCreateInfo view {};
@@ -93,7 +95,7 @@ class GraphicsPipelineBuilder {
 
 	public:
 
-		GraphicsPipelineBuilder(Device& device)
+		GraphicsPipelineBuilder(Device& device, int count)
 		: device(device) {
 
 			depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -135,8 +137,7 @@ class GraphicsPipelineBuilder {
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineColorBlendStateCreateInfo.html
 			blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			blending.attachmentCount = 1;
-			blending.pAttachments = &attachment;
+			blending.attachmentCount = count;
 			withBlendConstants(0.0f, 0.0f, 0.0f, 0.0f);
 			withBlendWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
 			withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
@@ -144,10 +145,16 @@ class GraphicsPipelineBuilder {
 			withBlendBitwiseFunc(VK_LOGIC_OP_COPY);
 			withBlendMode(BlendMode::DISABLED);
 
+			for (int i = 0; i < count; i ++) {
+				attachments.push_back(attachment);
+			}
+
+			blending.pAttachments = attachments.data();
+
 		}
 
-		inline static GraphicsPipelineBuilder of(Device& device) {
-			return {device};
+		inline static GraphicsPipelineBuilder of(Device& device, int count) {
+			return {device, count};
 		}
 
 	// dynamic configuration

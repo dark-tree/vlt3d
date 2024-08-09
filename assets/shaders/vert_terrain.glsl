@@ -12,6 +12,7 @@ layout(location = 3) in uint iNorm;
 layout(location = 0) out vec3 vColor;
 layout(location = 1) out vec2 vTexture;
 layout(location = 2) out vec3 vNorm;
+layout(location = 3) out vec3 vPosition;
 
 void main() {
 
@@ -28,4 +29,5 @@ void main() {
     vColor = iColor;
     vTexture = iTexture;
     vNorm = normals[iNorm];
+    vPosition = gl_Position.xyz;
 }

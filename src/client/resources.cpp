@@ -33,8 +33,10 @@ ResourceManager::State::State(Device& device, Allocator& allocator, CommandRecor
 	this->vert_2d = compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device);
 	this->vert_3d = compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device);
 	this->vert_terrain = compiler.compileFile("assets/shaders/vert_terrain.glsl", Kind::VERTEX).create(device);
+	this->vert_compose = compiler.compileFile("assets/shaders/vert_compose.glsl", Kind::VERTEX).create(device);
 	this->frag_terrain = compiler.compileFile("assets/shaders/frag_terrain.glsl", Kind::FRAGMENT).create(device);
 	this->frag_tint = compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device);
+	this->frag_compose = compiler.compileFile("assets/shaders/frag_compose.glsl", Kind::FRAGMENT).create(device);
 
 }
 

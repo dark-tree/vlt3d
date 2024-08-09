@@ -90,13 +90,22 @@ int main() {
 		recorder.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
 		recorder.bindPipeline(system.pipeline_3d_terrain);
 		recorder.writePushConstant(system.mvp_vertex_constant, &frame.uniforms);
-		recorder.writePushConstant(system.sun_vertex_constant, &sun);
-		recorder.bindDescriptorSet(frame.set);
+		recorder.bindDescriptorSet(frame.set1);
 
 		world_renderer.draw(recorder, frustum);
 		world_renderer.eraseOutside(camera.getPosition(), 12);
 
+		recorder.nextSubpass();
+
+		recorder.bindPipeline(system.pipeline_2d_compose);
+		recorder.writePushConstant(system.sun_vertex_constant, &sun);
+		recorder.bindDescriptorSet(frame.set2);
+		recorder.draw(3);
+
+		recorder.nextSubpass();
+
 		recorder.bindPipeline(system.pipeline_3d_tint)
+			.bindDescriptorSet(frame.set1)
 			.bindBuffer(frame.immediate_3d.getBuffer())
 			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)

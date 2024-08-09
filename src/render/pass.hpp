@@ -138,11 +138,17 @@ class SubpassBuilder {
 		VkSubpassDescription description {};
 		uint32_t attachment_count;
 		Pyramid<uint32_t>& preserve;
+		std::set<uint32_t> references;
+
+		std::vector<VkAttachmentReference> inputs;
+		std::vector<VkAttachmentReference> colors;
+		std::vector<VkAttachmentReference> depths;
+		std::vector<VkAttachmentReference> resolves;
 
 		VkAttachmentReference getReference(uint32_t attachment, VkImageLayout layout) {
 
 			if (attachment >= attachment_count) {
-				throw std::runtime_error("Attachment index " + std::to_string(attachment) + " out of bounds, only " + std::to_string(attachment_count) + " have been defined up to this point!");
+				throw Exception {"Attachment index " + std::to_string(attachment) + " out of bounds, only " + std::to_string(attachment_count) + " have been defined up to this point!"};
 			}
 
 			preserve.append(attachment);
@@ -155,25 +161,22 @@ class SubpassBuilder {
 
 		}
 
-		std::vector<VkAttachmentReference> inputs;
-		std::vector<VkAttachmentReference> colors;
-		std::vector<VkAttachmentReference> depths;
-		std::vector<VkAttachmentReference> resolves;
-
 		friend class RenderPassBuilder;
 
-		VkSubpassDescription finalize(const std::set<uint32_t> preserve) {
+		bool shouldPreserve(uint32_t attachment) const {
+			return !references.contains(attachment);
+		}
+
+		VkSubpassDescription finalize(const std::vector<uint32_t>& preserve) {
 
 			uint32_t input_count = inputs.size();
 			uint32_t color_count = colors.size();
 			uint32_t depth_count = depths.size();
 			uint32_t resolve_count = resolves.size();
 
-			std::vector<uint32_t> values {preserve.begin(), preserve.end()};
-
 			if (depth_count != 0 && resolve_count != 0) {
-				if (depth_count != color_count) throw std::runtime_error("Invalid number of depth attachments! Must be 0 or equal to the number of color attachments!");
-				if (resolve_count != color_count) throw std::runtime_error("Invalid number of resolve attachments! Must be 0 or equal to the number of color attachments!");
+				if (depth_count != color_count) throw Exception {"Invalid number of depth attachments! Must be 0 or equal to the number of color attachments!"};
+				if (resolve_count != color_count) throw Exception {"Invalid number of resolve attachments! Must be 0 or equal to the number of color attachments!"};
 			}
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSubpassDescription.html
@@ -185,8 +188,8 @@ class SubpassBuilder {
 			description.pResolveAttachments = resolves.data();
 			description.pDepthStencilAttachment = depths.data();
 
-			description.preserveAttachmentCount = (uint32_t) values.size();
-			description.pPreserveAttachments = values.data();
+			description.preserveAttachmentCount = (uint32_t) preserve.size();
+			description.pPreserveAttachments = preserve.data();
 
 			return description;
 
@@ -201,24 +204,28 @@ class SubpassBuilder {
 
 		/// attachments that are read from a shader
 		SubpassBuilder& addInput(uint32_t attachment, VkImageLayout layout) {
+			references.insert(attachment);
 			inputs.push_back(getReference(attachment, layout));
 			return *this;
 		}
 
 		/// attachment for color data
-		SubpassBuilder& addColor(uint32_t attachment, VkImageLayout layout) {
+		SubpassBuilder& addOutput(uint32_t attachment, VkImageLayout layout) {
+			references.insert(attachment);
 			colors.push_back(getReference(attachment, layout));
 			return *this;
 		}
 
 		/// attachment for depth and stencil data
 		SubpassBuilder& addDepth(uint32_t attachment, VkImageLayout layout) {
+			references.insert(attachment);
 			depths.push_back(getReference(attachment, layout));
 			return *this;
 		}
 
 		/// attachments used for multisampling color attachments
 		SubpassBuilder& addResolve(uint32_t attachment, VkImageLayout layout) {
+			references.insert(attachment);
 			resolves.push_back(getReference(attachment, layout));
 			return *this;
 		}
@@ -268,7 +275,7 @@ class RenderPassBuilder {
 		/**
 		 * Adds and makes usable an attachment for subpasses in the render pass
 		 */
-		AttachmentBuilder<> addAttachment(VkFormat format, VkSampleCountFlagBits samples) {
+		AttachmentBuilder<> addAttachment(VkFormat format, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT) {
 			return {*this, format, samples};
 		}
 
@@ -308,6 +315,8 @@ class RenderPassBuilder {
 			std::vector<VkAttachmentDescription> attachment_descriptions;
 			std::vector<VkSubpassDescription> subpass_descriptions;
 			std::vector<VkSubpassDependency> dependency_descriptions;
+			std::vector<std::vector<uint32_t>> preserve_indices;
+
 			auto view = preserve.view();
 
 			attachment_descriptions.reserve(attachments.size());
@@ -324,7 +333,17 @@ class RenderPassBuilder {
 
 			for (auto& subpass : subpasses) {
 				view.up();
-				subpass_descriptions.push_back(subpass.finalize(view.collect()));
+				auto set = view.collect();
+
+				preserve_indices.emplace_back();
+
+				for (uint32_t attachment : set) {
+					if (subpass.shouldPreserve(attachment)) {
+						preserve_indices.back().push_back(attachment);
+					}
+				}
+
+				subpass_descriptions.push_back(subpass.finalize(preserve_indices.back()));
 			}
 
 			VkRenderPassCreateInfo create_info {};
@@ -339,7 +358,7 @@ class RenderPassBuilder {
 
 			VkRenderPass render_pass;
 			if (vkCreateRenderPass(device.vk_device, &create_info, nullptr, &render_pass) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateRenderPass: Failed to create render pass!");
+				throw Exception {"Failed to create render pass!"};
 			}
 
 			return {device.vk_device, render_pass};
