@@ -26,7 +26,7 @@ int main() {
 	sound_system.add(buffer).loop().play();
 
 	Window window {1000, 700, "Funny Vulkan App"};
-	RenderSystem system {window, 1};
+	RenderSystem system {window, 3};
 
 	// for now
 	Swapchain& swapchain = system.swapchain;
