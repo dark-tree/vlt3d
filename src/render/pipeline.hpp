@@ -91,6 +91,12 @@ class GraphicsPipelineBuilder {
 			view.scissorCount = 1;
 			view.pScissors = &vk_scissor;
 
+			for (int i = 0; i < blending.attachmentCount; i ++) {
+				attachments.push_back(attachment);
+			}
+
+			blending.pAttachments = attachments.data();
+
 		}
 
 	public:
@@ -144,12 +150,6 @@ class GraphicsPipelineBuilder {
 			withBlendAlphaFunc(VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO);
 			withBlendBitwiseFunc(VK_LOGIC_OP_COPY);
 			withBlendMode(BlendMode::DISABLED);
-
-			for (int i = 0; i < count; i ++) {
-				attachments.push_back(attachment);
-			}
-
-			blending.pAttachments = attachments.data();
 
 		}
 
@@ -357,8 +357,6 @@ class GraphicsPipelineBuilder {
 	public:
 
 		GraphicsPipeline build() {
-
-			Timer timer;
 
 			if (subpass == -1) {
 				throw Exception {"Render pass needs to be specified!"};
