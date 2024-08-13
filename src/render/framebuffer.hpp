@@ -12,13 +12,18 @@ class Framebuffer {
 		READONLY VkFramebuffer vk_buffer;
 		READONLY VkDevice vk_device;
 		READONLY uint32_t index;
+		READONLY std::vector<VkImageView> owned;
 
 	public:
 
-		Framebuffer(VkFramebuffer vk_buffer, VkDevice vk_device, uint32_t index)
-		: vk_buffer(vk_buffer), vk_device(vk_device), index(index) {}
+		Framebuffer(VkFramebuffer vk_buffer, VkDevice vk_device, uint32_t index, std::vector<VkImageView> owned)
+		: vk_buffer(vk_buffer), vk_device(vk_device), index(index), owned(owned) {}
 
 		void close() {
+			for (VkImageView view : owned) {
+				vkDestroyImageView(vk_device, view, nullptr);
+			}
+
 			vkDestroyFramebuffer(vk_device, vk_buffer, nullptr);
 		}
 
@@ -31,17 +36,22 @@ class FramebufferBuilder {
 		VkRenderPass pass;
 		uint32_t width, height;
 		std::vector<VkImageView> attachments;
+		std::vector<VkImageView> owned;
 
 	public:
 
-		FramebufferBuilder(RenderPass& pass, uint32_t width, uint32_t height) {
+		FramebufferBuilder(RenderPass& pass, VkExtent2D extent) {
 			this->pass = pass.vk_pass;
-			this->width = width;
-			this->height = height;
+			this->width = extent.width;
+			this->height = extent.height;
 		}
 
-		void addAttachment(ImageView view) {
+		void addAttachment(ImageView view, bool owning = false) {
 			attachments.push_back(view.vk_view);
+
+			if (owning) {
+				owned.push_back(view.vk_view);
+			}
 		}
 
 		Framebuffer build(Device& device, uint32_t index) {
@@ -64,7 +74,7 @@ class FramebufferBuilder {
 				throw Exception {"Failed to create a framebuffer!"};
 			}
 
-			return {framebuffer, device.vk_device, index};
+			return {framebuffer, device.vk_device, index, owned};
 
 		}
 

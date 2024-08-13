@@ -29,6 +29,8 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 
 Frame::~Frame() {
 	buffer.close();
+	immediate_2d.close();
+	immediate_3d.close();
 	available_semaphore.close();
 	finished_semaphore.close();
 	flight_fence.close();
@@ -178,13 +180,29 @@ void RenderSystem::createRenderPass(Swapchain& surface) {
 
 void RenderSystem::createFramebuffers(RenderPass& pass) {
 
-	attachment_depth.allocate(device, swapchain.vk_extent, allocator);
-	attachment_albedo.allocate(device, swapchain.vk_extent, allocator);
-	attachment_normal.allocate(device, swapchain.vk_extent, allocator);
-	attachment_position.allocate(device, swapchain.vk_extent, allocator);
+	VkExtent2D extent = swapchain.vk_extent;
+
+	attachment_depth.allocate(device, extent, allocator);
+	attachment_albedo.allocate(device, extent, allocator);
+	attachment_normal.allocate(device, extent, allocator);
+	attachment_position.allocate(device, extent, allocator);
+
+	const std::vector<Image>& images = swapchain.getImages();
 
 	// create framebuffers
-	framebuffers = swapchain.getFramebuffers(pass, attachment_depth.view, attachment_position.view, attachment_normal.view, attachment_albedo.view);
+	framebuffers.clear();
+	framebuffers.reserve(images.size());
+
+	for (const Image& image : images) {
+		FramebufferBuilder builder {pass, extent};
+		builder.addAttachment(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT), true);
+		builder.addAttachment(attachment_albedo.view);
+		builder.addAttachment(attachment_normal.view);
+		builder.addAttachment(attachment_position.view);
+		builder.addAttachment(attachment_depth.view);
+
+		framebuffers.push_back(builder.build(device, framebuffers.size()));
+	}
 
 }
 
@@ -294,6 +312,7 @@ void RenderSystem::createFrames() {
 
 		frames.clear();
 		descriptor_pool.reset();
+		graphics_pool.reset(true);
 	}
 
 	for (int i = 0; i < concurrent; i ++) {

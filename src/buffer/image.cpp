@@ -131,7 +131,7 @@ Image::Image(VkImage vk_image, VkFormat vk_format)
 Image::Image(VkImage vk_image, VkFormat vk_format, MemoryAccess memory)
 : vk_image(vk_image), vk_format(vk_format), memory(memory) {}
 
-ImageViewBuilder Image::getViewBuilder() {
+ImageViewBuilder Image::getViewBuilder() const {
 	return ImageViewBuilder {vk_image, vk_format};
 }
 

@@ -46,22 +46,8 @@ class Swapchain {
 
 		}
 
-		std::vector<Framebuffer> getFramebuffers(RenderPass& pass, ImageView& depth_image, ImageView& position_image, ImageView& normal_image, ImageView& albedo_image) {
-			std::vector<Framebuffer> framebuffers;
-			framebuffers.reserve(images.size());
-
-			for (Image& image : images) {
-				FramebufferBuilder builder {pass, vk_extent.width, vk_extent.height};
-				builder.addAttachment(image.getViewBuilder().build(*device, VK_IMAGE_ASPECT_COLOR_BIT));
-				builder.addAttachment(albedo_image);
-				builder.addAttachment(normal_image);
-				builder.addAttachment(position_image);
-				builder.addAttachment(depth_image);
-
-				framebuffers.push_back(builder.build(*device, framebuffers.size()));
-			}
-
-			return framebuffers;
+		const std::vector<Image>& getImages() {
+			return images;
 		}
 
 		PresentResult getNextImage(Semaphore& semaphore, uint32_t* image_index) {
