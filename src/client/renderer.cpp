@@ -41,11 +41,7 @@ void Frame::wait() {
 }
 
 void Frame::execute() {
-	int count = queue.execute();
-
-	if (count > 0) {
-		logger::debug("Executed ", count, " deferred frame tasks");
-	}
+	queue.execute();
 }
 
 /*

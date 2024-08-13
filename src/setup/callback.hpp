@@ -12,6 +12,7 @@ class AllocatorCallbackFactory {
 
 			private:
 
+				// used for purpose of harmless code reuse
 				static constexpr VkInternalAllocationType DUMMY_TYPE = VK_INTERNAL_ALLOCATION_TYPE_EXECUTABLE;
 				static constexpr VkSystemAllocationScope DUMMY_SCOPE = VK_SYSTEM_ALLOCATION_SCOPE_OBJECT;
 
@@ -30,188 +31,84 @@ class AllocatorCallbackFactory {
 
 					private:
 
-						std::string pad(std::string str, int padding) {
-							str.append(padding - str.length(), ' ');
-							return str;
-						}
-
-						std::string pad(size_t counter, int padding) {
-							return pad(std::to_string(counter), padding);
-						}
+						// helper formatting methods
+						std::string pad(std::string str, int padding);
+						std::string pad(size_t counter, int padding);
 
 					public:
 
-						AllocatorState(const char* identifier, bool verbose)
-						: identifier(identifier), verbose(verbose) {}
+						AllocatorState(const char* identifier, bool verbose);
 
-						static AllocatorState* of(void* user_data) {
-							return static_cast<AllocatorState*>(user_data);
-						}
+						/// Converts the user_data pointer to the AllocatorState object
+						static AllocatorState* of(void* user_data);
 
-						static std::string getHeaderString() {
-							return "| Identifier      | Allocations     | Allocated       |\n"
-								   "+ --------------- + --------------- + --------------- +";
-						}
+						/// Returns a formatted ASCII table header
+						static std::string getHeaderString();
 
-						std::string getRowString() {
-							std::lock_guard lock {mutex};
-
-							long delta_allocations = allocations - frees;
-							long delta_allocated = allocated - freed;
-
-							return  "| " + pad(identifier, 15) + " | " + pad(delta_allocations, 15) + " | " + pad(delta_allocated, 15) + " |";
-						}
+						/// Returns the state of this allocator as a single row in a ASCII table
+						std::string getRowString();
 
 					public:
 
-						void onFree(size_t size) {
-							std::lock_guard lock {mutex};
-							frees ++;
-							freed += size;
+						/**
+						 * Notify the allocator that memory was freed in it
+						 * @param size the number of bytes freed
+						 */
+						void onFree(size_t size);
 
-							if (verbose) {
-								logger::debug("[Allocator] ", identifier, " freed ", size, " bytes");
-							}
-						}
-
-						void onAllocate(size_t size) {
-							std::lock_guard lock {mutex};
-							allocations ++;
-							allocated += size;
-
-							if (verbose) {
-								logger::debug("[Allocator] ", identifier, " allocated ", size, " bytes");
-							}
-						}
+						/**
+						 * Notify the allocator that memory was allocated in it
+						 * @param size the number of bytes allocated
+						 */
+						void onAllocate(size_t size);
 
 				};
 
+				// the structure prepended to the allocated memory blocks
 				struct Header {
 					size_t size;
 					void* root;
 				};
 
-				static void* vkProxyAllocationFunction(void* user_data, size_t size, size_t alignment, VkSystemAllocationScope scope) {
-					size_t space = size + alignment;
-					void* pointer = calloc(space + sizeof(Header), 1);
-
-					// reserve enough space for at least our header but a
-					// different location can be chosen after the pointer is aligned
-					void* block = static_cast<Header*>(pointer) + 1;
-
-					// try to satisfy alignment, this should always work
-					// as we allocate with 'alignment' bytes of padding
-					if (!std::align(alignment, size, block, space)) {
-						logger::error("Failed to align block in debug allocator!");
-					}
-
-					// now attach our own data once we know
-					// how the pointer was aligned
-					Header* header = static_cast<Header*>(block) - 1;
-					header->size = size;
-					header->root = pointer;
-
-					vkProxyInternalAllocationNotification(user_data, header->size, DUMMY_TYPE, DUMMY_SCOPE);
-					return block;
-				}
-
-				static void vkProxyFreeFunction(void* user_data, void* pointer) {
-					if (pointer == nullptr) {
-						return;
-					}
-
-					// retrieve our header struct back, remember to free
-					// header->root only after we finish using the header
-					Header* header = static_cast<Header*>(pointer) - 1;
-					vkProxyInternalFreeNotification(user_data, header->size, DUMMY_TYPE, DUMMY_SCOPE);
-					free(header->root);
-				}
-
-				static void* vkProxyReallocationFunction(void* user_data, void* pointer, size_t size, size_t alignment, VkSystemAllocationScope scope) {
-
-					// we implement a reallocation as a simple allocation-copy-free combo
-					// no need to do smart things here, it's just for debugging anyway
-					void* allocated = vkProxyAllocationFunction(user_data, size, alignment, scope);
-
-					// we need to extract the old size to know how much
-					// do we need to copy (realloc can both shrink and grow the allocation)
-					Header* header = static_cast<Header*>(pointer) - 1;
-					size_t bytes = std::min(size, header->size);
-
-					// copy and free the old block
-					memcpy(allocated, pointer, bytes);
-					vkProxyFreeFunction(user_data, pointer);
-					return allocated;
-				}
-
-				static void vkProxyInternalAllocationNotification(void* user_data, size_t size, VkInternalAllocationType type, VkSystemAllocationScope scope) {
-					AllocatorState::of(user_data)->onAllocate(size);
-				}
-
-				static void vkProxyInternalFreeNotification(void* user_data, size_t size, VkInternalAllocationType type, VkSystemAllocationScope scope) {
-					AllocatorState::of(user_data)->onFree(size);
-				}
+				// Implementation of all the vulkan function required to form a VkAllocationCallbacks
+				static void* vkProxyAllocationFunction(void* user_data, size_t size, size_t alignment, VkSystemAllocationScope scope);
+				static void vkProxyFreeFunction(void* user_data, void* pointer);
+				static void* vkProxyReallocationFunction(void* user_data, void* pointer, size_t size, size_t alignment, VkSystemAllocationScope scope);
+				static void vkProxyInternalAllocationNotification(void* user_data, size_t size, VkInternalAllocationType type, VkSystemAllocationScope scope);
+				static void vkProxyInternalFreeNotification(void* user_data, size_t size, VkInternalAllocationType type, VkSystemAllocationScope scope);
 
 			public:
 
 				READONLY VkAllocationCallbacks allocator;
 
-				WrappedAllocator(const char* identifier, bool verbose) {
-					allocator.pUserData = new AllocatorState (identifier, verbose);
-					allocator.pfnAllocation = vkProxyAllocationFunction;
-					allocator.pfnFree = vkProxyFreeFunction;
-					allocator.pfnReallocation = vkProxyReallocationFunction;
-					allocator.pfnInternalAllocation = vkProxyInternalAllocationNotification;
-					allocator.pfnInternalFree = vkProxyInternalFreeNotification;
-				}
+				/**
+				 * Construct an Allocator
+				 *
+				 * @param identifier the name of the tracked resource type, like "Sampler" or "Buffer"
+				 * @param verbose controls weather each allocation and free call should be logged
+				 */
+				WrappedAllocator(const char* identifier, bool verbose);
 
-				void print(bool header) {
-					if (header) {
-						std::cout << AllocatorState::getHeaderString() << "\n";
-					}
-
-					std::cout << AllocatorState::of(allocator.pUserData)->getRowString() << "\n";
-				}
+				void print(bool header);
 
 		};
 
 		std::mutex mutex;
 		std::unordered_map<std::string, WrappedAllocator> allocators;
 
-		void printAllocators() {
-			bool first = true;
+		void printAllocators();
+		WrappedAllocator& getAllocator(const char* identifier, bool verbose);
 
-			for (auto& [key, allocator] : allocators) {
-				allocator.print(first);
-				first = false;
-			}
-		}
-
-		WrappedAllocator& getAllocator(const char* identifier, bool verbose) {
-			std::lock_guard lock {mutex};
-			return allocators.try_emplace(identifier, identifier, verbose).first->second;
-		}
-
-		static AllocatorCallbackFactory& getFactory() {
-			static AllocatorCallbackFactory factory;
-			return factory;
-		}
+		/// get a singleton instance of AllocatorCallbackFactory
+		static AllocatorCallbackFactory& getFactory();
 		#endif
 
 	public:
 
-		static VkAllocationCallbacks* named(const char* identifier, bool verbose = false) {
-			#if !defined(NDEBUG)
-			return &getFactory().getAllocator(identifier, verbose).allocator;
-			#endif
+		/// get (or create) an allocator for resource named 'identifier'
+		static VkAllocationCallbacks* named(const char* identifier, bool verbose = false);
 
-			return nullptr;
-		}
-
-		static void print() {
-			#if !defined(NDEBUG)
-			getFactory().printAllocators();
-			#endif
-		}
+		/// print all allocators as an ASCII table to the log
+		static void print();
 
 };

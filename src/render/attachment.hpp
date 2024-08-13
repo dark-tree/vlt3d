@@ -74,6 +74,10 @@ struct StencilOp {
 
 };
 
+/**
+ * Abstraction over the "Image-View-Sampler" triple in the context of full-screen images used
+ * in shaders as outputs (or inputs) such as the depth buffer or the various images used in deferred rendering
+ */
 class Attachment {
 
 	private:
@@ -93,7 +97,6 @@ class Attachment {
 		READONLY VkImageUsageFlags vk_usage;
 		READONLY VkImageAspectFlags vk_aspect;
 		READONLY VkClearValue vk_clear;
-		READONLY VkImageTiling vk_tiling = VK_IMAGE_TILING_OPTIMAL;
 		READONLY VkFilter vk_filter = VK_FILTER_LINEAR;
 		READONLY VkSamplerAddressMode vk_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		READONLY VkBorderColor vk_border = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -106,28 +109,9 @@ class Attachment {
 
 		Attachment() = default;
 
-		void allocate(Device& device, VkExtent2D extent, Allocator& allocator) {
-			ImageInfo info {extent.width, extent.height, vk_format, vk_usage};
-			info.required(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			info.tiling(vk_tiling);
+		void allocate(Device& device, VkExtent2D extent, Allocator& allocator);
 
-			// close if it was already allocated
-			close(device);
-
-			allocated = true;
-			image = allocator.allocateImage(info);
-			view = image.getViewBuilder().build(device, vk_aspect);
-			sampler = view.getSamplerBuilder().setFilter(vk_filter).setMode(vk_mode).setBorder(vk_border).build(device);
-		}
-
-		void close(Device& device) {
-			if (allocated) {
-				sampler.close(device);
-				view.close(device);
-				image.close();
-				allocated = false;
-			}
-		}
+		void close(Device& device);
 
 };
 
@@ -139,64 +123,20 @@ class AttachmentImageBuilder {
 
 	public:
 
-		static AttachmentImageBuilder begin() {
-			return {};
-		}
+		static AttachmentImageBuilder begin();
 
 	public:
 
-		AttachmentImageBuilder& setFormat(VkFormat format) {
-			attachment.vk_format = format;
-			return *this;
-		}
+		AttachmentImageBuilder& setFormat(VkFormat format);
+		AttachmentImageBuilder& setUsage(VkImageUsageFlags usage);
+		AttachmentImageBuilder& setAspect(VkImageAspectFlags aspect);
+		AttachmentImageBuilder& setFilter(VkFilter filter);
+		AttachmentImageBuilder& setMode(VkSamplerAddressMode mode);
+		AttachmentImageBuilder& setBorder(VkBorderColor border);
+		AttachmentImageBuilder& setColorClearValue(float r, float g, float b, float a);
+		AttachmentImageBuilder& setColorClearValue(int r, int g, int b, int a);
+		AttachmentImageBuilder& setDepthClearValue(float depth, uint32_t stencil = 0);
 
-		AttachmentImageBuilder& setUsage(VkImageUsageFlags usage) {
-			attachment.vk_usage = usage;
-			return *this;
-		}
-
-		AttachmentImageBuilder& setAspect(VkImageAspectFlags aspect) {
-			attachment.vk_aspect = aspect;
-			return *this;
-		}
-
-		AttachmentImageBuilder& setTiling(VkImageTiling tiling) {
-			attachment.vk_tiling = tiling;
-			return *this;
-		}
-
-		AttachmentImageBuilder& setFilter(VkFilter filter) {
-			attachment.vk_filter = filter;
-			return *this;
-		}
-
-		AttachmentImageBuilder& setMode(VkSamplerAddressMode mode) {
-			attachment.vk_mode = mode;
-			return *this;
-		}
-
-		AttachmentImageBuilder& setBorder(VkBorderColor border) {
-			attachment.vk_border = border;
-			return *this;
-		}
-
-		AttachmentImageBuilder& setColorClearValue(float r, float g, float b, float a) {
-			attachment.vk_clear.color = {.float32 = {r, g, b, a}};
-			return *this;
-		}
-
-		AttachmentImageBuilder& setColorClearValue(int r, int g, int b, int a) {
-			attachment.vk_clear.color = {.int32 = {r, g, b, a}};
-			return *this;
-		}
-
-		AttachmentImageBuilder& setDepthClearValue(float depth, uint32_t stencil = 0) {
-			attachment.vk_clear.depthStencil = {depth, stencil};
-			return *this;
-		}
-
-		Attachment build() const {
-			return attachment;
-		}
+		Attachment build() const;
 
 };
