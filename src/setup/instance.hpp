@@ -46,7 +46,7 @@ class Instance {
 
 		void close() {
 			messenger.close();
-			vkDestroyInstance(vk_instance, nullptr);
+			vkDestroyInstance(vk_instance, AllocatorCallbackFactory::named("Instance"));
 		}
 
 		/**
@@ -178,7 +178,7 @@ class InstanceBuilder {
 			}
 
 			VkInstance instance;
-			if (vkCreateInstance(&create_info, nullptr, &instance) != VK_SUCCESS) {
+			if (vkCreateInstance(&create_info, AllocatorCallbackFactory::named("Instance"), &instance) != VK_SUCCESS) {
 				throw Exception {"Failed to create Vulkan instance"};
 			}
 

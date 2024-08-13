@@ -34,8 +34,8 @@ class GraphicsPipeline {
 		: vk_pipeline(vk_pipeline), vk_layout(vk_layout), vk_device(vk_device) {}
 
 		void close() {
-			vkDestroyPipeline(vk_device, vk_pipeline, nullptr);
-			vkDestroyPipelineLayout(vk_device, vk_layout, nullptr);
+			vkDestroyPipeline(vk_device, vk_pipeline, AllocatorCallbackFactory::named("Pipeline"));
+			vkDestroyPipelineLayout(vk_device, vk_layout, AllocatorCallbackFactory::named("PipelineLayout"));
 		}
 
 };
@@ -369,7 +369,7 @@ class GraphicsPipelineBuilder {
 			// first create the pipeline layout, it will be bundled with the pipeline
 			VkPipelineLayout pipeline_layout;
 
-			if (vkCreatePipelineLayout(device.vk_device, &layout, nullptr, &pipeline_layout) != VK_SUCCESS) {
+			if (vkCreatePipelineLayout(device.vk_device, &layout, AllocatorCallbackFactory::named("PipelineLayout"), &pipeline_layout) != VK_SUCCESS) {
 				throw Exception {"Failed to create graphics pipeline layout!"};
 			}
 
@@ -408,7 +408,7 @@ class GraphicsPipelineBuilder {
 
 			VkPipeline pipeline;
 
-			if (vkCreateGraphicsPipelines(device.vk_device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline) != VK_SUCCESS) {
+			if (vkCreateGraphicsPipelines(device.vk_device, VK_NULL_HANDLE, 1, &create_info, AllocatorCallbackFactory::named("Pipeline"), &pipeline) != VK_SUCCESS) {
 				throw Exception {"Failed to create graphics pipeline!"};
 			}
 

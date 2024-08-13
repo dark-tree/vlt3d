@@ -124,7 +124,7 @@ class Attachment {
 			if (allocated) {
 				sampler.close(device);
 				view.close(device);
-				image.close(device);
+				image.close();
 				allocated = false;
 			}
 		}

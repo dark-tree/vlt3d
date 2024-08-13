@@ -313,6 +313,7 @@ void RenderSystem::createFrames() {
 		frames.clear();
 		descriptor_pool.reset();
 		graphics_pool.reset(true);
+		transient_pool.reset(true);
 	}
 
 	for (int i = 0; i < concurrent; i ++) {

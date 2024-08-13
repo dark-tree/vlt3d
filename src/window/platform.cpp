@@ -18,6 +18,8 @@
 
 #include "external.hpp"
 #include "platform.hpp"
+#include "setup/callback.hpp"
+#include "util/exception.hpp"
 
 // a hack to make this work while i think of a better way to fix this
 // https://stackoverflow.com/a/43854514
@@ -40,8 +42,8 @@
 		create_info.hwnd = glfwGetWin32Window(window);
 		create_info.hinstance = GetModuleHandle(nullptr);
 
-		if (vkCreateWin32SurfaceKHR(instance, &create_info, nullptr, surface) != VK_SUCCESS) {
-			throw std::runtime_error("vkCreateWin32SurfaceKHR: Failed to create Win32 window surface!");
+		if (vkCreateWin32SurfaceKHR(instance, &create_info, AllocatorCallbackFactory::named("SurfaceKHR"), surface) != VK_SUCCESS) {
+			throw Exception {"Failed to create Win32 window surface!"};
 		}
 
 	}
@@ -55,8 +57,8 @@
 		create_info.dpy = glfwGetX11Display();
 		create_info.window = glfwGetX11Window(window);
 
-		if (vkCreateXlibSurfaceKHR(instance, &create_info, nullptr, surface) != VK_SUCCESS) {
-			throw std::runtime_error("vkCreateXlibSurfaceKHR: Failed to create Xlib window surface!");
+		if (vkCreateXlibSurfaceKHR(instance, &create_info, AllocatorCallbackFactory::named("SurfaceKHR"), surface) != VK_SUCCESS) {
+			throw Exception {"Failed to create Xlib window surface!"};
 		}
 
 	}
@@ -70,8 +72,8 @@
 		create_info.display = glfwGetWaylandDisplay();
 		create_info.surface = glfwGetWaylandWindow(window);
 
-		if (vkCreateWaylandSurfaceKHR(instance, &create_info, nullptr, surface) != VK_SUCCESS) {
-			throw std::runtime_error("vkCreateWaylandSurfaceKHR: Failed to create Wayland window surface!");
+		if (vkCreateWaylandSurfaceKHR(instance, &create_info, AllocatorCallbackFactory::named("SurfaceKHR"), surface) != VK_SUCCESS) {
+			throw Exception {"Failed to create Wayland window surface!"};
 		}
 
 	}

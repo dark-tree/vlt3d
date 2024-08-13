@@ -3,6 +3,7 @@
 #include "external.hpp"
 #include "window/window.hpp"
 #include "util/logger.hpp"
+#include "callback.hpp"
 
 class WindowSurface {
 
@@ -53,6 +54,6 @@ class WindowSurface {
 		}
 
 		void close() {
-			vkDestroySurfaceKHR(vk_instance, vk_surface, nullptr);
+			vkDestroySurfaceKHR(vk_instance, vk_surface, AllocatorCallbackFactory::named("SurfaceKHR"));
 		}
 };

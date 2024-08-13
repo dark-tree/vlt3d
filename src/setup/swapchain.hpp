@@ -72,7 +72,7 @@ class Swapchain {
 		}
 
 		void close() {
-			vkDestroySwapchainKHR(device->vk_device, vk_swapchain, nullptr);
+			vkDestroySwapchainKHR(device->vk_device, vk_swapchain, AllocatorCallbackFactory::named("Swapchain"));
 		}
 
 };
@@ -142,13 +142,13 @@ class SwapchainBuilder {
 			// how to handle pixels behind the window
 			create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
-			// ignore pixels that are obsured (for example by a window on top)
+			// ignore pixels that are obscured (for example by a window on top)
 			create_info.clipped = VK_TRUE;
 
 			VkSwapchainKHR swapchain;
 
-			if (vkCreateSwapchainKHR(device.vk_device, &create_info, nullptr, &swapchain) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateSwapchainKHR: Failed to create swapchain!");
+			if (vkCreateSwapchainKHR(device.vk_device, &create_info, AllocatorCallbackFactory::named("Swapchain"), &swapchain) != VK_SUCCESS) {
+				throw Exception {"Failed to create swapchain!"};
 			}
 
 			return Swapchain {swapchain, format, extent, device};

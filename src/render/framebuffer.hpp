@@ -21,10 +21,10 @@ class Framebuffer {
 
 		void close() {
 			for (VkImageView view : owned) {
-				vkDestroyImageView(vk_device, view, nullptr);
+				vkDestroyImageView(vk_device, view, AllocatorCallbackFactory::named("View"));
 			}
 
-			vkDestroyFramebuffer(vk_device, vk_buffer, nullptr);
+			vkDestroyFramebuffer(vk_device, vk_buffer, AllocatorCallbackFactory::named("Framebuffer"));
 		}
 
 };
@@ -70,7 +70,7 @@ class FramebufferBuilder {
 
 			VkFramebuffer framebuffer;
 
-			if (vkCreateFramebuffer(device.vk_device, &create_info, nullptr, &framebuffer) != VK_SUCCESS) {
+			if (vkCreateFramebuffer(device.vk_device, &create_info, AllocatorCallbackFactory::named("Framebuffer"), &framebuffer) != VK_SUCCESS) {
 				throw Exception {"Failed to create a framebuffer!"};
 			}
 

@@ -2,6 +2,7 @@
 
 #include "external.hpp"
 #include "setup/device.hpp"
+#include "setup/callback.hpp"
 
 class ImageSampler {
 
@@ -17,7 +18,7 @@ class ImageSampler {
 		: vk_sampler(sampler), vk_view(view) {}
 
 		void close(Device& device) {
-			vkDestroySampler(device.vk_device, vk_sampler, nullptr);
+			vkDestroySampler(device.vk_device, vk_sampler, AllocatorCallbackFactory::named("Sampler"));
 		}
 
 };
@@ -77,8 +78,8 @@ class ImageSamplerBuilder {
 
 			VkSampler sampler;
 
-			if (vkCreateSampler(device.vk_device, &create_info, nullptr, &sampler) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateSampler: Failed to create image sampler!");
+			if (vkCreateSampler(device.vk_device, &create_info, AllocatorCallbackFactory::named("Sampler"), &sampler) != VK_SUCCESS) {
+				throw Exception {"Failed to create image sampler!"};
 			}
 
 			return {sampler, vk_view};
@@ -92,21 +93,20 @@ class ImageView {
 	public:
 
 		READONLY VkImageView vk_view;
-		READONLY VkImage vk_image;
 
 	public:
 
 		ImageView() {}
 
-		ImageView(VkImageView vk_view, VkImage vk_image)
-		: vk_view(vk_view), vk_image(vk_image) {}
+		ImageView(VkImageView vk_view)
+		: vk_view(vk_view) {}
 
 		ImageSamplerBuilder getSamplerBuilder() {
 			return {vk_view};
 		}
 
 		void close(Device& device) {
-			vkDestroyImageView(device.vk_device, vk_view, nullptr);
+			vkDestroyImageView(device.vk_device, vk_view, AllocatorCallbackFactory::named("View"));
 		}
 
 };
@@ -155,11 +155,11 @@ class ImageViewBuilder {
 
 			VkImageView view;
 
-			if (vkCreateImageView(device.vk_device, &create_info, nullptr, &view) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateImageView: Failed to create image view!");
+			if (vkCreateImageView(device.vk_device, &create_info, AllocatorCallbackFactory::named("View"), &view) != VK_SUCCESS) {
+				throw Exception ("Failed to create image view!");
 			}
 
-			return ImageView {view, image};
+			return ImageView {view};
 
 		}
 

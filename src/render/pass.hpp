@@ -263,7 +263,7 @@ class RenderPass {
 		}
 
 		void close() {
-			vkDestroyRenderPass(vk_device, vk_pass, nullptr);
+			vkDestroyRenderPass(vk_device, vk_pass, AllocatorCallbackFactory::named("RenderPass"));
 		}
 
 };
@@ -376,7 +376,7 @@ class RenderPassBuilder {
 			create_info.pDependencies = dependency_descriptions.data();
 
 			VkRenderPass render_pass;
-			if (vkCreateRenderPass(device.vk_device, &create_info, nullptr, &render_pass) != VK_SUCCESS) {
+			if (vkCreateRenderPass(device.vk_device, &create_info, AllocatorCallbackFactory::named("RenderPass"), &render_pass) != VK_SUCCESS) {
 				throw Exception {"Failed to create render pass!"};
 			}
 

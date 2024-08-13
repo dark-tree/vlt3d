@@ -135,6 +135,6 @@ ImageViewBuilder Image::getViewBuilder() const {
 	return ImageViewBuilder {vk_image, vk_format};
 }
 
-void Image::close(Device& device) {
-	vkDestroyImage(device.vk_device, vk_image, nullptr);
+void Image::close() {
+	memory.closeImage(vk_image);
 }

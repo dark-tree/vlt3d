@@ -239,7 +239,7 @@ class Allocator {
 			const VmaAllocationCreateInfo allocation_info = info.getAllocationInfo();
 			const VkImageCreateInfo image_info = info.getImageInfo();
 
-			if(vmaCreateImage(vma_allocator, &image_info, &allocation_info, &image, &allocation, nullptr) != VK_SUCCESS) {
+			if (vmaCreateImage(vma_allocator, &image_info, &allocation_info, &image, &allocation, nullptr) != VK_SUCCESS) {
 				throw Exception {"Failed to allocated buffer!"};
 			}
 

@@ -120,6 +120,6 @@ class Image {
 		Image(VkImage vk_image, VkFormat vk_format, MemoryAccess memory);
 
 		ImageViewBuilder getViewBuilder() const;
-		void close(Device& device);
+		void close();
 
 };

@@ -55,32 +55,6 @@ class CommandRecorder {
 			return *this;
 		}
 
-		[[deprecated("Use withViewport() during pipeline creation")]]
-		CommandRecorder& setDynamicViewport(int x, int y, uint32_t width, uint32_t height, float min_depth = 0.0f, float max_depth = 1.0f) {
-
-			VkViewport viewport {};
-			viewport.x = (float) x;
-			viewport.y = (float) y;
-			viewport.width = (float) width;
-			viewport.height = (float) height;
-			viewport.minDepth = min_depth;
-			viewport.maxDepth = max_depth;
-
-			vkCmdSetViewport(vk_buffer, 0, 1, &viewport);
-			return *this;
-		}
-
-		[[deprecated("Use withScissors() during pipeline creation")]]
-		CommandRecorder& setDynamicScissors(int x, int y, uint32_t width, uint32_t height) {
-
-			VkRect2D scissor {};
-			scissor.offset = {x, y};
-			scissor.extent = {width, height};
-
-			vkCmdSetScissor(vk_buffer, 0, 1, &scissor);
-			return *this;
-		}
-
 		CommandRecorder& writePushConstant(const PushConstant& constant, const void* data) {
 			vkCmdPushConstants(vk_buffer, vk_layout, constant.flags, constant.offset, constant.size, data);
 			return *this;

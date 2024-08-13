@@ -7,6 +7,7 @@
 #include "sync/semaphore.hpp"
 #include "buffer/memory.hpp"
 #include "setup/picker.hpp"
+#include "callback.hpp"
 
 /**
  * A Vulkan Logical Device, a configured connection to a physical device
@@ -38,7 +39,7 @@ class Device {
 		}
 
 		void close() {
-			vkDestroyDevice(vk_device, nullptr);
+			vkDestroyDevice(vk_device, AllocatorCallbackFactory::named("Device"));
 		}
 
 		Fence fence(bool signaled = false) const {
@@ -122,7 +123,7 @@ class DeviceBuilder {
 			create_info.enabledLayerCount = 0;
 
 			VkDevice device;
-			if (vkCreateDevice(vk_device, &create_info, nullptr, &device) != VK_SUCCESS) {
+			if (vkCreateDevice(vk_device, &create_info, AllocatorCallbackFactory::named("Device"), &device) != VK_SUCCESS) {
 				throw Exception {"Failed to create logical device!"};
 			}
 
