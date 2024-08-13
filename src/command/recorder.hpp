@@ -20,7 +20,7 @@ class CommandRecorder {
 		: vk_buffer(vk_buffer), vk_layout(nullptr) {}
 
 		// TODO clean this one
-		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent, float r, float g, float b, float a) {
+		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent) {
 
 			VkRenderPassBeginInfo info {};
 			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -30,17 +30,10 @@ class CommandRecorder {
 			info.renderArea.offset = {0, 0};
 			info.renderArea.extent = extent;
 
-			// TODO set clear color
-			VkClearValue clears[8] = {0};
-
-			for (auto& clear : clears) {
-				clear.color = {{ 0.0f, 0.0f, 0.0f, 0.0f }};
-			}
-
-			clears[4].depthStencil = {1.0f, 0};
-
-			info.clearValueCount = 5;
-			info.pClearValues = clears;
+			// attachments define their own clear values
+			const std::vector<VkClearValue>& values = render_pass.values;
+			info.clearValueCount = values.size();
+			info.pClearValues = values.data();
 
 			vkCmdBeginRenderPass(vk_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 			return *this;

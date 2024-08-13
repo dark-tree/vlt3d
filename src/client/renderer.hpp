@@ -91,16 +91,14 @@ class RenderSystem {
 		CommandPool graphics_pool;
 		CommandPool transient_pool;
 
+		Attachment attachment_color;
+		Attachment attachment_albedo;
+		Attachment attachment_normal;
+		Attachment attachment_position;
+		Attachment attachment_depth;
+
 		Swapchain swapchain;
 		RenderPass render_pass;
-		Image depth_image;
-		ImageView depth_view;
-		Image albedo_image;
-		ImageView albedo_view;
-		Image normal_image;
-		ImageView normal_view;
-		Image position_image;
-		ImageView position_view;
 		std::vector<Framebuffer> framebuffers;
 
 		ResourceManager assets;
@@ -110,7 +108,6 @@ class RenderSystem {
 		BindingLayout binding_terrain;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;
-		BindingLayout binding_null;
 		GraphicsPipeline pipeline_2d_compose;
 		GraphicsPipeline pipeline_3d_terrain;
 		GraphicsPipeline pipeline_3d_tint;
@@ -172,6 +169,8 @@ class RenderSystem {
 		 * it will be called every time a resource reload or swapchain recreation occurs
 		 */
 		void createPipelines();
+
+		void createFrames();
 
 	public:
 

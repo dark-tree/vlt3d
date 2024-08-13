@@ -26,7 +26,7 @@ int main() {
 //	sound_system.add(buffer).loop().play();
 
 	Window window {1000, 700, "Funny Vulkan App"};
-	RenderSystem system {window, 1};
+	RenderSystem system {window, 3};
 
 	// for now
 	Swapchain& swapchain = system.swapchain;
@@ -87,7 +87,7 @@ int main() {
 		Skybox skybox;
 		Sun sun = skybox.getSunData(camera.getPosition().x / 100);
 
-		recorder.beginRenderPass(pass, framebuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
+		recorder.beginRenderPass(pass, framebuffer, extent);
 		recorder.bindPipeline(system.pipeline_3d_terrain);
 		recorder.writePushConstant(system.mvp_vertex_constant, &frame.uniforms);
 		recorder.bindDescriptorSet(frame.set1);

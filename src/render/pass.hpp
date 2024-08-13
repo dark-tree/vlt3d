@@ -45,30 +45,40 @@ class AttachmentBuilder {
 		}
 
 		/**
-		 * Describes how the attachment data should be treated on load
+		 * Describes how the attachment data should be treated on load at the start of a render pass
 		 *
 		 * @param color describes what should happen to the color data
 		 * @param stencil describes what should happen to the stencil data
 		 * @param layout describes what layout should be used
 		 */
 		template <typename C, typename S>
-		AttachmentBuilder& input(AttachmentOp<ColorOp, C> color, AttachmentOp<StencilOp, S> stencil, VkImageLayout layout) {
+		AttachmentBuilder& begin(AttachmentOp<ColorOp, C> color, AttachmentOp<StencilOp, S> stencil, VkImageLayout layout) {
 			return input(color.load(), stencil.load(), layout);
 		}
 
+		template <typename C>
+		AttachmentBuilder& begin(AttachmentOp<ColorOp, C> color, VkImageLayout layout) {
+			return begin(color, StencilOp::IGNORE, layout);
+		}
+
 		/**
-		 * Describes how the attachment data should be treated on write
+		 * Describes how the attachment data should be treated after the render pass
 		 *
 		 * @param color describes what should happen to the color data
 		 * @param stencil describes what should happen to the stencil data
 		 * @param layout describes what layout should be used
 		 */
 		template <typename C, typename S>
-		AttachmentBuilder& output(AttachmentOp<ColorOp, C> color, AttachmentOp<StencilOp, S> stencil, VkImageLayout layout) {
+		AttachmentBuilder& end(AttachmentOp<ColorOp, C> color, AttachmentOp<StencilOp, S> stencil, VkImageLayout layout) {
 			return output(color.store(), stencil.store(), layout);
 		}
 
-		T& next() {
+		template <typename C>
+		AttachmentBuilder& end(AttachmentOp<ColorOp, C> color, VkImageLayout layout) {
+			return end(color, StencilOp::IGNORE, layout);
+		}
+
+		Attachment::Ref next() {
 			return builder.addAttachment(*this);
 		}
 
@@ -203,30 +213,30 @@ class SubpassBuilder {
 		}
 
 		/// attachments that are read from a shader
-		SubpassBuilder& addInput(uint32_t attachment, VkImageLayout layout) {
-			references.insert(attachment);
-			inputs.push_back(getReference(attachment, layout));
+		SubpassBuilder& addInput(Attachment::Ref attachment, VkImageLayout target_layout) {
+			references.insert(attachment.index);
+			inputs.push_back(getReference(attachment.index, target_layout));
 			return *this;
 		}
 
 		/// attachment for color data
-		SubpassBuilder& addOutput(uint32_t attachment, VkImageLayout layout) {
-			references.insert(attachment);
-			colors.push_back(getReference(attachment, layout));
+		SubpassBuilder& addOutput(Attachment::Ref attachment, VkImageLayout target_layout) {
+			references.insert(attachment.index);
+			colors.push_back(getReference(attachment.index, target_layout));
 			return *this;
 		}
 
 		/// attachment for depth and stencil data
-		SubpassBuilder& addDepth(uint32_t attachment, VkImageLayout layout) {
-			references.insert(attachment);
-			depths.push_back(getReference(attachment, layout));
+		SubpassBuilder& addDepth(Attachment::Ref attachment, VkImageLayout target_layout) {
+			references.insert(attachment.index);
+			depths.push_back(getReference(attachment.index, target_layout));
 			return *this;
 		}
 
 		/// attachments used for multisampling color attachments
-		SubpassBuilder& addResolve(uint32_t attachment, VkImageLayout layout) {
-			references.insert(attachment);
-			resolves.push_back(getReference(attachment, layout));
+		SubpassBuilder& addResolve(Attachment::Ref attachment, VkImageLayout target_layout) {
+			references.insert(attachment.index);
+			resolves.push_back(getReference(attachment.index, target_layout));
 			return *this;
 		}
 
@@ -242,12 +252,15 @@ class RenderPass {
 
 		READONLY VkDevice vk_device;
 		READONLY VkRenderPass vk_pass;
+		READONLY std::vector<VkClearValue> values;
 
 	public:
 
 		RenderPass() = default;
-		RenderPass(VkDevice vk_device, VkRenderPass vk_pass)
-		: vk_device(vk_device), vk_pass(vk_pass) {}
+		RenderPass(VkDevice vk_device, VkRenderPass vk_pass, std::vector<VkClearValue> values)
+		: vk_device(vk_device), vk_pass(vk_pass), values(values) {
+			values.shrink_to_fit();
+		}
 
 		void close() {
 			vkDestroyRenderPass(vk_device, vk_pass, nullptr);
@@ -259,6 +272,7 @@ class RenderPassBuilder {
 
 	private:
 
+		std::vector<VkClearValue> values;
 		std::vector<AttachmentBuilder<>> attachments;
 		std::vector<SubpassBuilder<>> subpasses;
 		std::vector<DependencyBuilder<>> dependencies;
@@ -267,9 +281,9 @@ class RenderPassBuilder {
 
 	public:
 
-		RenderPassBuilder& addAttachment(AttachmentBuilder<>& builder) {
+		Attachment::Ref addAttachment(AttachmentBuilder<>& builder) {
 			attachments.push_back(builder);
-			return *this;
+			return attachments.size() - 1;
 		}
 
 		/**
@@ -277,6 +291,11 @@ class RenderPassBuilder {
 		 */
 		AttachmentBuilder<> addAttachment(VkFormat format, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT) {
 			return {*this, format, samples};
+		}
+
+		AttachmentBuilder<> addAttachment(const Attachment& attachment, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT) {
+			values.push_back(attachment.vk_clear);
+			return addAttachment(attachment.vk_format, samples);
 		}
 
 	public:
@@ -361,7 +380,7 @@ class RenderPassBuilder {
 				throw Exception {"Failed to create render pass!"};
 			}
 
-			return {device.vk_device, render_pass};
+			return {device.vk_device, render_pass, values};
 
 		}
 

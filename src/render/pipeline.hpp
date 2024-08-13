@@ -91,7 +91,8 @@ class GraphicsPipelineBuilder {
 			view.scissorCount = 1;
 			view.pScissors = &vk_scissor;
 
-			for (int i = 0; i < blending.attachmentCount; i ++) {
+			// technically blending is per-pipeline and per-attachment but we limit it to per-pipeline only here
+			for (int i = 0; i < (int) blending.attachmentCount; i ++) {
 				attachments.push_back(attachment);
 			}
 
