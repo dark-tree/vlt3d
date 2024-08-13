@@ -46,11 +46,11 @@ class Frame {
 		Fence flight_fence;
 
 		Uniforms uniforms;
-		DescriptorSet set1, set2;
+		DescriptorSet set_1;
 
 	public:
 
-		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor1, DescriptorSet descriptor2, const ImageSampler& sampler, const ImageSampler& albedo_sampler, const ImageSampler& normal_sampler, const ImageSampler& position_sampler);
+		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor_1, const ImageSampler& atlas_sampler);
 
 		/**
 		 * This class is fully managed by the RenderSystem so it uses
@@ -92,9 +92,6 @@ class RenderSystem {
 		CommandPool transient_pool;
 
 		Attachment attachment_color;
-		Attachment attachment_albedo;
-		Attachment attachment_normal;
-		Attachment attachment_position;
 		Attachment attachment_depth;
 
 		Swapchain swapchain;
@@ -104,11 +101,9 @@ class RenderSystem {
 		ResourceManager assets;
 
 		DescriptorSetLayout descriptor_layout;
-		DescriptorSetLayout composition_layout;
 		BindingLayout binding_terrain;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;
-		GraphicsPipeline pipeline_2d_compose;
 		GraphicsPipeline pipeline_3d_terrain;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;

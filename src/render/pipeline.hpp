@@ -341,6 +341,7 @@ class GraphicsPipelineBuilder {
 
 	// renderpass configuration
 
+		// TODO get attachment count from here not from that constructor arg
 		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, uint32_t index = 0) {
 			vk_pass = render_pass.vk_pass;
 			subpass = (int) index;

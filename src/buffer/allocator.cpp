@@ -148,7 +148,7 @@ Image Allocator::allocateImage(const ImageInfo& info) {
 	const VkImageCreateInfo image_info = info.getImageInfo();
 
 	if (vmaCreateImage(vma_allocator, &image_info, &allocation_info, &image, &allocation, nullptr) != VK_SUCCESS) {
-		throw Exception {"Failed to allocated buffer!"};
+		throw Exception {"Failed to allocated image!"};
 	}
 
 	return {image, image_info.format, {vma_allocator, allocation}};

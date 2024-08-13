@@ -30,7 +30,6 @@ int main() {
 
 	// for now
 	Swapchain& swapchain = system.swapchain;
-	RenderPass& pass = system.render_pass;
 
 	World world;
 	WorldRenderer world_renderer {system, world};
@@ -87,25 +86,16 @@ int main() {
 		Skybox skybox;
 		Sun sun = skybox.getSunData(camera.getPosition().x / 100);
 
-		recorder.beginRenderPass(pass, framebuffer, extent);
+		recorder.beginRenderPass(system.render_pass, framebuffer, extent);
 		recorder.bindPipeline(system.pipeline_3d_terrain);
 		recorder.writePushConstant(system.mvp_vertex_constant, &frame.uniforms);
-		recorder.bindDescriptorSet(frame.set1);
+		recorder.writePushConstant(system.sun_vertex_constant, &sun);
+		recorder.bindDescriptorSet(frame.set_1);
 
 		world_renderer.draw(recorder, frustum);
 		world_renderer.eraseOutside(camera.getPosition(), 12);
 
-		recorder.nextSubpass();
-
-		recorder.bindPipeline(system.pipeline_2d_compose);
-		recorder.writePushConstant(system.sun_vertex_constant, &sun);
-		recorder.bindDescriptorSet(frame.set2);
-		recorder.draw(3);
-
-		recorder.nextSubpass();
-
 		recorder.bindPipeline(system.pipeline_3d_tint)
-			.bindDescriptorSet(frame.set1)
 			.bindBuffer(frame.immediate_3d.getBuffer())
 			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)
