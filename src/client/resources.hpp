@@ -9,6 +9,7 @@
 class CommandBuffer;
 class Device;
 class Allocator;
+class RenderSystem;
 
 class ResourceManager {
 
@@ -16,8 +17,12 @@ class ResourceManager {
 
 		struct State {
 
+			Device& device;
 			Atlas atlas;
 			Font font;
+
+			Image image;
+			ImageView view;
 			ImageSampler sampler;
 
 			ShaderModule vert_2d;
@@ -28,7 +33,8 @@ class ResourceManager {
 			ShaderModule frag_tint;
 			ShaderModule frag_compose;
 
-			State(Device& device, Allocator& allocator, CommandRecorder& recorder);
+			State(RenderSystem& system, TaskQueue& queue, CommandRecorder& recorder);
+			~State();
 
 		};
 
@@ -52,6 +58,9 @@ class ResourceManager {
 		 * some sort of a progress tracker
 		 * object and show a loading screen
 		 */
-		void reload(Device& device, Allocator& allocator, CommandBuffer pool);
+		void reload(RenderSystem& system, TaskQueue& queue, CommandBuffer pool);
+
+		/// close all resource and load nothing, expects that none of the assets are in use
+		void close();
 
 };

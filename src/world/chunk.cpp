@@ -24,7 +24,7 @@ Chunk::Chunk(glm::ivec3 pos)
 : pos(pos) {}
 
 Chunk::~Chunk() {
-	delete[] blocks;
+	std::free(blocks);
 }
 
 void Chunk::setBlock(int x, int y, int z, Block block) {

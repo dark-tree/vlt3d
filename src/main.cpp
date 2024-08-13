@@ -127,7 +127,8 @@ int main() {
 		sound_system.update();
 	}
 
-	system.wait();
+	world_renderer.close();
+	system.close();
 	window.close();
 	glfwTerminate();
 

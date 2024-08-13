@@ -82,9 +82,11 @@ class ChunkRenderPool {
 	public:
 
 		ChunkRenderPool(WorldRenderer& renderer, RenderSystem& system, World& world);
-		~ChunkRenderPool();
 
 		/// add a chunk remesh request
 		void push(glm::ivec3 chunk, bool important);
+
+		/// wait for all pending jobs and free resources
+		void close();
 
 };

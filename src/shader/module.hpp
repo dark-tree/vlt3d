@@ -31,7 +31,6 @@ class ShaderModule {
 
 		}
 
-		// TODO this is not, as of yet, called anywhere
 		void close(Device& device) {
 			vkDestroyShaderModule(device.vk_device, vk_module, AllocatorCallbackFactory::named("ShaderModule"));
 		}

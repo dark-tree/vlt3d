@@ -208,6 +208,7 @@ class Allocator {
 			create_info.pVulkanFunctions = &functions;
 			create_info.instance = instance.vk_instance;
 			create_info.vulkanApiVersion = VK_API_VERSION_1_0;
+			create_info.pAllocationCallbacks = AllocatorCallbackFactory::named("VmaAllocator");
 
 			vmaCreateAllocator(&create_info, &vma_allocator);
 		}

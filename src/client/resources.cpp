@@ -3,8 +3,10 @@
 #include "command/pool.hpp"
 #include "util/threads.hpp"
 #include "shader/compiler.hpp"
+#include "client/renderer.hpp"
 
-ResourceManager::State::State(Device& device, Allocator& allocator, CommandRecorder& recorder) {
+ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRecorder& recorder)
+: device(system.device) {
 
 	Compiler compiler;
 
@@ -26,8 +28,8 @@ ResourceManager::State::State(Device& device, Allocator& allocator, CommandRecor
 	atlas.getImage().save("atlas.png");
 	fallback.close();
 
-	Image image = atlas.getImage().upload(allocator, recorder, VK_FORMAT_R8G8B8A8_SRGB);
-	ImageView view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
+	this->image = atlas.getImage().upload(system.allocator, queue, recorder, VK_FORMAT_R8G8B8A8_SRGB);
+	this->view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
 	this->sampler = view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
 
 	this->vert_2d = compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device);
@@ -37,7 +39,20 @@ ResourceManager::State::State(Device& device, Allocator& allocator, CommandRecor
 	this->frag_terrain = compiler.compileFile("assets/shaders/frag_terrain.glsl", Kind::FRAGMENT).create(device);
 	this->frag_tint = compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device);
 	this->frag_compose = compiler.compileFile("assets/shaders/frag_compose.glsl", Kind::FRAGMENT).create(device);
+}
 
+ResourceManager::State::~State() {
+	atlas.close();
+	sampler.close(device);
+	view.close(device);
+	image.close();
+	vert_2d.close(device);
+	vert_3d.close(device);
+	vert_terrain.close(device);
+	vert_compose.close(device);
+	frag_terrain.close(device);
+	frag_tint.close(device);
+	frag_compose.close(device);
 }
 
 void ResourceManager::replace(State* state) {
@@ -61,11 +76,11 @@ const ImageSampler& ResourceManager::getAtlasSampler() const {
 	return state->sampler;
 }
 
-void ResourceManager::reload(Device& device, Allocator& allocator, CommandBuffer buffer) {
+void ResourceManager::reload(RenderSystem& system, TaskQueue& queue, CommandBuffer buffer) {
 	if (!loading.test_and_set()) {
 		try {
 			CommandRecorder recorder = buffer.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-			replace(new State(device, allocator, recorder));
+			replace(new State(system, queue, recorder));
 			recorder.done();
 		} catch (Exception& cause) {
 			throw Exception("Failed to reload resources", cause);
@@ -74,4 +89,8 @@ void ResourceManager::reload(Device& device, Allocator& allocator, CommandBuffer
 	} else {
 		logger::info("Ignoring resource reload request, it looks like one is already under way");
 	}
+}
+
+void ResourceManager::close() {
+	replace(nullptr);
 }

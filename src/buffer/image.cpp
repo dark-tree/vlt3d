@@ -53,6 +53,18 @@ void ImageData::close() {
 	}
 }
 
+void ImageData::clear(std::initializer_list<uint8_t> value) {
+	if (value.size() != channels()) {
+		throw Exception {"Can't clear image with given value, invalid channel count!"};
+	}
+
+	for (int y = 0; y < (int) h; y ++) {
+		for (int x = 0; x < (int) w; x++) {
+			memcpy(pixel(x, y), value.begin(), c);
+		}
+	}
+}
+
 void ImageData::save(const std::string& path) const {
 	stbi_write_png(path.c_str(), w, h, c, pixels, w * c);
 }
@@ -69,10 +81,10 @@ ImageData ImageData::loadFromFile(const std::string& path, int channels) {
 }
 
 ImageData ImageData::allocate(int w, int h, int channels) {
-	return {Type::MALLOCED, malloc(w * h * channels), w, h, channels};
+	return {Type::MALLOCED, calloc(w * h * channels, 1), w, h, channels};
 }
 
-Image ImageData::upload(Allocator& allocator, CommandRecorder& recorder, VkFormat format) const {
+Image ImageData::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format) const {
 
 	BufferInfo buffer_builder {size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
 	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -96,6 +108,10 @@ Image ImageData::upload(Allocator& allocator, CommandRecorder& recorder, VkForma
 	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	recorder.copyBufferToImage(image, staging, w, h);
 	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+	queue.enqueue([staging] () mutable {
+		staging.close();
+	});
 
 	return image;
 

@@ -20,8 +20,9 @@ class AllocatorCallbackFactory {
 					private:
 
 						std::mutex mutex;
-						bool verbose;
 						const char* identifier;
+						bool verbose;
+
 						long allocations = 0;
 						long allocated = 0;
 						long frees = 0;

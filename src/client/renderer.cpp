@@ -302,7 +302,7 @@ void RenderSystem::createPipelines() {
 
 }
 
-void RenderSystem::createFrames() {
+void RenderSystem::closeFrames() {
 	if (!frames.empty()) {
 
 		// execute all pending operations to not leak any memory
@@ -315,6 +315,10 @@ void RenderSystem::createFrames() {
 		graphics_pool.reset(true);
 		transient_pool.reset(true);
 	}
+}
+
+void RenderSystem::createFrames() {
+	closeFrames();
 
 	for (int i = 0; i < concurrent; i ++) {
 		DescriptorSet descriptor_1 = descriptor_pool.allocate(descriptor_layout);
@@ -454,14 +458,16 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	// this step will need to be repeated each time the resources are reloaded
 
 	logger::debug("Resource reload took: ", Timer::of([&] {
+		TaskQueue queue;
 		Fence fence = device.fence();
 		CommandBuffer buffer = transient_pool.allocate();
-		assets.reload(device, allocator, buffer);
+		assets.reload(*this, queue, buffer);
 		buffer.submit().unlocks(fence).done(transfer_queue);
 
 		fence.wait();
 		fence.close();
 		buffer.close();
+		queue.execute();
 	}).milliseconds(), "ms");
 
 	createPipelines();
@@ -472,18 +478,21 @@ void RenderSystem::reloadAssets() {
 	wait();
 
 	logger::debug("Resource reload took: ", Timer::of([&] {
+		TaskQueue queue;
 		Fence fence = device.fence();
 		CommandBuffer buffer = transient_pool.allocate();
-		assets.reload(device, allocator, buffer);
+		assets.reload(*this, queue, buffer);
 		buffer.submit().unlocks(fence).done(transfer_queue);
 
 		fence.wait();
 		fence.close();
 		buffer.close();
+		queue.execute();
 
 		pipeline_2d_tint.close();
 		pipeline_3d_terrain.close();
 		pipeline_3d_tint.close();
+		pipeline_2d_compose.close();
 
 		createPipelines();
 		createFrames();
@@ -524,4 +533,42 @@ void RenderSystem::defer(const Task& task) {
 
 void RenderSystem::wait() {
 	device.wait();
+}
+
+void RenderSystem::close() {
+	wait();
+
+	swapchain.close();
+
+	attachment_depth.close(device);
+	attachment_normal.close(device);
+	attachment_albedo.close(device);
+	attachment_position.close(device);
+
+	for (Framebuffer& framebuffer : framebuffers) {
+		framebuffer.close();
+	}
+
+	closeFrames();
+
+	pipeline_2d_tint.close();
+	pipeline_3d_terrain.close();
+	pipeline_3d_tint.close();
+	pipeline_2d_compose.close();
+
+	render_pass.close();
+	descriptor_layout.close();
+	composition_layout.close();
+
+	assets.close();
+	transient_pool.close();
+	graphics_pool.close();
+	descriptor_pool.close();
+	surface.close();
+	allocator.close();
+
+	// Goodbye vulkan!
+	device.close();
+	instance.close();
+
 }

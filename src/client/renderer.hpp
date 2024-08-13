@@ -170,6 +170,14 @@ class RenderSystem {
 		 */
 		void createPipelines();
 
+		/**
+		 *
+		 */
+		void closeFrames();
+
+		/**
+		 *
+		 */
 		void createFrames();
 
 	public:
@@ -197,5 +205,8 @@ class RenderSystem {
 
 		/// Wait for all pending operations on all queues are finished
 		void wait();
+
+		/// Free are resources managed by this render system
+		void close();
 
 };

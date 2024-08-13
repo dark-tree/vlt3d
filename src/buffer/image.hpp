@@ -2,6 +2,7 @@
 
 #include "external.hpp"
 #include "memory.hpp"
+#include "util/threads.hpp"
 
 class Image;
 class CommandRecorder;
@@ -58,6 +59,12 @@ class ImageData {
 		void close();
 
 		/**
+		 * Clears the image, setting all pixels in the image to the
+		 * given value, must contains EXACTLY 'channels()' components
+		 */
+		void clear(std::initializer_list<uint8_t> value);
+
+		/**
 		 * Save the image data as a PNG image under the
 		 * given path, can be useful for debugging
 		 */
@@ -79,7 +86,7 @@ class ImageData {
 		 * Records a copy-to-GPU-memory operation into the
 		 * given command buffer, a staging buffer IS used and resulting image returned
 		 */
-		Image upload(Allocator& allocator, CommandRecorder& recorder, VkFormat format) const;
+		Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format) const;
 
 	public:
 

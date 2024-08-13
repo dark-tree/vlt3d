@@ -83,11 +83,7 @@ glm::vec2 Camera::getMouseDelta() {
 }
 
 Camera::Camera(Window& window, float sensitivity, float speed)
-: window(window) {
-
-	this->angle = glm::vec2(0);
-	this->rotation = glm::vec3(0);
-	this->pos = glm::vec3(2, 2, -2);
+: window(window), angle(0), pos(0), rotation(0), direction(1, 0, 0) {
 
 	this->sensitivity = sensitivity;
 	this->speed = speed;
