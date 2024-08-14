@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "external.hpp"
 #include "attachment.hpp"
 #include "util/pyramid.hpp"
@@ -177,7 +179,7 @@ class SubpassBuilder {
 			return !references.contains(attachment);
 		}
 
-		VkSubpassDescription finalize(const std::vector<uint32_t>& preserve) {
+		VkSubpassDescription finalize(const std::vector<uint32_t>& preserve, std::vector<int>& subpass_attachments) {
 
 			uint32_t input_count = inputs.size();
 			uint32_t color_count = colors.size();
@@ -200,6 +202,11 @@ class SubpassBuilder {
 
 			description.preserveAttachmentCount = (uint32_t) preserve.size();
 			description.pPreserveAttachments = preserve.data();
+
+			// this is here so that the renderpass can retain the information about
+			// how many attachments were there for each subpass - this is then used during pipeline
+			// creation to setup blending for each attachment
+			subpass_attachments.push_back(input_count + color_count);
 
 			return description;
 
@@ -253,17 +260,26 @@ class RenderPass {
 		READONLY VkDevice vk_device;
 		READONLY VkRenderPass vk_pass;
 		READONLY std::vector<VkClearValue> values;
+		READONLY std::vector<int> subpasses;
 
 	public:
 
 		RenderPass() = default;
-		RenderPass(VkDevice vk_device, VkRenderPass vk_pass, std::vector<VkClearValue> values)
-		: vk_device(vk_device), vk_pass(vk_pass), values(values) {
+		RenderPass(VkDevice vk_device, VkRenderPass vk_pass, std::vector<VkClearValue>& values, std::vector<int>& subpass_attachments)
+		: vk_device(vk_device), vk_pass(vk_pass), values(values), subpasses(subpass_attachments) {
 			values.shrink_to_fit();
 		}
 
 		void close() {
 			vkDestroyRenderPass(vk_device, vk_pass, AllocatorCallbackFactory::named("RenderPass"));
+		}
+
+		int getAttachmentCount(int subpass) const {
+			return subpasses[subpass];
+		}
+
+		int getSubpassCount() const {
+			return subpasses.size();
 		}
 
 };
@@ -335,6 +351,7 @@ class RenderPassBuilder {
 			std::vector<VkSubpassDescription> subpass_descriptions;
 			std::vector<VkSubpassDependency> dependency_descriptions;
 			std::vector<std::vector<uint32_t>> preserve_indices;
+			std::vector<int> subpass_attachments;
 
 			auto view = preserve.view();
 
@@ -362,7 +379,7 @@ class RenderPassBuilder {
 					}
 				}
 
-				subpass_descriptions.push_back(subpass.finalize(preserve_indices.back()));
+				subpass_descriptions.push_back(subpass.finalize(preserve_indices.back(), subpass_attachments));
 			}
 
 			VkRenderPassCreateInfo create_info {};
@@ -380,7 +397,7 @@ class RenderPassBuilder {
 				throw Exception {"Failed to create render pass!"};
 			}
 
-			return {device.vk_device, render_pass, values};
+			return {device.vk_device, render_pass, values, subpass_attachments};
 
 		}
 

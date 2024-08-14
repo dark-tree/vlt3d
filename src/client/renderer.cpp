@@ -193,7 +193,7 @@ void RenderSystem::createPipelines() {
 
 	VkExtent2D extent = swapchain.vk_extent;
 
-	pipeline_3d_terrain = GraphicsPipelineBuilder::of(device, 1)
+	pipeline_3d_terrain = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
@@ -205,7 +205,7 @@ void RenderSystem::createPipelines() {
 		.withDescriptorSetLayout(descriptor_layout)
 		.build();
 
-	pipeline_3d_tint = GraphicsPipelineBuilder::of(device, 1)
+	pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
@@ -220,7 +220,7 @@ void RenderSystem::createPipelines() {
 		.withDescriptorSetLayout(descriptor_layout)
 		.build();
 
-	pipeline_2d_tint = GraphicsPipelineBuilder::of(device, 1)
+	pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withRenderPass(render_pass)

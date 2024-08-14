@@ -102,7 +102,7 @@ class GraphicsPipelineBuilder {
 
 	public:
 
-		GraphicsPipelineBuilder(Device& device, int count)
+		GraphicsPipelineBuilder(Device& device)
 		: device(device) {
 
 			depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -144,7 +144,7 @@ class GraphicsPipelineBuilder {
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineColorBlendStateCreateInfo.html
 			blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			blending.attachmentCount = count;
+			blending.attachmentCount = 0;
 			withBlendConstants(0.0f, 0.0f, 0.0f, 0.0f);
 			withBlendWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
 			withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
@@ -154,8 +154,8 @@ class GraphicsPipelineBuilder {
 
 		}
 
-		inline static GraphicsPipelineBuilder of(Device& device, int count) {
-			return {device, count};
+		inline static GraphicsPipelineBuilder of(Device& device) {
+			return {device};
 		}
 
 	// dynamic configuration
@@ -341,10 +341,16 @@ class GraphicsPipelineBuilder {
 
 	// renderpass configuration
 
-		// TODO get attachment count from here not from that constructor arg
-		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, uint32_t index = 0) {
+		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, int index = 0) {
+			const int count = render_pass.getSubpassCount();
+
+			if (count <= index) {
+				throw Exception {"Specified render pass has " + std::to_string(count) + " subpasses but, subpass with index " + std::to_string(index) + " was requested"};
+			}
+
+			blending.attachmentCount = render_pass.getAttachmentCount(index);
 			vk_pass = render_pass.vk_pass;
-			subpass = (int) index;
+			subpass = index;
 			return *this;
 		}
 
