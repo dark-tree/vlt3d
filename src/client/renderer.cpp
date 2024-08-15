@@ -20,6 +20,7 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	set_2.sampler(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_normal.sampler);
 	set_2.sampler(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_position.sampler);
 	set_2.sampler(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_albedo.sampler);
+	set_2.sampler(5, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_ambience.sampler);
 
 }
 
@@ -156,7 +157,12 @@ void RenderSystem::createRenderPass() {
 
 		Attachment::Ref depth = builder.addAttachment(attachment_depth)
 			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		Attachment::Ref ambience = builder.addAttachment(attachment_ambience)
+			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
+			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.next();
 
 		builder.addDependency() // G-Buffer/Color 0->Write
@@ -166,15 +172,25 @@ void RenderSystem::createRenderPass() {
 
 		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT)
 			.input(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-			.output(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.output(1, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
+			.next();
+
+		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT)
+			.input(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.output(2, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
 			.next();
 
 		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT) // Color Output
-			.input(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.input(2, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
 		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // SSAO
+			.addOutput(ambience, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.next();
+
+		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Lighting
+			.addInput(ambience, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.next();
 
@@ -220,6 +236,7 @@ void RenderSystem::createFramebuffers() {
 		FramebufferBuilder builder {lighting_pass, extent};
 		builder.addAttachment(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT), true);
 		builder.addAttachment(attachment_depth);
+		builder.addAttachment(attachment_ambience);
 
 		framebuffers.push_back(builder.build(device, framebuffers.size()));
 	}
@@ -281,7 +298,7 @@ void RenderSystem::createPipelines() {
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
-		.withRenderPass(lighting_pass, 1)
+		.withRenderPass(lighting_pass, 2)
 		.withShaders(assets.state->vert_3d, assets.state->frag_tint)
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 		.withBlendMode(BlendMode::ENABLED)
@@ -295,7 +312,7 @@ void RenderSystem::createPipelines() {
 	pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
-		.withRenderPass(lighting_pass, 1)
+		.withRenderPass(lighting_pass, 2)
 		.withShaders(assets.state->vert_2d, assets.state->frag_tint)
 		.withBlendMode(BlendMode::ENABLED)
 		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
@@ -305,11 +322,20 @@ void RenderSystem::createPipelines() {
 		.withDescriptorSetLayout(descriptor_layout)
 		.build();
 
-	ssao_pipeline = GraphicsPipelineBuilder::of(device)
+	pipeline_ssao = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withRenderPass(lighting_pass, 0)
 		.withShaders(assets.state->vert_blit, assets.state->frag_ssao)
+		.withPushConstantLayout(constant_layout)
+		.withDescriptorSetLayout(ssao_descriptor_layout)
+		.build();
+
+	pipeline_compose = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withRenderPass(lighting_pass, 1)
+		.withShaders(assets.state->vert_blit, assets.state->frag_compose)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(ssao_descriptor_layout)
 		.build();
@@ -455,7 +481,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	attachment_ambience = AttachmentImageBuilder::begin()
 		.setFormat(VK_FORMAT_R8_UNORM)
-		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setColorClearValue(0, 0, 0, 0)
 		.build();
@@ -529,6 +555,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.descriptor(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(5, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
 	// Phase 2

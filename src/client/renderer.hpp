@@ -100,7 +100,6 @@ class RenderSystem {
 		ImageView ssao_noise_view;
 		ImageSampler ssao_noise_sampler;
 		Buffer ssao_uniform_buffer;
-		GraphicsPipeline ssao_pipeline;
 		DescriptorSetLayout ssao_descriptor_layout;
 
 		Attachment attachment_color;
@@ -113,6 +112,12 @@ class RenderSystem {
 		RenderPass terrain_pass;
 		RenderPass lighting_pass;
 
+		GraphicsPipeline pipeline_3d_terrain;
+		GraphicsPipeline pipeline_3d_tint;
+		GraphicsPipeline pipeline_2d_tint;
+		GraphicsPipeline pipeline_ssao;
+		GraphicsPipeline pipeline_compose;
+
 		Swapchain swapchain;
 		std::vector<Framebuffer> framebuffers;
 		Framebuffer terrain_framebuffer;
@@ -123,9 +128,6 @@ class RenderSystem {
 		BindingLayout binding_terrain;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;
-		GraphicsPipeline pipeline_3d_terrain;
-		GraphicsPipeline pipeline_3d_tint;
-		GraphicsPipeline pipeline_2d_tint;
 		DescriptorPool descriptor_pool;
 
 		PushConstantLayout constant_layout;

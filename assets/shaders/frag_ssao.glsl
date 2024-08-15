@@ -15,19 +15,18 @@ layout(binding = 3) uniform sampler2D uPositionSampler;
 layout(binding = 4) uniform sampler2D uAlbedoSampler;
 
 layout(location = 0) in vec2 vTexture;
-layout(location = 0) out vec3 fAmbience;
+layout(location = 0) out float fAmbience;
 
 const vec2 noise_scale = vec2(1000.0/4.0, 700.0/4.0);
 const float bias = 0.025;
 const int kernel_size = 64;
-const float radius = 0.8;
+const float radius = 0.9;
 
 void main() {
 
     vec3 position = texture(uPositionSampler, vTexture).xyz;
     vec3 normal = texture(uNormalSampler, vTexture).rgb;
     vec3 random = texture(uNoiseSampler, vTexture * noise_scale).xyz;
-    vec3 albedo = texture(uAlbedoSampler, vTexture).rgb;
 
     // Create a TBN matrix that transforms any vector from tangent-space to view-space.
     // Using a process called the "Gramm-Schmidt process" we create an orthogonal basis, each time slightly tilted
@@ -54,6 +53,6 @@ void main() {
         occlusion += (depth >= pos.z + bias ? 1.0 : 0.0) * limit;
     }
 
-    fAmbience = vec3(albedo - 0.8 * (occlusion / kernel_size));
+    fAmbience = 1.0f - (occlusion / kernel_size);
 
 }

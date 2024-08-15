@@ -206,7 +206,7 @@ class SubpassBuilder {
 			// this is here so that the renderpass can retain the information about
 			// how many attachments were there for each subpass - this is then used during pipeline
 			// creation to setup blending for each attachment
-			subpass_attachments.push_back(input_count + color_count);
+			subpass_attachments.push_back(color_count);
 
 			return description;
 

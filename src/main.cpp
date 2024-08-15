@@ -108,10 +108,14 @@ int main() {
 		push_constant_block.view = view;
 
 		recorder.beginRenderPass(system.lighting_pass, framebuffer, extent)
-			.bindPipeline(system.ssao_pipeline)
+			.bindPipeline(system.pipeline_ssao)
 			.writePushConstant(system.push_constant, &push_constant_block)
 			.bindDescriptorSet(frame.set_2)
 			.draw(3); // draw blit quad
+
+		recorder.nextSubpass()
+			.bindPipeline(system.pipeline_compose)
+			.draw(3);
 
 		push_constant_block.matrix = mvp;
 		push_constant_block.view = mvp;
