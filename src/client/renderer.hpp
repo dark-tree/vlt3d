@@ -54,7 +54,7 @@ class Frame {
 
 	public:
 
-		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor_1, const ImageSampler& atlas_sampler);
+		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, const ImageSampler& atlas_sampler);
 
 		/**
 		 * This class is fully managed by the RenderSystem so it uses
@@ -100,9 +100,7 @@ class RenderSystem {
 		ImageView ssao_noise_view;
 		ImageSampler ssao_noise_sampler;
 		Buffer ssao_uniform_buffer;
-		RenderPass ssao_render_pass;
 		GraphicsPipeline ssao_pipeline;
-		Framebuffer ssao_framebuffer;
 		DescriptorSetLayout ssao_descriptor_layout;
 
 		Attachment attachment_color;
@@ -112,9 +110,12 @@ class RenderSystem {
 		Attachment attachment_position;
 		Attachment attachment_ambience;
 
+		RenderPass terrain_pass;
+		RenderPass lighting_pass;
+
 		Swapchain swapchain;
-		RenderPass render_pass;
 		std::vector<Framebuffer> framebuffers;
+		Framebuffer terrain_framebuffer;
 
 		ResourceManager assets;
 
