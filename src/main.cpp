@@ -94,7 +94,7 @@ int main() {
 		push_constant_block.view = view;
 //		push_constant_block.sun = skybox.getSunData(camera.getPosition().x / 100);
 
-		recorder.beginRenderPass(system.render_pass, framebuffer, extent);
+		recorder.beginRenderPass(system.render_pass, system.ssao_framebuffer, extent);
 		recorder.bindPipeline(system.pipeline_3d_terrain);
 		recorder.writePushConstant(system.push_constant, &push_constant_block);
 		recorder.bindDescriptorSet(frame.set_1);
@@ -102,19 +102,21 @@ int main() {
 		world_renderer.draw(recorder, frustum);
 		world_renderer.eraseOutside(camera.getPosition(), 12);
 
-		recorder.nextSubpass();
-		recorder.bindPipeline(system.pipeline_3d_tint)
-			.bindBuffer(frame.immediate_3d.getBuffer())
-			.draw(frame.immediate_3d.getCount())
-			.bindPipeline(system.pipeline_2d_tint)
-			.bindBuffer(frame.immediate_2d.getBuffer())
-			.draw(frame.immediate_2d.getCount())
-			.endRenderPass();
+//		recorder.nextSubpass();
+//		recorder.bindPipeline(system.pipeline_3d_tint)
+//			.bindBuffer(frame.immediate_3d.getBuffer())
+//			.draw(frame.immediate_3d.getCount())
+//			.bindPipeline(system.pipeline_2d_tint)
+//			.bindBuffer(frame.immediate_2d.getBuffer())
+//			.draw(frame.immediate_2d.getCount())
+//			.endRenderPass();
+
+		recorder.endRenderPass();
 
 		push_constant_block.matrix = projection;
 		push_constant_block.view = view;
 
-		recorder.beginRenderPass(system.ssao_render_pass, system.ssao_framebuffer, extent)
+		recorder.beginRenderPass(system.ssao_render_pass, framebuffer, extent)
 			.bindPipeline(system.ssao_pipeline)
 			.writePushConstant(system.push_constant, &push_constant_block)
 			.bindDescriptorSet(frame.set_2)

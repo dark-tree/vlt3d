@@ -349,7 +349,7 @@ class GraphicsPipelineBuilder {
 			const int count = render_pass.getSubpassCount();
 
 			if (count <= index) {
-				throw Exception {"Specified render pass has " + std::to_string(count) + " subpasses but, subpass with index " + std::to_string(index) + " was requested"};
+				throw Exception {"Specified render pass has " + std::to_string(count) + " subpasses but, subpass with index " + std::to_string(index) + " was requested!"};
 			}
 
 			blending.attachmentCount = render_pass.getAttachmentCount(index);

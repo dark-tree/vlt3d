@@ -12,7 +12,7 @@ layout(location = 3) in uint iNorm;
 
 layout(location = 0) out vec3 vColor;
 layout(location = 1) out vec2 vTexture;
-layout(location = 2) out vec3 vNorm;
+layout(location = 2) out vec3 vNormal;
 layout(location = 3) out vec3 vPosition;
 
 void main() {
@@ -26,12 +26,14 @@ void main() {
         {0, 0, +1},
     };
 
+    // TODO any better ideas? Can we do the SSAO in some other coordinate space?
     mat3 normal_matrix = transpose(inverse(mat3(uObject.view)));
-    vNorm = normal_matrix * normals[iNorm];
 
     gl_Position = uObject.mvp * vec4(iPosition, 1.0);
     vColor = iColor;
     vTexture = iTexture;
-    //vNorm = (uObject.view * vec4(normals[iNorm], 1.0)).xyz;
+
+    // view space
+    vNormal = normal_matrix * normals[iNorm];
     vPosition = (uObject.view *  vec4(iPosition, 1.0)).xyz;
 }
