@@ -17,7 +17,7 @@ class DescriptorSet {
 		DescriptorSet(VkDevice device, VkDescriptorSet set)
 		: vk_device(device), vk_set(set) {}
 
-		void buffer(int binding, VkDescriptorType type, Buffer& buffer, size_t length, int offset = 0) {
+		void buffer(int binding, VkDescriptorType type, const Buffer& buffer, size_t length, int offset = 0) {
 
 			VkDescriptorBufferInfo info {};
 			info.buffer = buffer.vk_buffer;

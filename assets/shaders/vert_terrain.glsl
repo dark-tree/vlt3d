@@ -2,6 +2,7 @@
 
 layout(push_constant) uniform UniformBufferObject {
     mat4 mvp;
+    mat4 view;
 } uObject;
 
 layout(location = 0) in vec3 iPosition;
@@ -25,9 +26,12 @@ void main() {
         {0, 0, +1},
     };
 
+    mat3 normal_matrix = transpose(inverse(mat3(uObject.view)));
+    vNorm = normal_matrix * normals[iNorm];
+
     gl_Position = uObject.mvp * vec4(iPosition, 1.0);
     vColor = iColor;
     vTexture = iTexture;
-    vNorm = normals[iNorm];
-    vPosition = gl_Position.xyz;
+    //vNorm = (uObject.view * vec4(normals[iNorm], 1.0)).xyz;
+    vPosition = (uObject.view *  vec4(iPosition, 1.0)).xyz;
 }

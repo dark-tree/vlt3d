@@ -15,6 +15,10 @@ struct Uniforms {
 	glm::mat4 mvp;
 };
 
+struct AmbientOcclusionUniform {
+	glm::vec3 samples[64];
+};
+
 class Frame {
 
 	private:
@@ -46,7 +50,7 @@ class Frame {
 		Fence flight_fence;
 
 		Uniforms uniforms;
-		DescriptorSet set_1;
+		DescriptorSet set_1, set_2;
 
 	public:
 
@@ -91,8 +95,22 @@ class RenderSystem {
 		CommandPool graphics_pool;
 		CommandPool transient_pool;
 
+		// SSAO
+		Image ssao_noise_image;
+		ImageView ssao_noise_view;
+		ImageSampler ssao_noise_sampler;
+		Buffer ssao_uniform_buffer;
+		RenderPass ssao_render_pass;
+		GraphicsPipeline ssao_pipeline;
+		Framebuffer ssao_framebuffer;
+		DescriptorSetLayout ssao_descriptor_layout;
+
 		Attachment attachment_color;
 		Attachment attachment_depth;
+		Attachment attachment_albedo;
+		Attachment attachment_normal;
+		Attachment attachment_position;
+		Attachment attachment_ambience;
 
 		Swapchain swapchain;
 		RenderPass render_pass;
@@ -110,8 +128,7 @@ class RenderSystem {
 		DescriptorPool descriptor_pool;
 
 		PushConstantLayout constant_layout;
-		PushConstant mvp_vertex_constant;
-		PushConstant sun_vertex_constant;
+		PushConstant push_constant;
 
 	private:
 
@@ -145,13 +162,13 @@ class RenderSystem {
 		 * Creates the vulkan render pass, this MAY need to be called when the
 		 * swapchain is recreated, depending on the format picked by `createSwapchain()`
 		 */
-		void createRenderPass(Swapchain& surface);
+		void createRenderPass();
 
 		/**
 		 * Populates the framebuffer array, needs to be called after the swapchain is recreated
-		 * this function depends on render pass as the created framebuffers need to be compatible with it
+		 * this function depends on render passes as the created framebuffers need to be compatible with them
 		 */
-		void createFramebuffers(RenderPass& pass);
+		void createFramebuffers();
 
 		/**
 		 * Called from `acquireFramebuffer()` and `presentFramebuffer()` when the current swapchain is
@@ -184,10 +201,10 @@ class RenderSystem {
 		void reloadAssets();
 
 		/// Get the screen's framebuffer reference
-		Framebuffer& acquireFramebuffer();
+		Framebuffer& acquireScreenFramebuffer();
 
 		/// Queue the given framebuffer for rendering on the screen
-		void presentFramebuffer(Framebuffer& framebuffer);
+		void presentScreenFramebuffer(Framebuffer& framebuffer);
 
 		/// Get a reference to the current frame state
 		Frame& getFrame();

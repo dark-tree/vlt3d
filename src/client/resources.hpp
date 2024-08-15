@@ -28,10 +28,11 @@ class ResourceManager {
 			ShaderModule vert_2d;
 			ShaderModule vert_3d;
 			ShaderModule vert_terrain;
-			ShaderModule vert_compose;
+			ShaderModule vert_blit;
 			ShaderModule frag_terrain;
 			ShaderModule frag_tint;
 			ShaderModule frag_compose;
+			ShaderModule frag_ssao;
 
 			State(RenderSystem& system, TaskQueue& queue, CommandRecorder& recorder);
 			~State();

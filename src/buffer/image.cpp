@@ -84,6 +84,10 @@ ImageData ImageData::allocate(int w, int h, int channels) {
 	return {Type::MALLOCED, calloc(w * h * channels, 1), w, h, channels};
 }
 
+ImageData ImageData::view(void* pixels, int w, int h, int channels) {
+	return {Type::VIEW, pixels, w, h, channels};
+}
+
 Image ImageData::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format) const {
 
 	BufferInfo buffer_builder {size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
@@ -101,7 +105,7 @@ Image ImageData::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder&
 	ImageInfo image_builder {w, h, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
 	image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
-	buffer_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+	image_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
 	Image image = allocator.allocateImage(image_builder);
 

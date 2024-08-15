@@ -183,7 +183,9 @@ class InstanceBuilder {
 			}
 
 			// we need to fetch the functions and this is the earliest point we have the VkInstance
-			initProxyInstance(instance);
+			loadInstanceFunction(instance, "vkCreateDebugUtilsMessengerEXT");
+			loadInstanceFunction(instance, "vkDestroyDebugUtilsMessengerEXT");
+			loadInstanceFunction(instance, "vkGetPhysicalDeviceFeatures2KHR");
 
 			return Instance {instance, messenger.attach(instance), validation_layers.isAnySelected()};
 

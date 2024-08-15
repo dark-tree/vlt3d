@@ -18,7 +18,7 @@ class ShaderModule {
 		ShaderModule() = default;
 
 		ShaderModule(Device& device, const uint32_t* data, uint32_t size, Kind kind)
-		: vk_stage(kind.vulkan) {
+		: vk_stage((VkShaderStageFlagBits) kind.vulkan) {
 
 			VkShaderModuleCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

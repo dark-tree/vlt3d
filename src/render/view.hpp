@@ -96,8 +96,7 @@ class ImageView {
 
 	public:
 
-		ImageView() {}
-
+		ImageView() = default;
 		ImageView(VkImageView vk_view)
 		: vk_view(vk_view) {}
 

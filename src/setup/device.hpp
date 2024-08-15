@@ -18,13 +18,13 @@ class Device {
 
 		READONLY VkPhysicalDevice vk_physical_device;
 		READONLY VkDevice vk_device;
-		READONLY FeatureSetView features;
+		READONLY ExtendedFeatureSet features;
 		READONLY MemoryInfo memory;
 
 	public:
 
 		Device() = default;
-		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, FeatureSetView& features)
+		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, ExtendedFeatureSet& features)
 		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features), memory(vk_physical_device, vk_device) {}
 
 		/**
@@ -64,7 +64,8 @@ class DeviceBuilder {
 
 	public:
 
-		READONLY FeatureSet features;
+		READONLY ExtendedFeatureSet supported_features;
+		READONLY ExtendedFeatureSet selected_features;
 
 	public:
 
@@ -101,7 +102,6 @@ class DeviceBuilder {
 		Device create() {
 
 			std::vector<VkDeviceQueueCreateInfo> configs;
-			FeatureSetView view = features.view();
 
 			// append configured family queues
 			for (QueueFamilyConfig& family : configured) {
@@ -111,9 +111,10 @@ class DeviceBuilder {
 			// information required for creating a logical device
 			VkDeviceCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+			create_info.pNext = selected_features.getLinked();
 			create_info.pQueueCreateInfos = configs.data();
 			create_info.queueCreateInfoCount = configs.size();
-			create_info.pEnabledFeatures = &view.vk_features;
+			create_info.pEnabledFeatures = nullptr;
 
 			// pass extensions
 			create_info.enabledExtensionCount = device_extensions.size();
@@ -127,7 +128,7 @@ class DeviceBuilder {
 				throw Exception {"Failed to create logical device!"};
 			}
 
-			return {vk_device, device, view};
+			return {vk_device, device, selected_features};
 
 		}
 
@@ -135,8 +136,8 @@ class DeviceBuilder {
 
 		friend class DeviceInfo;
 
-		DeviceBuilder(VkPhysicalDevice& vk_device, std::vector<QueueFamily>& families, FeatureSet features)
-		: vk_device(vk_device), families(families), device_extensions(vk_device), features(features) {}
+		DeviceBuilder(VkPhysicalDevice& vk_device, std::vector<QueueFamily>& families, ExtendedFeatureSet features)
+		: vk_device(vk_device), families(families), device_extensions(vk_device), supported_features(features) {}
 
 };
 
@@ -146,7 +147,7 @@ class DeviceInfo {
 
 		VkPhysicalDevice vk_device;
 		VkPhysicalDeviceProperties vk_properties;
-		VkPhysicalDeviceFeatures vk_features;
+		ExtendedFeatureSet features;
 		std::vector<QueueFamily> families;
 
 	public:
@@ -156,7 +157,7 @@ class DeviceInfo {
 
 			// load info about this device into structs
 			vkGetPhysicalDeviceProperties(vk_device, &vk_properties);
-			vkGetPhysicalDeviceFeatures(vk_device, &vk_features);
+			vkGetPhysicalDeviceFeatures2KHR(vk_device, features.getLinked());
 
 			// create a list of queue families supported
 			uint32_t count = 0, index = 0;
@@ -187,8 +188,8 @@ class DeviceInfo {
 		/**
 		 * @see https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
 		 */
-		FeatureSetView getFeatures() {
-			return FeatureSet {vk_features}.view();
+		const ExtendedFeatureSet& getFeatures() {
+			return features;
 		}
 
 		/**
@@ -214,7 +215,7 @@ class DeviceInfo {
 		}
 
 		DeviceBuilder builder() {
-			return {vk_device, families, vk_features};
+			return {vk_device, families, features};
 		}
 
 };

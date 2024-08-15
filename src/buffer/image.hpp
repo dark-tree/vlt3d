@@ -3,6 +3,7 @@
 #include "external.hpp"
 #include "memory.hpp"
 #include "util/threads.hpp"
+#include "setup/callback.hpp"
 
 class Image;
 class CommandRecorder;
@@ -22,7 +23,7 @@ class ImageData {
 		enum Type {
 			STB_IMAGE,
 			MALLOCED,
-			UNBACKED
+			VIEW
 		};
 
 		READONLY Type type;
@@ -81,6 +82,12 @@ class ImageData {
 		 * dimensions and channel count.
 		 */
 		static ImageData allocate(int w, int h, int channels = 4);
+
+		/**
+		 * Treats the given pointer as the image data
+		 * the data is not taken ownership of
+		 */
+		static ImageData view(void* pixels, int w, int h, int channels = 4);
 
 		/**
 		 * Records a copy-to-GPU-memory operation into the

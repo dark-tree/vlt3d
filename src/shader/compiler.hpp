@@ -89,6 +89,7 @@ class Compiler {
 
 		Compiler(bool optimize = true) {
 			options.SetOptimizationLevel(optimize ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
+			options.SetGenerateDebugInfo();
 		}
 
 		// simmilar to adding -Dkey=value

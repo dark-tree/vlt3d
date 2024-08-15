@@ -17,6 +17,11 @@
 #include "client/gui/screen/play.hpp"
 #include "world/skybox.hpp"
 
+struct PushConstantBlock {
+	glm::mat4 matrix;
+	glm::mat4 view;
+};
+
 int main() {
 
 	TaskPool pool;
@@ -54,7 +59,7 @@ int main() {
 		glm::mat4 view = camera.getView();
 		glm::mat4 projection = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 
-		frame.uniforms.mvp = projection * view * model;
+		glm::mat4 mvp = projection * view * model;
 		Frustum frustum = camera.getFrustum(projection);
 
 		frame.wait();
@@ -63,7 +68,7 @@ int main() {
 		immediate.prepare(swapchain.vk_extent);
 		stack.draw(immediate, window.getInputContext(), camera);
 
-		Framebuffer& framebuffer = system.acquireFramebuffer();
+		Framebuffer& framebuffer = system.acquireScreenFramebuffer();
 		VkExtent2D extent = system.swapchain.vk_extent;
 
 		// record commands
@@ -84,25 +89,39 @@ int main() {
 		world.update(world_generator, camera.getPosition(), 8);
 
 		Skybox skybox;
-		Sun sun = skybox.getSunData(camera.getPosition().x / 100);
+		PushConstantBlock push_constant_block {};
+		push_constant_block.matrix = mvp;
+		push_constant_block.view = view;
+//		push_constant_block.sun = skybox.getSunData(camera.getPosition().x / 100);
 
 		recorder.beginRenderPass(system.render_pass, framebuffer, extent);
 		recorder.bindPipeline(system.pipeline_3d_terrain);
-		recorder.writePushConstant(system.mvp_vertex_constant, &frame.uniforms);
-		recorder.writePushConstant(system.sun_vertex_constant, &sun);
+		recorder.writePushConstant(system.push_constant, &push_constant_block);
 		recorder.bindDescriptorSet(frame.set_1);
 
 		world_renderer.draw(recorder, frustum);
 		world_renderer.eraseOutside(camera.getPosition(), 12);
 
+		recorder.nextSubpass();
 		recorder.bindPipeline(system.pipeline_3d_tint)
 			.bindBuffer(frame.immediate_3d.getBuffer())
 			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)
 			.bindBuffer(frame.immediate_2d.getBuffer())
 			.draw(frame.immediate_2d.getCount())
-			.endRenderPass()
-			.done();
+			.endRenderPass();
+
+		push_constant_block.matrix = projection;
+		push_constant_block.view = view;
+
+		recorder.beginRenderPass(system.ssao_render_pass, system.ssao_framebuffer, extent)
+			.bindPipeline(system.ssao_pipeline)
+			.writePushConstant(system.push_constant, &push_constant_block)
+			.bindDescriptorSet(frame.set_2)
+			.draw(3) // draw blit quad
+			.endRenderPass();
+
+		recorder.done();
 
 		frame.buffer.submit()
 			.awaits(frame.available_semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
@@ -110,7 +129,7 @@ int main() {
 			.unlocks(frame.flight_fence)
 			.done(system.graphics_queue);
 
-		system.presentFramebuffer(framebuffer);
+		system.presentScreenFramebuffer(framebuffer);
 		system.nextFrame();
 
 		sound_system.getListener().position(camera.getPosition()).facing(camera.getDirection(), camera.getUp());

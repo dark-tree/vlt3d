@@ -11,7 +11,11 @@
 #include "shader/module.hpp"
 #include "descriptor/push.hpp"
 
-#define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw Exception {"Feature '" #feature "' not enabled on this device!"}; }
+#if defined(NDEBUG)
+#define ASSERT_FEATURE(test, device, feature)
+#else
+#define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.getStandard().feature) { throw Exception {"Feature '" #feature "' not enabled on this device!"}; }
+#endif
 
 enum struct BlendMode {
 	BITWISE = 1,
@@ -228,13 +232,13 @@ class GraphicsPipelineBuilder {
 	// rasterizer configuration
 
 		GraphicsPipelineBuilder& withDepthClamp(bool enable) {
-			ASSERT_FEATURE(enable, device, DepthClamp);
+			ASSERT_FEATURE(enable, device, depthClamp);
 			rasterizer.depthClampEnable = enable;
 			return *this;
 		}
 
 		GraphicsPipelineBuilder& withDepthBias(bool enable, float constant = 0.0f, float clamp = 0.0f, float slope = 0.0f) {
-			ASSERT_FEATURE(clamp != 0.0f, device, DepthBiasClamp);
+			ASSERT_FEATURE(clamp != 0.0f, device, depthBiasClamp);
 			rasterizer.depthBiasEnable = enable;
 			rasterizer.depthBiasConstantFactor = constant;
 			rasterizer.depthBiasClamp = clamp;
@@ -243,13 +247,13 @@ class GraphicsPipelineBuilder {
 		}
 
 		GraphicsPipelineBuilder& withPolygonMode(VkPolygonMode mode) {
-			ASSERT_FEATURE(mode != VK_POLYGON_MODE_FILL, device, FillModeNonSolid);
+			ASSERT_FEATURE(mode != VK_POLYGON_MODE_FILL, device, fillModeNonSolid);
 			rasterizer.polygonMode = mode;
 			return *this;
 		}
 
 		GraphicsPipelineBuilder& withLineWidth(float width) {
-			ASSERT_FEATURE(width > 1.0f, device, WideLines);
+			ASSERT_FEATURE(width > 1.0f, device, wideLines);
 			rasterizer.lineWidth = width;
 			return *this;
 		}
@@ -331,7 +335,7 @@ class GraphicsPipelineBuilder {
 			}
 
 			if (mode == BlendMode::BITWISE) {
-				ASSERT_FEATURE(true, device, LogicOp);
+				ASSERT_FEATURE(true, device, logicOp);
 				blending.logicOpEnable = true;
 				attachment.blendEnable = false;
 			}
