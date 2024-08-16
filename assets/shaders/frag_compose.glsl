@@ -1,10 +1,10 @@
 #version 450
 
-layout(input_attachment_index = 0, binding = 2) uniform subpassInput uNormalSampler;
-layout(input_attachment_index = 1, binding = 4) uniform subpassInput uAlbedoSampler;
-layout(input_attachment_index = 2, binding = 5) uniform subpassInput uAmbienceInput;
+layout(input_attachment_index = 0, binding = 0) uniform subpassInput uNormalInput;
+layout(input_attachment_index = 1, binding = 2) uniform subpassInput uAlbedoInput;
 
-layout(binding = 3) uniform sampler2D uPositionSampler;
+layout(binding = 1) uniform sampler2D uPositionSampler;
+layout(binding = 3) uniform sampler2D uAmbienceSampler;
 
 struct LightSource {
     vec3 pos;
@@ -19,12 +19,28 @@ layout(push_constant) uniform SceneUniform {
 layout(location = 0) in vec2 vTexture;
 layout(location = 0) out vec4 fColor;
 
+float getAmbientOcclusion() {
+
+    vec2 texel = 1.0 / vec2(textureSize(uAmbienceSampler, 0));
+    float result = 0.0;
+
+    for (int x = -2; x < 2; x ++)  {
+        for (int y = -2; y < 2; y ++) {
+            vec2 offset = vec2(float(x), float(y)) * texel;
+            result += texture(uAmbienceSampler, vTexture + offset).r;
+        }
+    }
+
+    return result / (4.0 * 4.0);
+
+}
+
 void main() {
 
     // Read G-Buffer values from previous subpass
-    vec4 normal = uSceneObject.light * vec4(subpassLoad(uNormalSampler).xyz, 0.0f);
-    vec3 albedo = subpassLoad(uAlbedoSampler).rgb;
-    float ambience = subpassLoad(uAmbienceInput).r;
+    vec4 normal = uSceneObject.light * vec4(subpassLoad(uNormalInput).xyz, 0.0f);
+    vec3 albedo = subpassLoad(uAlbedoInput).rgb;
+    float ambience = getAmbientOcclusion();
     vec3 sun = unpackUnorm4x8(uSceneObject.sun.color).rgb;
 
     // ambient lighting
@@ -39,5 +55,5 @@ void main() {
     // diffuse lighting
     vec3 diffuse = sun * max(dot(normal.xyz, uSceneObject.sun.pos), 0.0);
 
-    fColor = vec4(albedo * pow(ambience, 5) * (diffuse + ambient), 1.0);
+    fColor = vec4(albedo * pow(ambience, 6) * (diffuse + ambient), 1.0);
 }

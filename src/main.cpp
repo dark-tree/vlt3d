@@ -113,16 +113,18 @@ int main() {
 		lighting_push_block.projection = projection;
 		lighting_push_block.sun = skybox.getSunData(0);
 
-		recorder.beginRenderPass(system.lighting_pass, framebuffer, extent)
+		recorder.beginRenderPass(system.ssao_pass, system.ssao_framebuffer, extent)
 			.bindPipeline(system.pipeline_ssao)
 			.writePushConstant(system.push_constant, &lighting_push_block)
 			.bindDescriptorSet(frame.set_2)
-			.draw(3); // draw blit quad
+			.draw(3) // draw blit quad
+			.endRenderPass();
 
 		lighting_push_block.projection = light;
 
-		recorder.nextSubpass()
+		recorder.beginRenderPass(system.lighting_pass, framebuffer, extent)
 			.bindPipeline(system.pipeline_compose)
+			.bindDescriptorSet(frame.set_3)
 			.writePushConstant(system.push_constant, &lighting_push_block)
 			.draw(3);
 

@@ -19,7 +19,7 @@ layout(location = 0) out float fAmbience;
 
 const float bias = 0.025;
 const int kernel_size = 32;
-const float radius = 0.9;
+const float radius = 1.0;
 
 void main() {
 

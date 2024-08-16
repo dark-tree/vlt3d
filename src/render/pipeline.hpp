@@ -345,16 +345,16 @@ class GraphicsPipelineBuilder {
 
 	// renderpass configuration
 
-		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, int index = 0) {
+		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, int subpass_index) {
 			const int count = render_pass.getSubpassCount();
 
-			if (count <= index) {
-				throw Exception {"Specified render pass has " + std::to_string(count) + " subpasses but, subpass with index " + std::to_string(index) + " was requested!"};
+			if (count <= subpass_index) {
+				throw Exception {"Specified render pass has " + std::to_string(count) + " subpasses but, subpass with index " + std::to_string(subpass_index) + " was requested!"};
 			}
 
-			blending.attachmentCount = render_pass.getAttachmentCount(index);
+			blending.attachmentCount = render_pass.getAttachmentCount(subpass_index);
 			vk_pass = render_pass.vk_pass;
-			subpass = index;
+			subpass = subpass_index;
 			return *this;
 		}
 

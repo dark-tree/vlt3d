@@ -51,7 +51,7 @@ class Frame {
 		Fence flight_fence;
 
 		Uniforms uniforms;
-		DescriptorSet set_1, set_2;
+		DescriptorSet set_1, set_2, set_3;
 
 	public:
 
@@ -110,6 +110,7 @@ class RenderSystem {
 		Attachment attachment_ambience;
 
 		RenderPass terrain_pass;
+		RenderPass ssao_pass;
 		RenderPass lighting_pass;
 
 		GraphicsPipeline pipeline_3d_terrain;
@@ -120,11 +121,13 @@ class RenderSystem {
 
 		Swapchain swapchain;
 		std::vector<Framebuffer> framebuffers;
+		Framebuffer ssao_framebuffer;
 		Framebuffer terrain_framebuffer;
 
 		ResourceManager assets;
 
 		DescriptorSetLayout geometry_descriptor_layout;
+		DescriptorSetLayout ssao_descriptor_layout;
 		DescriptorSetLayout lighting_descriptor_layout;
 
 		BindingLayout binding_terrain;
