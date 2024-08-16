@@ -1,10 +1,10 @@
 #version 450
 
-layout(input_attachment_index = 0, binding = 5) uniform subpassInput uAmbienceInput;
+layout(input_attachment_index = 0, binding = 2) uniform subpassInput uNormalSampler;
+layout(input_attachment_index = 1, binding = 4) uniform subpassInput uAlbedoSampler;
+layout(input_attachment_index = 2, binding = 5) uniform subpassInput uAmbienceInput;
 
-layout(binding = 2) uniform sampler2D uNormalSampler;
 layout(binding = 3) uniform sampler2D uPositionSampler;
-layout(binding = 4) uniform sampler2D uAlbedoSampler;
 
 struct LightSource {
     vec3 pos;
@@ -22,9 +22,8 @@ layout(location = 0) out vec4 fColor;
 void main() {
 
     // Read G-Buffer values from previous subpass
-    vec4 normal = uSceneObject.light * vec4(texture(uNormalSampler, vTexture).rgb, 0.0f);
-//    vec3 position = texture(uPositionSampler, vTexture).xyz;
-    vec3 albedo = texture(uAlbedoSampler, vTexture).rgb;
+    vec4 normal = uSceneObject.light * vec4(subpassLoad(uNormalSampler).xyz, 0.0f);
+    vec3 albedo = subpassLoad(uAlbedoSampler).rgb;
     float ambience = subpassLoad(uAmbienceInput).r;
     vec3 sun = unpackUnorm4x8(uSceneObject.sun.color).rgb;
 

@@ -11,15 +11,15 @@
 Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device, const ImageSampler& atlas_sampler)
 : buffer(pool.allocate()), immediate_2d(system, 1024), immediate_3d(system, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
 
-	set_1 = system.descriptor_pool.allocate(system.descriptor_layout);
+	set_1 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
 	set_1.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, atlas_sampler);
 
-	set_2 = system.descriptor_pool.allocate(system.ssao_descriptor_layout);
+	set_2 = system.descriptor_pool.allocate(system.lighting_descriptor_layout);
 	set_2.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, system.ssao_uniform_buffer, sizeof(AmbientOcclusionUniform));
 	set_2.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.ssao_noise_sampler);
-	set_2.sampler(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_normal.sampler);
+	set_2.sampler(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_normal.sampler);
 	set_2.sampler(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_position.sampler);
-	set_2.sampler(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_albedo.sampler);
+	set_2.sampler(4, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_albedo.sampler);
 	set_2.sampler(5, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_ambience.sampler);
 
 }
@@ -160,6 +160,16 @@ void RenderSystem::createRenderPass() {
 			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
+		Attachment::Ref albedo = builder.addAttachment(attachment_albedo)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		Attachment::Ref normal = builder.addAttachment(attachment_normal)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
 		Attachment::Ref ambience = builder.addAttachment(attachment_ambience)
 			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
 			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
@@ -186,11 +196,14 @@ void RenderSystem::createRenderPass() {
 			.next();
 
 		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // SSAO
+			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(ambience, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
 		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Lighting
+			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.addInput(albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addInput(ambience, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
@@ -238,6 +251,8 @@ void RenderSystem::createFramebuffers() {
 		FramebufferBuilder builder {lighting_pass, extent};
 		builder.addAttachment(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT), true);
 		builder.addAttachment(attachment_depth);
+		builder.addAttachment(attachment_albedo);
+		builder.addAttachment(attachment_normal);
 		builder.addAttachment(attachment_ambience);
 
 		framebuffers.push_back(builder.build(device, framebuffers.size()));
@@ -293,7 +308,7 @@ void RenderSystem::createPipelines() {
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 		.withBindingLayout(binding_terrain)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(descriptor_layout)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
 		.build();
 
 	pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
@@ -308,7 +323,7 @@ void RenderSystem::createPipelines() {
 		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBindingLayout(binding_3d)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(descriptor_layout)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
 		.build();
 
 	pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
@@ -321,7 +336,7 @@ void RenderSystem::createPipelines() {
 		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBindingLayout(binding_2d)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(descriptor_layout)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
 		.build();
 
 	pipeline_ssao = GraphicsPipelineBuilder::of(device)
@@ -331,7 +346,7 @@ void RenderSystem::createPipelines() {
 		.withDepthTest(VK_COMPARE_OP_GREATER, true, false)
 		.withShaders(assets.state->vert_blit, assets.state->frag_ssao)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(ssao_descriptor_layout)
+		.withDescriptorSetLayout(lighting_descriptor_layout)
 		.build();
 
 	pipeline_compose = GraphicsPipelineBuilder::of(device)
@@ -341,7 +356,7 @@ void RenderSystem::createPipelines() {
 		.withDepthTest(VK_COMPARE_OP_GREATER, true, false)
 		.withShaders(assets.state->vert_blit, assets.state->frag_compose)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(ssao_descriptor_layout)
+		.withDescriptorSetLayout(lighting_descriptor_layout)
 		.build();
 
 }
@@ -418,7 +433,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	frames.reserve(concurrent);
 
 	// Create this thing
-	descriptor_layout = DescriptorSetLayoutBuilder::begin()
+	geometry_descriptor_layout = DescriptorSetLayoutBuilder::begin()
 		.descriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
@@ -464,14 +479,14 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	attachment_albedo = AttachmentImageBuilder::begin()
 		.setFormat(VK_FORMAT_R8G8B8A8_UNORM)
-		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setColorClearValue(0, 0, 0, 0)
 		.build();
 
 	attachment_normal = AttachmentImageBuilder::begin()
 		.setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setColorClearValue(0, 0, 0, 0)
 		.build();
@@ -502,13 +517,12 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	for (unsigned int i = 0; i < 16; i ++) {
 
-		glm::vec4 sample;
+		glm::vec3 sample;
 		sample.x = random.uniformFloat(-1, 1);
 		sample.y = random.uniformFloat(-1, 1);
 		sample.z = 0;
-		sample.w = 0;
 
-		ssao_noise.push_back(sample);
+		ssao_noise.emplace_back(sample, 0.0f);
 	}
 
 	for (int i = 0; i < 64; ++ i) {
@@ -529,7 +543,8 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	}
 
-	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec3));
+	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec4));
+	ssao_config.noise_scale = glm::vec2 {1000.0/4.0, 700.0/4.0};
 
 	this->ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_buffers, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT);
 	this->ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -553,12 +568,13 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	transient_commands.close();
 	transient_buffers.execute();
 
-	ssao_descriptor_layout = DescriptorSetLayoutBuilder::begin()
+	// TODO save types in layout so we don't have to type them again when the set is allocated
+	lighting_descriptor_layout = DescriptorSetLayoutBuilder::begin()
 		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.descriptor(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.descriptor(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(4, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(5, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
@@ -667,7 +683,8 @@ void RenderSystem::close() {
 
 	terrain_pass.close();
 	lighting_pass.close();
-	descriptor_layout.close();
+	geometry_descriptor_layout.close();
+	lighting_descriptor_layout.close();
 
 	assets.close();
 	transient_pool.close();

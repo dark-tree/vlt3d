@@ -16,7 +16,8 @@ struct Uniforms {
 };
 
 struct AmbientOcclusionUniform {
-	glm::vec3 samples[64];
+	glm::vec4 samples[64];
+	glm::vec2 noise_scale;
 };
 
 class Frame {
@@ -100,7 +101,6 @@ class RenderSystem {
 		ImageView ssao_noise_view;
 		ImageSampler ssao_noise_sampler;
 		Buffer ssao_uniform_buffer;
-		DescriptorSetLayout ssao_descriptor_layout;
 
 		Attachment attachment_color;
 		Attachment attachment_depth;
@@ -124,7 +124,9 @@ class RenderSystem {
 
 		ResourceManager assets;
 
-		DescriptorSetLayout descriptor_layout;
+		DescriptorSetLayout geometry_descriptor_layout;
+		DescriptorSetLayout lighting_descriptor_layout;
+
 		BindingLayout binding_terrain;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;

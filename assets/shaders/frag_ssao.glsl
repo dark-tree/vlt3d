@@ -2,30 +2,30 @@
 
 layout(binding = 0) uniform AmbientOcclusionUniform {
     vec4 samples[64];
+    vec2 noise_scale;
 } uAmbientObject;
 
 layout(push_constant) uniform SceneUniform {
     mat4 projection;
 } uSceneObject;
 
+layout(input_attachment_index = 0, binding = 2) uniform subpassInput uNormalSampler;
+
 layout(binding = 1) uniform sampler2D uNoiseSampler;
-layout(binding = 2) uniform sampler2D uNormalSampler;
 layout(binding = 3) uniform sampler2D uPositionSampler;
-layout(binding = 4) uniform sampler2D uAlbedoSampler;
 
 layout(location = 0) in vec2 vTexture;
 layout(location = 0) out float fAmbience;
 
-const vec2 noise_scale = vec2(1000.0/4.0, 700.0/4.0);
 const float bias = 0.025;
-const int kernel_size = 64;
+const int kernel_size = 32;
 const float radius = 0.9;
 
 void main() {
 
     vec3 position = texture(uPositionSampler, vTexture).xyz;
-    vec3 normal = texture(uNormalSampler, vTexture).rgb;
-    vec3 random = texture(uNoiseSampler, vTexture * noise_scale).xyz;
+    vec3 normal = subpassLoad(uNormalSampler).rgb;
+    vec3 random = texture(uNoiseSampler, vTexture * uAmbientObject.noise_scale).xyz;
 
     // Create a TBN matrix that transforms any vector from tangent-space to view-space.
     // Using a process called the "Gramm-Schmidt process" we create an orthogonal basis, each time slightly tilted
