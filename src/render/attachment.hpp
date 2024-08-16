@@ -2,6 +2,8 @@
 #pragma once
 
 #include "external.hpp"
+#include "view.hpp"
+#include "buffer/allocator.hpp"
 
 struct AttachmentOpType {
 
@@ -69,5 +71,72 @@ struct StencilOp {
 	static constexpr AttachmentOp<StencilOp, AttachmentOpType::Load> LOAD {VK_ATTACHMENT_LOAD_OP_LOAD};
 	static constexpr AttachmentOp<StencilOp, AttachmentOpType::Store> STORE {VK_ATTACHMENT_STORE_OP_STORE};
 	static constexpr AttachmentOp<StencilOp, AttachmentOpType::Both> IGNORE {VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE};
+
+};
+
+/**
+ * Abstraction over the "Image-View-Sampler" triple in the context of full-screen images used
+ * in shaders as outputs (or inputs) such as the depth buffer or the various images used in deferred rendering
+ */
+class Attachment {
+
+	private:
+
+		bool allocated = false;
+
+	public:
+
+		struct Ref {
+			const uint32_t index;
+
+			Ref(int index)
+			: index(index) {}
+		};
+
+		READONLY VkFormat vk_format;
+		READONLY VkImageUsageFlags vk_usage;
+		READONLY VkImageAspectFlags vk_aspect;
+		READONLY VkClearValue vk_clear;
+		READONLY VkFilter vk_filter = VK_FILTER_LINEAR;
+		READONLY VkSamplerAddressMode vk_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		READONLY VkBorderColor vk_border = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
+		READONLY Image image;
+		READONLY ImageView view;
+		READONLY ImageSampler sampler;
+
+	public:
+
+		Attachment() = default;
+
+		void allocate(Device& device, VkExtent2D extent, Allocator& allocator);
+
+		void close(Device& device);
+
+};
+
+class AttachmentImageBuilder {
+
+	private:
+
+		Attachment attachment;
+
+	public:
+
+		static AttachmentImageBuilder begin();
+
+	public:
+
+		AttachmentImageBuilder& setFormat(VkFormat format);
+		AttachmentImageBuilder& setUsage(VkImageUsageFlags usage);
+		AttachmentImageBuilder& setAspect(VkImageAspectFlags aspect);
+		AttachmentImageBuilder& setFilter(VkFilter filter);
+		AttachmentImageBuilder& setMode(VkSamplerAddressMode mode);
+		AttachmentImageBuilder& setBorder(VkBorderColor border);
+		AttachmentImageBuilder& setColorClearValue(float r, float g, float b, float a);
+		AttachmentImageBuilder& setColorClearValue(int r, int g, int b, int a);
+		AttachmentImageBuilder& setDepthClearValue(float depth, uint32_t stencil = 0);
+
+		Attachment build() const;
 
 };

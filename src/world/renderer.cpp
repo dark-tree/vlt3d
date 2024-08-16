@@ -22,6 +22,21 @@ void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder, Frustum& frustu
 	}
 }
 
+void WorldRenderer::ChunkBuffer::dispose(RenderSystem& system) {
+
+	// empty buffers can just be tossed away, they don't actually hold
+	// any vulkan resources and never were actually passed to the GPU
+	if (buffer.empty()) {
+		delete this;
+		return;
+	}
+
+	system.defer([this] () {
+		this->buffer.close();
+		delete this;
+	});
+}
+
 /*
  * WorldRenderer
  */
@@ -30,19 +45,7 @@ void WorldRenderer::eraseBuffer(glm::ivec3 pos) {
 	auto it = buffers.find(pos);
 
 	if (it != buffers.end()) {
-		ChunkBuffer* chunk = buffers.extract(it).mapped();
-
-		// empty buffers can just be tossed away, they don't actually hold
-		// any vulkan resources and never were actually passed to the GPU
-		if (chunk->buffer.empty()) {
-			delete chunk;
-			return;
-		}
-
-		system.defer([chunk]() {
-			chunk->buffer.close();
-			delete chunk;
-		});
+		buffers.extract(it).mapped()->dispose(system);
 	}
 }
 
@@ -111,5 +114,22 @@ void WorldRenderer::eraseOutside(glm::ivec3 origin, float radius) {
 		if (glm::length(glm::vec3(pos) - viewer) > radius) {
 			erasures.emplace_back(pos);
 		}
+	}
+}
+
+void WorldRenderer::close() {
+	mesher.close();
+
+	// now we have them all this is mostly superficial
+	// but for correctness let's lock the mutex
+	std::lock_guard lock {submit_mutex};
+	awaiting.swap();
+
+	for (auto& [pos, chunk] : buffers) {
+		chunk->dispose(system);
+	}
+
+	for (auto& chunk : awaiting.read()) {
+		chunk->dispose(system);
 	}
 }

@@ -2,6 +2,8 @@
 
 #include "external.hpp"
 #include "memory.hpp"
+#include "util/threads.hpp"
+#include "setup/callback.hpp"
 
 class Image;
 class CommandRecorder;
@@ -21,7 +23,7 @@ class ImageData {
 		enum Type {
 			STB_IMAGE,
 			MALLOCED,
-			UNBACKED
+			VIEW
 		};
 
 		READONLY Type type;
@@ -58,6 +60,12 @@ class ImageData {
 		void close();
 
 		/**
+		 * Clears the image, setting all pixels in the image to the
+		 * given value, must contains EXACTLY 'channels()' components
+		 */
+		void clear(std::initializer_list<uint8_t> value);
+
+		/**
 		 * Save the image data as a PNG image under the
 		 * given path, can be useful for debugging
 		 */
@@ -76,10 +84,16 @@ class ImageData {
 		static ImageData allocate(int w, int h, int channels = 4);
 
 		/**
+		 * Treats the given pointer as the image data
+		 * the data is not taken ownership of
+		 */
+		static ImageData view(void* pixels, int w, int h, int channels = 4);
+
+		/**
 		 * Records a copy-to-GPU-memory operation into the
 		 * given command buffer, a staging buffer IS used and resulting image returned
 		 */
-		Image upload(Allocator& allocator, CommandRecorder& recorder, VkFormat format) const;
+		Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format) const;
 
 	public:
 
@@ -119,7 +133,7 @@ class Image {
 		Image(VkImage vk_image, VkFormat vk_format);
 		Image(VkImage vk_image, VkFormat vk_format, MemoryAccess memory);
 
-		ImageViewBuilder getViewBuilder();
-		void close(Device& device);
+		ImageViewBuilder getViewBuilder() const;
+		void close();
 
 };

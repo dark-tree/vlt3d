@@ -53,7 +53,7 @@ class SoundSystem {
 			// as the context is already gone, so clear the array first to force the correct order
 			sources.clear();
 
-			alcMakeContextCurrent(NULL);
+			alcMakeContextCurrent(nullptr);
 			alcDestroyContext(al_context);
 			alcCloseDevice(al_device);
 		}

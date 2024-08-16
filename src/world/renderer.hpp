@@ -67,6 +67,9 @@ class WorldRenderer {
 
 			/// draw this buffer
 			void draw(CommandRecorder& recorder, Frustum& frustum);
+
+			/// dispose of this buffer as soon as it's valid to do so
+			void dispose(RenderSystem& system);
 		};
 
 		/// erase vertex buffer and mark it for deletion
@@ -109,4 +112,6 @@ class WorldRenderer {
 		/// Discards all chunks that are further away than the given radius
 		void eraseOutside(glm::ivec3 origin, float radius);
 
+		/// Discards all chunks and marks all resources for deletion
+		void close();
 };

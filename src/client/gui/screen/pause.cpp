@@ -2,7 +2,9 @@
 #include "pause.hpp"
 
 PauseScreen::PauseScreen()
-: GridScreen({10, 10, 32}) {}
+: GridScreen({10, 10, 32}) {
+	AllocatorCallbackFactory::print();
+}
 
 void PauseScreen::buildModel(GuiComposed::Builder& builder) {
 	builder.add(1, 0, GuiImage::of().box(3, 3).inset(0.05).sprite("vkblob"));

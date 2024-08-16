@@ -39,9 +39,9 @@ class Skybox {
 			sun.pos = getSunPos(observer_latitude);
 			int s = std::max(0, (int) -(sun.pos.y * 200));
 
-			sun.r = std::max(0, 100 - (int) s);
-			sun.g = std::max(0, 90 - (int) s);
-			sun.b = std::max(0, 80 - (int) s);
+			sun.r = std::max(0, 170 - (int) s);
+			sun.g = std::max(0, 160 - (int) s);
+			sun.b = std::max(0, 150 - (int) s);
 			return sun;
 		}
 

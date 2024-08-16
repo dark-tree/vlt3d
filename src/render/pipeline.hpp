@@ -11,7 +11,11 @@
 #include "shader/module.hpp"
 #include "descriptor/push.hpp"
 
-#define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.has##feature ()) { throw Exception {"Feature '" #feature "' not enabled on this device!"}; }
+#if defined(NDEBUG)
+#define ASSERT_FEATURE(test, device, feature)
+#else
+#define ASSERT_FEATURE(test, device, feature) if ((test) && !device.features.getStandard().feature) { throw Exception {"Feature '" #feature "' not enabled on this device!"}; }
+#endif
 
 enum struct BlendMode {
 	BITWISE = 1,
@@ -34,8 +38,8 @@ class GraphicsPipeline {
 		: vk_pipeline(vk_pipeline), vk_layout(vk_layout), vk_device(vk_device) {}
 
 		void close() {
-			vkDestroyPipeline(vk_device, vk_pipeline, nullptr);
-			vkDestroyPipelineLayout(vk_device, vk_layout, nullptr);
+			vkDestroyPipeline(vk_device, vk_pipeline, AllocatorCallbackFactory::named("Pipeline"));
+			vkDestroyPipelineLayout(vk_device, vk_layout, AllocatorCallbackFactory::named("PipelineLayout"));
 		}
 
 };
@@ -48,6 +52,8 @@ class GraphicsPipelineBuilder {
 		std::vector<VkDynamicState> dynamics;
 		std::vector<VkVertexInputBindingDescription> bindings;
 		std::vector<VkVertexInputAttributeDescription> attributes;
+		std::vector<VkPipelineColorBlendAttachmentState> attachments;
+
 		std::vector<ShaderModule> stages;
 
 		VkPipelineViewportStateCreateInfo view {};
@@ -88,6 +94,13 @@ class GraphicsPipelineBuilder {
 			view.pViewports = &vk_viewport;
 			view.scissorCount = 1;
 			view.pScissors = &vk_scissor;
+
+			// technically blending is per-pipeline and per-attachment but we limit it to per-pipeline only here
+			for (int i = 0; i < (int) blending.attachmentCount; i ++) {
+				attachments.push_back(attachment);
+			}
+
+			blending.pAttachments = attachments.data();
 
 		}
 
@@ -135,8 +148,7 @@ class GraphicsPipelineBuilder {
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineColorBlendStateCreateInfo.html
 			blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			blending.attachmentCount = 1;
-			blending.pAttachments = &attachment;
+			blending.attachmentCount = 0;
 			withBlendConstants(0.0f, 0.0f, 0.0f, 0.0f);
 			withBlendWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
 			withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
@@ -220,13 +232,13 @@ class GraphicsPipelineBuilder {
 	// rasterizer configuration
 
 		GraphicsPipelineBuilder& withDepthClamp(bool enable) {
-			ASSERT_FEATURE(enable, device, DepthClamp);
+			ASSERT_FEATURE(enable, device, depthClamp);
 			rasterizer.depthClampEnable = enable;
 			return *this;
 		}
 
 		GraphicsPipelineBuilder& withDepthBias(bool enable, float constant = 0.0f, float clamp = 0.0f, float slope = 0.0f) {
-			ASSERT_FEATURE(clamp != 0.0f, device, DepthBiasClamp);
+			ASSERT_FEATURE(clamp != 0.0f, device, depthBiasClamp);
 			rasterizer.depthBiasEnable = enable;
 			rasterizer.depthBiasConstantFactor = constant;
 			rasterizer.depthBiasClamp = clamp;
@@ -235,13 +247,13 @@ class GraphicsPipelineBuilder {
 		}
 
 		GraphicsPipelineBuilder& withPolygonMode(VkPolygonMode mode) {
-			ASSERT_FEATURE(mode != VK_POLYGON_MODE_FILL, device, FillModeNonSolid);
+			ASSERT_FEATURE(mode != VK_POLYGON_MODE_FILL, device, fillModeNonSolid);
 			rasterizer.polygonMode = mode;
 			return *this;
 		}
 
 		GraphicsPipelineBuilder& withLineWidth(float width) {
-			ASSERT_FEATURE(width > 1.0f, device, WideLines);
+			ASSERT_FEATURE(width > 1.0f, device, wideLines);
 			rasterizer.lineWidth = width;
 			return *this;
 		}
@@ -323,7 +335,7 @@ class GraphicsPipelineBuilder {
 			}
 
 			if (mode == BlendMode::BITWISE) {
-				ASSERT_FEATURE(true, device, LogicOp);
+				ASSERT_FEATURE(true, device, logicOp);
 				blending.logicOpEnable = true;
 				attachment.blendEnable = false;
 			}
@@ -333,9 +345,16 @@ class GraphicsPipelineBuilder {
 
 	// renderpass configuration
 
-		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, uint32_t index = 0) {
+		GraphicsPipelineBuilder& withRenderPass(RenderPass& render_pass, int subpass_index) {
+			const int count = render_pass.getSubpassCount();
+
+			if (count <= subpass_index) {
+				throw Exception {"Specified render pass has " + std::to_string(count) + " subpasses but, subpass with index " + std::to_string(subpass_index) + " was requested!"};
+			}
+
+			blending.attachmentCount = render_pass.getAttachmentCount(subpass_index);
 			vk_pass = render_pass.vk_pass;
-			subpass = (int) index;
+			subpass = subpass_index;
 			return *this;
 		}
 
@@ -351,8 +370,6 @@ class GraphicsPipelineBuilder {
 
 		GraphicsPipeline build() {
 
-			Timer timer;
-
 			if (subpass == -1) {
 				throw Exception {"Render pass needs to be specified!"};
 			}
@@ -363,7 +380,7 @@ class GraphicsPipelineBuilder {
 			// first create the pipeline layout, it will be bundled with the pipeline
 			VkPipelineLayout pipeline_layout;
 
-			if (vkCreatePipelineLayout(device.vk_device, &layout, nullptr, &pipeline_layout) != VK_SUCCESS) {
+			if (vkCreatePipelineLayout(device.vk_device, &layout, AllocatorCallbackFactory::named("PipelineLayout"), &pipeline_layout) != VK_SUCCESS) {
 				throw Exception {"Failed to create graphics pipeline layout!"};
 			}
 
@@ -402,7 +419,7 @@ class GraphicsPipelineBuilder {
 
 			VkPipeline pipeline;
 
-			if (vkCreateGraphicsPipelines(device.vk_device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline) != VK_SUCCESS) {
+			if (vkCreateGraphicsPipelines(device.vk_device, VK_NULL_HANDLE, 1, &create_info, AllocatorCallbackFactory::named("Pipeline"), &pipeline) != VK_SUCCESS) {
 				throw Exception {"Failed to create graphics pipeline!"};
 			}
 

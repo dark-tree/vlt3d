@@ -2,28 +2,36 @@
 #include "renderer.hpp"
 
 #include "setup/device.hpp"
+#include "util/random.hpp"
 
 /*
  * Frame
  */
 
-Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler)
+Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device, const ImageSampler& atlas_sampler)
 : buffer(pool.allocate()), immediate_2d(system, 1024), immediate_3d(system, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
 
-//	// leaving this here as it may prove useful later
-//	BufferInfo buffer_builder {sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
-//	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-//	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-//
-//	ubo = system.allocator.allocateBuffer(buffer_builder);
-//	map = ubo.access().map();
+	set_1 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
+	set_1.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, atlas_sampler);
 
-	set = descriptor;
-	set.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sampler);
+	set_2 = system.descriptor_pool.allocate(system.ssao_descriptor_layout);
+	set_2.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, system.ssao_uniform_buffer, sizeof(AmbientOcclusionUniform));
+	set_2.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.ssao_noise_sampler);
+	set_2.sampler(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_normal.sampler);
+	set_2.sampler(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_position.sampler);
+
+	set_3 = system.descriptor_pool.allocate(system.lighting_descriptor_layout);
+	set_3.sampler(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_normal.sampler);
+	set_3.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_position.sampler);
+	set_3.sampler(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_albedo.sampler);
+	set_3.sampler(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_ambience.sampler);
+
 }
 
 Frame::~Frame() {
 	buffer.close();
+	immediate_2d.close();
+	immediate_3d.close();
 	available_semaphore.close();
 	finished_semaphore.close();
 	flight_fence.close();
@@ -34,11 +42,7 @@ void Frame::wait() {
 }
 
 void Frame::execute() {
-	int count = queue.execute();
-
-	if (count > 0) {
-		logger::debug("Executed ", count, " defered frame tasks");
-	}
+	queue.execute();
 }
 
 /*
@@ -75,7 +79,7 @@ void RenderSystem::createSwapchain() {
 	}
 
 	if (!matched) {
-		logger::error("No surface format matched the requested parameters!");
+		throw Exception {"No surface format matched the requested parameters!"};
 	}
 
 	// swapchain creation
@@ -86,52 +90,209 @@ void RenderSystem::createSwapchain() {
 
 	swapchain = builder.build(device, surface);
 
-}
-
-void RenderSystem::createRenderPass(Swapchain& surface) {
-
-	VkFormat format = surface.vk_surface_format.format;
-	RenderPassBuilder builder;
-
-	builder.addAttachment(format, VK_SAMPLE_COUNT_1_BIT)
-		.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
-		.output(ColorOp::STORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-		.next();
-
-	builder.addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-		.input(ColorOp::CLEAR, StencilOp::IGNORE, VK_IMAGE_LAYOUT_UNDEFINED)
-		.output(ColorOp::IGNORE, StencilOp::IGNORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-		.next();
-
-	builder.addDependency()
-		.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0)
-		.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-		.next();
-
-	builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS)
-		.addColor(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-		.addDepth(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-		.next();
-
-	render_pass = builder.build(device);
+	attachment_color = AttachmentImageBuilder::begin()
+		.setFormat(selected.format)
+		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		.setColorClearValue(0.0f, 0.0f, 0.0f, 1.0f)
+		.build();
 
 }
 
-void RenderSystem::createFramebuffers(RenderPass& pass) {
+void RenderSystem::createRenderPass() {
 
-	// create the depth buffer shared by the framebuffers
-	{
-		ImageInfo image_builder {swapchain.vk_extent.width, swapchain.vk_extent.height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
-		image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
+	{ // geometry pass
 
-		depth_image = allocator.allocateImage(image_builder);
-		depth_view = depth_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_DEPTH_BIT);
+		RenderPassBuilder builder;
+
+		Attachment::Ref depth = builder.addAttachment(attachment_depth)
+			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		Attachment::Ref albedo = builder.addAttachment(attachment_albedo)
+			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		Attachment::Ref normal = builder.addAttachment(attachment_normal)
+			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		Attachment::Ref position = builder.addAttachment(attachment_position)
+			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		builder.addDependency() // G-Buffer/Color 0->Write
+			.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0)
+			.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.next();
+
+		builder.addDependency() // Depth 0->Write
+			.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0)
+			.output(0, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+			.next();
+
+		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT) // Color Output
+			.input(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
+			.next();
+
+		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS)
+			.addOutput(albedo, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addOutput(normal, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addOutput(position, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		terrain_pass = builder.build(device);
+
 	}
 
-	// create framebuffers
-	framebuffers = swapchain.getFramebuffers(pass, depth_view);
+	{ // SSAO pass
 
+		RenderPassBuilder builder;
+
+		Attachment::Ref depth = builder.addAttachment(attachment_depth)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) // TODO VK_ATTACHMENT_STORE_OP_NONE_KHR
+			.next();
+
+		Attachment::Ref normal = builder.addAttachment(attachment_normal)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) // TODO VK_ATTACHMENT_STORE_OP_NONE_KHR
+			.next();
+
+		Attachment::Ref ambience = builder.addAttachment(attachment_ambience)
+			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		builder.addDependency() // G-Buffer/Color 0->Write
+			.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0)
+			.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.next();
+
+		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT) // Color Output
+			.input(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
+			.next();
+
+		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // SSAO
+			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.addOutput(ambience, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		ssao_pass = builder.build(device);
+
+	}
+
+	{ // lighting pass
+
+		RenderPassBuilder builder;
+
+		Attachment::Ref color = builder.addAttachment(attachment_color)
+			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+			.next();
+
+		Attachment::Ref depth = builder.addAttachment(attachment_depth)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		Attachment::Ref albedo = builder.addAttachment(attachment_albedo)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		Attachment::Ref normal = builder.addAttachment(attachment_normal)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		builder.addDependency() // G-Buffer/Color 0->Write
+			.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0)
+			.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.next();
+
+		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT)
+			.input(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.output(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.next();
+
+		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT) // Color Output
+			.input(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
+			.next();
+
+		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Lighting
+			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.addInput(albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Overlay
+			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		lighting_pass = builder.build(device);
+
+	}
+
+}
+
+// TODO this also would be cool to automate base on render pass attachments
+void RenderSystem::createFramebuffers() {
+
+	VkExtent2D extent = swapchain.vk_extent;
+
+	attachment_depth.allocate(device, extent, allocator);
+	attachment_albedo.allocate(device, extent, allocator);
+	attachment_normal.allocate(device, extent, allocator);
+	attachment_position.allocate(device, extent, allocator);
+	attachment_ambience.allocate(device, extent, allocator);
+
+	// create the deferred framebuffer
+	{
+		FramebufferBuilder builder {terrain_pass, extent};
+		builder.addAttachment(attachment_depth);
+		builder.addAttachment(attachment_albedo);
+		builder.addAttachment(attachment_normal);
+		builder.addAttachment(attachment_position);
+
+		terrain_framebuffer = builder.build(device);
+	}
+
+	// create the deferred framebuffer
+	{
+		FramebufferBuilder builder {ssao_pass, extent};
+		builder.addAttachment(attachment_depth);
+		builder.addAttachment(attachment_normal);
+		builder.addAttachment(attachment_ambience);
+
+		ssao_framebuffer = builder.build(device);
+	}
+
+	const std::vector<ImageView>& views = swapchain.getImageViews();
+
+	// create the main screen framebuffers
+	framebuffers.clear();
+	framebuffers.reserve(views.size());
+
+	for (const ImageView& view : views) {
+		FramebufferBuilder builder {lighting_pass, extent};
+		builder.addAttachment(view);
+		builder.addAttachment(attachment_depth);
+		builder.addAttachment(attachment_albedo);
+		builder.addAttachment(attachment_normal);
+
+		framebuffers.push_back(builder.build(device, framebuffers.size()));
+	}
 }
 
 void RenderSystem::recreateSwapchain() {
@@ -141,8 +302,7 @@ void RenderSystem::recreateSwapchain() {
 
 	// free old stuff
 	swapchain.close();
-	depth_view.close(device);
-	depth_image.close(device);
+	attachment_depth.close(device);
 
 	for (Framebuffer& framebuffer : framebuffers) {
 		framebuffer.close();
@@ -155,20 +315,20 @@ void RenderSystem::recreateSwapchain() {
 
 	// we don't necessarily need to recreate the render pass if the format stayed the same
 	if (swapchain.vk_surface_format.format != old_format) {
-		logger::info("Swapchain format changed, recreating render pass!");
-		render_pass.close();
-		createRenderPass(swapchain);
+		logger::info("Swapchain format changed, recreating render passes!");
+		terrain_pass.close();
+		createRenderPass();
 	}
 
 	// create new framebuffers
-	createFramebuffers(render_pass);
+	createFramebuffers();
 
 	pipeline_2d_tint.close();
 	pipeline_3d_terrain.close();
 	pipeline_3d_tint.close();
 
 	createPipelines();
-
+	createFrames();
 }
 
 void RenderSystem::createPipelines() {
@@ -179,19 +339,19 @@ void RenderSystem::createPipelines() {
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
-		.withRenderPass(render_pass)
+		.withRenderPass(terrain_pass, 0)
 		.withShaders(assets.state->vert_terrain, assets.state->frag_terrain)
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 		.withBindingLayout(binding_terrain)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(descriptor_layout)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
 		.build();
 
 	pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
-		.withRenderPass(render_pass)
+		.withRenderPass(lighting_pass, 1)
 		.withShaders(assets.state->vert_3d, assets.state->frag_tint)
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 		.withBlendMode(BlendMode::ENABLED)
@@ -199,22 +359,65 @@ void RenderSystem::createPipelines() {
 		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBindingLayout(binding_3d)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(descriptor_layout)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
 		.build();
 
 	pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
-		.withRenderPass(render_pass)
+		.withRenderPass(lighting_pass, 1)
 		.withShaders(assets.state->vert_2d, assets.state->frag_tint)
 		.withBlendMode(BlendMode::ENABLED)
 		.withBlendAlphaFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBlendColorFunc(VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 		.withBindingLayout(binding_2d)
 		.withPushConstantLayout(constant_layout)
-		.withDescriptorSetLayout(descriptor_layout)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
 		.build();
 
+	pipeline_ssao = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withRenderPass(ssao_pass, 0)
+		.withDepthTest(VK_COMPARE_OP_GREATER, true, false)
+		.withShaders(assets.state->vert_blit, assets.state->frag_ssao)
+		.withPushConstantLayout(constant_layout)
+		.withDescriptorSetLayout(ssao_descriptor_layout)
+		.build();
+
+	pipeline_compose = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withRenderPass(lighting_pass, 0)
+		.withDepthTest(VK_COMPARE_OP_GREATER, true, false)
+		.withShaders(assets.state->vert_blit, assets.state->frag_compose)
+		.withPushConstantLayout(constant_layout)
+		.withDescriptorSetLayout(lighting_descriptor_layout)
+		.build();
+
+}
+
+void RenderSystem::closeFrames() {
+	if (!frames.empty()) {
+
+		// execute all pending operations to not leak any memory
+		for (Frame& frame : frames) {
+			frame.execute();
+		}
+
+		frames.clear();
+		descriptor_pool.reset();
+		graphics_pool.reset(true);
+		transient_pool.reset(true);
+	}
+}
+
+void RenderSystem::createFrames() {
+	closeFrames();
+
+	for (int i = 0; i < concurrent; i ++) {
+		frames.emplace_back(*this, graphics_pool, device, assets.getAtlasSampler());
+	}
 }
 
 RenderSystem::RenderSystem(Window& window, int concurrent)
@@ -226,6 +429,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	// instance configuration
 	InstanceBuilder builder;
 	builder.addApplicationInfo("My Funny Vulkan Application");
+	builder.addInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME).orFail();
 
 	#if !defined(NDEBUG)
 	logger::debug("Running in debug mode");
@@ -245,8 +449,8 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
 
 	// enable some additional features
-	device_builder.features.enableFillModeNonSolid().orFail();
-	device_builder.features.enableWideLines().orFail();
+	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.fillModeNonSolid);
+	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.wideLines);
 
 	// device and queue creation
 	device = device_builder.create();
@@ -265,7 +469,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	frames.reserve(concurrent);
 
 	// Create this thing
-	descriptor_layout = DescriptorSetLayoutBuilder::begin()
+	geometry_descriptor_layout = DescriptorSetLayoutBuilder::begin()
 		.descriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
@@ -291,74 +495,186 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.attribute(2, VK_FORMAT_R8G8B8A8_UNORM)
 		.done();
 
+	// TODO
 	descriptor_pool = DescriptorPoolBuilder::begin()
-		.add(concurrent, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-		.add(concurrent, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-		.done(device, concurrent);
+		.add(32, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+		.add(32, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+		.add(32, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+		.done(device, 32);
 
 	constant_layout = PushConstantLayoutBuilder::begin()
-		.add(Kind::VERTEX, 64, &mvp_vertex_constant)
-		.add(Kind::FRAGMENT, 16, &sun_vertex_constant)
+		.add(Kind::VERTEX | Kind::FRAGMENT, 64 + 64, &push_constant)
 		.done();
+
+	attachment_depth = AttachmentImageBuilder::begin()
+		.setFormat(VK_FORMAT_D32_SFLOAT)
+		.setUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+		.setAspect(VK_IMAGE_ASPECT_DEPTH_BIT)
+		.setDepthClearValue(1.0f)
+		.build();
+
+	attachment_albedo = AttachmentImageBuilder::begin()
+		.setFormat(VK_FORMAT_R8G8B8A8_UNORM)
+		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
+		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		.setColorClearValue(0, 0, 0, 0)
+		.build();
+
+	attachment_normal = AttachmentImageBuilder::begin()
+		.setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
+		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		.setMode(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
+		.setColorClearValue(0, 0, 0, 0)
+		.build();
+
+	attachment_position = AttachmentImageBuilder::begin()
+		.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
+		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		.setMode(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
+		.setColorClearValue(0, 0, 0, 0)
+		.build();
+
+	attachment_ambience = AttachmentImageBuilder::begin()
+		.setFormat(VK_FORMAT_R8_UNORM)
+		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		.setColorClearValue(0, 0, 0, 0)
+		.build();
+
+	Random random {42};
+	TaskQueue transient_buffers;
+	CommandBuffer transient_commands = transient_pool.allocate();
+	CommandRecorder transient_recorder = transient_commands.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	Fence fence = device.fence();
+
+	std::vector<glm::vec4> ssao_noise;
+	std::vector<glm::vec4> ssao_kernel;
+	AmbientOcclusionUniform ssao_config;
+
+	for (unsigned int i = 0; i < 16; i ++) {
+
+		glm::vec3 sample;
+		sample.x = random.uniformFloat(-1, 1);
+		sample.y = random.uniformFloat(-1, 1);
+		sample.z = 0;
+
+		ssao_noise.emplace_back(sample, 0.0f);
+	}
+
+	for (int i = 0; i < 64; ++ i) {
+
+		glm::vec3 sample;
+		sample.x = random.uniformFloat(-1, 1);
+		sample.y = random.uniformFloat(-1, 1);
+		sample.z = random.uniformFloat(0, 1);
+
+		sample = glm::normalize(sample);
+		sample *= random.uniformFloat(0, 1);
+
+		float frac = i / 64.0f;
+		float scale = std::lerp(0.1f, 1.0f, frac * frac);
+		sample *= scale;
+
+		ssao_kernel.emplace_back(sample, 0.0f);
+
+	}
+
+	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec4));
+	ssao_config.noise_scale = glm::vec2 {1000.0/4.0, 700.0/4.0};
+
+	this->ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_buffers, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT);
+	this->ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
+	this->ssao_noise_sampler = ssao_noise_view.getSamplerBuilder().setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT).setFilter(VK_FILTER_NEAREST).build(device);
+
+	BufferInfo ssao_buffer_builder {sizeof(AmbientOcclusionUniform), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
+	ssao_buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	ssao_buffer_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	ssao_buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+	ssao_uniform_buffer = allocator.allocateBuffer(ssao_buffer_builder);
+
+	MemoryMap ssao_map = ssao_uniform_buffer.access().map();
+	ssao_map.write(&ssao_config, sizeof(AmbientOcclusionUniform));
+	ssao_map.unmap();
+
+	transient_recorder.done();
+	transient_commands.submit().unlocks(fence).done(transfer_queue);
+	fence.wait();
+	fence.close();
+	transient_commands.close();
+	transient_buffers.execute();
+
+	ssao_descriptor_layout = DescriptorSetLayoutBuilder::begin()
+		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.done(device);
+
+	// TODO save types in layout so we don't have to type them again when the set is allocated
+	lighting_descriptor_layout = DescriptorSetLayoutBuilder::begin()
+		.descriptor(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.done(device);
 
 	// Phase 2
 	// this step needs to be more or less repeated every time the window size changes
 
 	createSwapchain();
-	createRenderPass(swapchain);
-	createFramebuffers(render_pass);
+	createRenderPass();
+	createFramebuffers();
 
 	// Phase 3
 	// this step will need to be repeated each time the resources are reloaded
 
-	logger::debug("Resource reload took: ", Timer::of([&] {
+	logger::info("Resource reload took: ", Timer::of([&] {
+		TaskQueue queue;
 		Fence fence = device.fence();
 		CommandBuffer buffer = transient_pool.allocate();
-		assets.reload(device, allocator, buffer);
+		assets.reload(*this, queue, buffer);
 		buffer.submit().unlocks(fence).done(transfer_queue);
 
 		fence.wait();
 		fence.close();
 		buffer.close();
+		queue.execute();
 	}).milliseconds(), "ms");
 
 	createPipelines();
-
-	for (int i = 0; i < concurrent; i ++) {
-		frames.emplace_back(*this, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
-	}
+	createFrames();
 }
 
 void RenderSystem::reloadAssets() {
 	wait();
 
-	logger::debug("Resource reload took: ", Timer::of([&] {
+	logger::info("Resource reload took: ", Timer::of([&] {
+		TaskQueue queue;
 		Fence fence = device.fence();
 		CommandBuffer buffer = transient_pool.allocate();
-		assets.reload(device, allocator, buffer);
+		assets.reload(*this, queue, buffer);
 		buffer.submit().unlocks(fence).done(transfer_queue);
 
 		fence.wait();
 		fence.close();
 		buffer.close();
+		queue.execute();
 
 		pipeline_2d_tint.close();
 		pipeline_3d_terrain.close();
 		pipeline_3d_tint.close();
+		pipeline_ssao.close();
+		pipeline_compose.close();
 
 		createPipelines();
-
-		descriptor_pool.reset();
-		frames.clear();
-
-		for (int i = 0; i < concurrent; i ++) {
-			frames.emplace_back(*this, graphics_pool, device, descriptor_pool.allocate(descriptor_layout), assets.getAtlasSampler());
-		}
+		createFrames();
 	}).milliseconds(), "ms");
-
 }
 
-Framebuffer& RenderSystem::acquireFramebuffer() {
+Framebuffer& RenderSystem::acquireScreenFramebuffer() {
 	uint32_t image_index;
 	if (swapchain.getNextImage(getFrame().available_semaphore, &image_index).mustReplace()) {
 		recreateSwapchain();
@@ -367,8 +683,8 @@ Framebuffer& RenderSystem::acquireFramebuffer() {
 	return framebuffers[image_index];
 }
 
-void RenderSystem::presentFramebuffer(Framebuffer& framebuffer) {
-	if (swapchain.present(presentation_queue, getFrame().finished_semaphore, framebuffer.index).mustReplace()) {
+void RenderSystem::presentScreenFramebuffer(Framebuffer& framebuffer) {
+	if (swapchain.present(presentation_queue, getFrame().finished_semaphore, framebuffer.presentation_index).mustReplace()) {
 		recreateSwapchain();
 	}
 }
@@ -382,9 +698,65 @@ void RenderSystem::nextFrame() {
 }
 
 void RenderSystem::defer(const Task& task) {
-	getFrame().queue.enqueue(task);
+	// On some std::vector implementations (Windows) the elements is only treated as inserted after it's constructor
+	// is done (container size is incremented after the element is constructed), this makes referencing it by index
+	// from that constructor throw in debug mode. This hack works around that and references it directly, note that
+	// this is safe as 'frames' will never be re-allocated as that is something we ensure separately using 'reserve()'
+	// before we insert anything so we can, in fact, be sure that the element is being constructed "in-place".
+	frames.data()[index].queue.enqueue(task);
 }
 
 void RenderSystem::wait() {
 	device.wait();
+}
+
+void RenderSystem::close() {
+	wait();
+
+	swapchain.close();
+	attachment_depth.close(device);
+	attachment_normal.close(device);
+	attachment_position.close(device);
+	attachment_albedo.close(device);
+	attachment_ambience.close(device);
+
+	terrain_framebuffer.close();
+	ssao_framebuffer.close();
+
+	for (Framebuffer& framebuffer : framebuffers) {
+		framebuffer.close();
+	}
+
+	closeFrames();
+
+	pipeline_2d_tint.close();
+	pipeline_3d_terrain.close();
+	pipeline_3d_tint.close();
+	pipeline_ssao.close();
+	pipeline_compose.close();
+
+	terrain_pass.close();
+	lighting_pass.close();
+	ssao_pass.close();
+
+	geometry_descriptor_layout.close();
+	ssao_descriptor_layout.close();
+	lighting_descriptor_layout.close();
+
+	ssao_noise_sampler.close(device);
+	ssao_noise_view.close(device);
+	ssao_noise_image.close();
+	ssao_uniform_buffer.close();
+
+	assets.close();
+	transient_pool.close();
+	graphics_pool.close();
+	descriptor_pool.close();
+	surface.close();
+	allocator.close();
+
+	// Goodbye vulkan!
+	device.close();
+	instance.close();
+
 }

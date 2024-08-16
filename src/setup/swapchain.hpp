@@ -21,6 +21,7 @@ class Swapchain {
 	private:
 
 		std::vector<Image> images;
+		std::vector<ImageView> views;
 		Device* device;
 
 	public:
@@ -39,30 +40,18 @@ class Swapchain {
 
 				images.reserve(count);
 
-				for (VkImage img : entries) {
-					images.emplace_back(img, vk_surface_format.format);
+				for (VkImage vk_image : entries) {
+					Image image {vk_image, vk_surface_format.format};
+
+					images.push_back(image);
+					views.push_back(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT));
 				}
 			}
 
 		}
 
-		std::vector<Image>& getImages() {
-			return images;
-		}
-
-		std::vector<Framebuffer> getFramebuffers(RenderPass& pass, ImageView& depth_image) {
-			std::vector<Framebuffer> framebuffers;
-			framebuffers.reserve(images.size());
-
-			for (Image& image : images) {
-				FramebufferBuilder builder {pass, vk_extent.width, vk_extent.height};
-				builder.addAttachment(image.getViewBuilder().build(*device, VK_IMAGE_ASPECT_COLOR_BIT));
-				builder.addAttachment(depth_image);
-
-				framebuffers.push_back(builder.build(*device, framebuffers.size()));
-			}
-
-			return framebuffers;
+		const std::vector<ImageView>& getImageViews() {
+			return views;
 		}
 
 		PresentResult getNextImage(Semaphore& semaphore, uint32_t* image_index) {
@@ -87,7 +76,11 @@ class Swapchain {
 		}
 
 		void close() {
-			vkDestroySwapchainKHR(device->vk_device, vk_swapchain, nullptr);
+			for (ImageView& view : views) {
+				view.close(*device);
+			}
+
+			vkDestroySwapchainKHR(device->vk_device, vk_swapchain, AllocatorCallbackFactory::named("Swapchain"));
 		}
 
 };
@@ -157,13 +150,13 @@ class SwapchainBuilder {
 			// how to handle pixels behind the window
 			create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
-			// ignore pixels that are obsured (for example by a window on top)
+			// ignore pixels that are obscured (for example by a window on top)
 			create_info.clipped = VK_TRUE;
 
 			VkSwapchainKHR swapchain;
 
-			if (vkCreateSwapchainKHR(device.vk_device, &create_info, nullptr, &swapchain) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateSwapchainKHR: Failed to create swapchain!");
+			if (vkCreateSwapchainKHR(device.vk_device, &create_info, AllocatorCallbackFactory::named("Swapchain"), &swapchain) != VK_SUCCESS) {
+				throw Exception {"Failed to create swapchain!"};
 			}
 
 			return Swapchain {swapchain, format, extent, device};

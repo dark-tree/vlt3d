@@ -11,15 +11,17 @@ class Framebuffer {
 
 		READONLY VkFramebuffer vk_buffer;
 		READONLY VkDevice vk_device;
-		READONLY uint32_t index;
+		READONLY uint32_t presentation_index;
+		READONLY std::vector<VkImageView> owned;
 
 	public:
 
-		Framebuffer(VkFramebuffer vk_buffer, VkDevice vk_device, uint32_t index)
-		: vk_buffer(vk_buffer), vk_device(vk_device), index(index) {}
+		Framebuffer() = default;
+		Framebuffer(VkFramebuffer vk_buffer, VkDevice vk_device, uint32_t presentation_index)
+		: vk_buffer(vk_buffer), vk_device(vk_device), presentation_index(presentation_index) {}
 
 		void close() {
-			vkDestroyFramebuffer(vk_device, vk_buffer, nullptr);
+			vkDestroyFramebuffer(vk_device, vk_buffer, AllocatorCallbackFactory::named("Framebuffer"));
 		}
 
 };
@@ -34,20 +36,25 @@ class FramebufferBuilder {
 
 	public:
 
-		FramebufferBuilder(RenderPass& pass, uint32_t width, uint32_t height) {
+		FramebufferBuilder(RenderPass& pass, VkExtent2D extent) {
 			this->pass = pass.vk_pass;
-			this->width = width;
-			this->height = height;
+			this->width = extent.width;
+			this->height = extent.height;
 		}
 
 		void addAttachment(ImageView view) {
 			attachments.push_back(view.vk_view);
 		}
 
-		Framebuffer build(Device& device, uint32_t index) {
+		void addAttachment(const Attachment& attachment) {
+			addAttachment(attachment.view);
+		}
+
+		Framebuffer build(Device& device, uint32_t presentation_index = 0) {
 
 			VkFramebufferCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			create_info.pNext = nullptr;
 			create_info.renderPass = pass;
 
 			create_info.attachmentCount = attachments.size();
@@ -57,14 +64,15 @@ class FramebufferBuilder {
 
 			// TODO should this be passed by the image?
 			create_info.layers = 1;
+			create_info.flags = 0;
 
 			VkFramebuffer framebuffer;
 
-			if (vkCreateFramebuffer(device.vk_device, &create_info, nullptr, &framebuffer) != VK_SUCCESS) {
+			if (vkCreateFramebuffer(device.vk_device, &create_info, AllocatorCallbackFactory::named("Framebuffer"), &framebuffer) != VK_SUCCESS) {
 				throw Exception {"Failed to create a framebuffer!"};
 			}
 
-			return {framebuffer, device.vk_device, index};
+			return {framebuffer, device.vk_device, presentation_index};
 
 		}
 

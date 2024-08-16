@@ -225,18 +225,6 @@ ChunkRenderPool::ChunkRenderPool(WorldRenderer& renderer, RenderSystem& system, 
 	}
 }
 
-ChunkRenderPool::~ChunkRenderPool() {
-	logger::info("Stopping chunk meshing worker pool...");
-	{
-		std::lock_guard lock {mutex};
-		stop = true;
-	}
-
-	// don't wait while calling notify,
-	// it's not invalid but MAY be non-optimal
-	condition.notify_all();
-}
-
 void ChunkRenderPool::push(glm::ivec3 chunk, bool important) {
 	{
 		std::lock_guard lock {mutex};
@@ -253,4 +241,22 @@ void ChunkRenderPool::push(glm::ivec3 chunk, bool important) {
 	// don't wait while calling notify,
 	// it's not invalid but MAY be non-optimal
 	condition.notify_one();
+}
+
+void ChunkRenderPool::close() {
+	logger::info("Stopping chunk meshing worker pool...");
+	{
+		std::lock_guard lock {mutex};
+		stop = true;
+	}
+
+	// don't wait while calling notify,
+	// it's not invalid but MAY be non-optimal
+	condition.notify_all();
+
+	for (std::thread& thread : workers) {
+		thread.join();
+	}
+
+	workers.clear();
 }

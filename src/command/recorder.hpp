@@ -20,7 +20,7 @@ class CommandRecorder {
 		: vk_buffer(vk_buffer), vk_layout(nullptr) {}
 
 		// TODO clean this one
-		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent, float r, float g, float b, float a) {
+		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent) {
 
 			VkRenderPassBeginInfo info {};
 			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -30,15 +30,17 @@ class CommandRecorder {
 			info.renderArea.offset = {0, 0};
 			info.renderArea.extent = extent;
 
-			// TODO set clear color
-			VkClearValue clearColor[2] = {0};
-			clearColor[0].color = {r, g, b, a};
-			clearColor[1].depthStencil = {1.0f, 0};
-
-			info.clearValueCount = 2;
-			info.pClearValues = clearColor;
+			// attachments define their own clear values
+			const std::vector<VkClearValue>& values = render_pass.values;
+			info.clearValueCount = values.size();
+			info.pClearValues = values.data();
 
 			vkCmdBeginRenderPass(vk_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+			return *this;
+		}
+
+		CommandRecorder& nextSubpass() {
+			vkCmdNextSubpass(vk_buffer, VK_SUBPASS_CONTENTS_INLINE);
 			return *this;
 		}
 
@@ -50,30 +52,6 @@ class CommandRecorder {
 
 		CommandRecorder& bindDescriptorSet(DescriptorSet& set) {
 			vkCmdBindDescriptorSets(vk_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_layout, 0, 1, &set.vk_set, 0, nullptr);
-			return *this;
-		}
-
-		CommandRecorder& setDynamicViewport(int x, int y, uint32_t width, uint32_t height, float min_depth = 0.0f, float max_depth = 1.0f) {
-
-			VkViewport viewport {};
-			viewport.x = (float) x;
-			viewport.y = (float) y;
-			viewport.width = (float) width;
-			viewport.height = (float) height;
-			viewport.minDepth = min_depth;
-			viewport.maxDepth = max_depth;
-
-			vkCmdSetViewport(vk_buffer, 0, 1, &viewport);
-			return *this;
-		}
-
-		CommandRecorder& setDynamicScissors(int x, int y, uint32_t width, uint32_t height) {
-
-			VkRect2D scissor {};
-			scissor.offset = {x, y};
-			scissor.extent = {width, height};
-
-			vkCmdSetScissor(vk_buffer, 0, 1, &scissor);
 			return *this;
 		}
 

@@ -15,6 +15,11 @@ struct Uniforms {
 	glm::mat4 mvp;
 };
 
+struct AmbientOcclusionUniform {
+	glm::vec4 samples[64];
+	glm::vec2 noise_scale;
+};
+
 class Frame {
 
 	private:
@@ -46,11 +51,11 @@ class Frame {
 		Fence flight_fence;
 
 		Uniforms uniforms;
-		DescriptorSet set;
+		DescriptorSet set_1, set_2, set_3;
 
 	public:
 
-		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler);
+		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, const ImageSampler& atlas_sampler);
 
 		/**
 		 * This class is fully managed by the RenderSystem so it uses
@@ -91,26 +96,47 @@ class RenderSystem {
 		CommandPool graphics_pool;
 		CommandPool transient_pool;
 
-		Swapchain swapchain;
-		RenderPass render_pass;
-		Image depth_image;
-		ImageView depth_view;
-		std::vector<Framebuffer> framebuffers;
+		// SSAO
+		Image ssao_noise_image;
+		ImageView ssao_noise_view;
+		ImageSampler ssao_noise_sampler;
+		Buffer ssao_uniform_buffer;
 
-		ResourceManager assets;
+		Attachment attachment_color;
+		Attachment attachment_depth;
+		Attachment attachment_albedo;
+		Attachment attachment_normal;
+		Attachment attachment_position;
+		Attachment attachment_ambience;
 
-		DescriptorSetLayout descriptor_layout;
-		BindingLayout binding_terrain;
-		BindingLayout binding_3d;
-		BindingLayout binding_2d;
+		RenderPass terrain_pass;
+		RenderPass ssao_pass;
+		RenderPass lighting_pass;
+
 		GraphicsPipeline pipeline_3d_terrain;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;
+		GraphicsPipeline pipeline_ssao;
+		GraphicsPipeline pipeline_compose;
+
+		Swapchain swapchain;
+		std::vector<Framebuffer> framebuffers;
+		Framebuffer ssao_framebuffer;
+		Framebuffer terrain_framebuffer;
+
+		ResourceManager assets;
+
+		DescriptorSetLayout geometry_descriptor_layout;
+		DescriptorSetLayout ssao_descriptor_layout;
+		DescriptorSetLayout lighting_descriptor_layout;
+
+		BindingLayout binding_terrain;
+		BindingLayout binding_3d;
+		BindingLayout binding_2d;
 		DescriptorPool descriptor_pool;
 
 		PushConstantLayout constant_layout;
-		PushConstant mvp_vertex_constant;
-		PushConstant sun_vertex_constant;
+		PushConstant push_constant;
 
 	private:
 
@@ -144,13 +170,13 @@ class RenderSystem {
 		 * Creates the vulkan render pass, this MAY need to be called when the
 		 * swapchain is recreated, depending on the format picked by `createSwapchain()`
 		 */
-		void createRenderPass(Swapchain& surface);
+		void createRenderPass();
 
 		/**
 		 * Populates the framebuffer array, needs to be called after the swapchain is recreated
-		 * this function depends on render pass as the created framebuffers need to be compatible with it
+		 * this function depends on render passes as the created framebuffers need to be compatible with them
 		 */
-		void createFramebuffers(RenderPass& pass);
+		void createFramebuffers();
 
 		/**
 		 * Called from `acquireFramebuffer()` and `presentFramebuffer()` when the current swapchain is
@@ -164,6 +190,16 @@ class RenderSystem {
 		 */
 		void createPipelines();
 
+		/**
+		 *
+		 */
+		void closeFrames();
+
+		/**
+		 *
+		 */
+		void createFrames();
+
 	public:
 
 		/// Only one instance of render system should ever be created
@@ -173,10 +209,10 @@ class RenderSystem {
 		void reloadAssets();
 
 		/// Get the screen's framebuffer reference
-		Framebuffer& acquireFramebuffer();
+		Framebuffer& acquireScreenFramebuffer();
 
 		/// Queue the given framebuffer for rendering on the screen
-		void presentFramebuffer(Framebuffer& framebuffer);
+		void presentScreenFramebuffer(Framebuffer& framebuffer);
 
 		/// Get a reference to the current frame state
 		Frame& getFrame();
@@ -189,5 +225,8 @@ class RenderSystem {
 
 		/// Wait for all pending operations on all queues are finished
 		void wait();
+
+		/// Free are resources managed by this render system
+		void close();
 
 };
