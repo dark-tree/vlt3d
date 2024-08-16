@@ -19,19 +19,21 @@ layout(push_constant) uniform SceneUniform {
 layout(location = 0) in vec2 vTexture;
 layout(location = 0) out vec4 fColor;
 
+const int blur_radius = 2;
+
 float getAmbientOcclusion() {
 
     vec2 texel = 1.0 / vec2(textureSize(uAmbienceSampler, 0));
     float result = 0.0;
 
-    for (int x = -2; x < 2; x ++)  {
-        for (int y = -2; y < 2; y ++) {
+    for (int x = -blur_radius; x < blur_radius; x ++)  {
+        for (int y = -blur_radius; y < blur_radius; y ++) {
             vec2 offset = vec2(float(x), float(y)) * texel;
             result += texture(uAmbienceSampler, vTexture + offset).r;
         }
     }
 
-    return result / (4.0 * 4.0);
+    return result / (2 * blur_radius * 2 * blur_radius);
 
 }
 
@@ -55,5 +57,5 @@ void main() {
     // diffuse lighting
     vec3 diffuse = sun * max(dot(normal.xyz, uSceneObject.sun.pos), 0.0);
 
-    fColor = vec4(albedo * pow(ambience, 6) * (diffuse + ambient), 1.0);
+    fColor = vec4(albedo * pow(ambience, 4) * (diffuse + ambient), 1.0);
 }

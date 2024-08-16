@@ -18,8 +18,8 @@ layout(location = 0) in vec2 vTexture;
 layout(location = 0) out float fAmbience;
 
 const float bias = 0.025;
-const int kernel_size = 32;
-const float radius = 1.0;
+const int kernel_size = 24;
+const float radius = 2.5;
 
 void main() {
 

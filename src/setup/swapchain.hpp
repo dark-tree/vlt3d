@@ -21,6 +21,7 @@ class Swapchain {
 	private:
 
 		std::vector<Image> images;
+		std::vector<ImageView> views;
 		Device* device;
 
 	public:
@@ -39,15 +40,18 @@ class Swapchain {
 
 				images.reserve(count);
 
-				for (VkImage img : entries) {
-					images.emplace_back(img, vk_surface_format.format);
+				for (VkImage vk_image : entries) {
+					Image image {vk_image, vk_surface_format.format};
+
+					images.push_back(image);
+					views.push_back(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT));
 				}
 			}
 
 		}
 
-		const std::vector<Image>& getImages() {
-			return images;
+		const std::vector<ImageView>& getImageViews() {
+			return views;
 		}
 
 		PresentResult getNextImage(Semaphore& semaphore, uint32_t* image_index) {
@@ -72,6 +76,10 @@ class Swapchain {
 		}
 
 		void close() {
+			for (ImageView& view : views) {
+				view.close(*device);
+			}
+
 			vkDestroySwapchainKHR(device->vk_device, vk_swapchain, AllocatorCallbackFactory::named("Swapchain"));
 		}
 

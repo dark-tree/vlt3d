@@ -33,7 +33,6 @@ class FramebufferBuilder {
 		VkRenderPass pass;
 		uint32_t width, height;
 		std::vector<VkImageView> attachments;
-		std::vector<VkImageView> owned;
 
 	public:
 
@@ -43,12 +42,8 @@ class FramebufferBuilder {
 			this->height = extent.height;
 		}
 
-		void addAttachment(ImageView view, bool owning = false) {
+		void addAttachment(ImageView view) {
 			attachments.push_back(view.vk_view);
-
-			if (owning) {
-				owned.push_back(view.vk_view);
-			}
 		}
 
 		void addAttachment(const Attachment& attachment) {

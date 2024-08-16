@@ -213,20 +213,10 @@ void RenderSystem::createRenderPass() {
 			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.next();
 
-//		Attachment::Ref ambience = builder.addAttachment(attachment_ambience)
-//			.begin(ColorOp::CLEAR, VK_IMAGE_LAYOUT_UNDEFINED)
-//			.end(ColorOp::IGNORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-//			.next();
-
 		builder.addDependency() // G-Buffer/Color 0->Write
 			.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0)
 			.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
 			.next();
-
-//		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT)
-//			.input(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-//			.output(1, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
-//			.next();
 
 		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT)
 			.input(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
@@ -237,12 +227,6 @@ void RenderSystem::createRenderPass() {
 			.input(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
-
-//		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // SSAO
-//			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-//			.addOutput(ambience, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-//			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-//			.next();
 
 		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Lighting
 			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
@@ -294,15 +278,15 @@ void RenderSystem::createFramebuffers() {
 		ssao_framebuffer = builder.build(device);
 	}
 
-	const std::vector<Image>& images = swapchain.getImages();
+	const std::vector<ImageView>& views = swapchain.getImageViews();
 
 	// create the main screen framebuffers
 	framebuffers.clear();
-	framebuffers.reserve(images.size());
+	framebuffers.reserve(views.size());
 
-	for (const Image& image : images) {
+	for (const ImageView& view : views) {
 		FramebufferBuilder builder {lighting_pass, extent};
-		builder.addAttachment(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT), true);
+		builder.addAttachment(view);
 		builder.addAttachment(attachment_depth);
 		builder.addAttachment(attachment_albedo);
 		builder.addAttachment(attachment_normal);
@@ -540,6 +524,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
 		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		.setMode(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
 		.setColorClearValue(0, 0, 0, 0)
 		.build();
 
@@ -547,6 +532,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
 		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		.setMode(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
 		.setColorClearValue(0, 0, 0, 0)
 		.build();
 
@@ -680,6 +666,8 @@ void RenderSystem::reloadAssets() {
 		pipeline_2d_tint.close();
 		pipeline_3d_terrain.close();
 		pipeline_3d_tint.close();
+		pipeline_ssao.close();
+		pipeline_compose.close();
 
 		createPipelines();
 		createFrames();
@@ -727,6 +715,13 @@ void RenderSystem::close() {
 
 	swapchain.close();
 	attachment_depth.close(device);
+	attachment_normal.close(device);
+	attachment_position.close(device);
+	attachment_albedo.close(device);
+	attachment_ambience.close(device);
+
+	terrain_framebuffer.close();
+	ssao_framebuffer.close();
 
 	for (Framebuffer& framebuffer : framebuffers) {
 		framebuffer.close();
@@ -737,11 +732,21 @@ void RenderSystem::close() {
 	pipeline_2d_tint.close();
 	pipeline_3d_terrain.close();
 	pipeline_3d_tint.close();
+	pipeline_ssao.close();
+	pipeline_compose.close();
 
 	terrain_pass.close();
 	lighting_pass.close();
+	ssao_pass.close();
+
 	geometry_descriptor_layout.close();
+	ssao_descriptor_layout.close();
 	lighting_descriptor_layout.close();
+
+	ssao_noise_sampler.close(device);
+	ssao_noise_view.close(device);
+	ssao_noise_image.close();
+	ssao_uniform_buffer.close();
 
 	assets.close();
 	transient_pool.close();
