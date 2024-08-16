@@ -136,4 +136,6 @@ class Image {
 		ImageViewBuilder getViewBuilder() const;
 		void close();
 
+		void setDebugName(const Device& device, const char* name) const;
+
 };

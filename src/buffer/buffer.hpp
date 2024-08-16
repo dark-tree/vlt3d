@@ -23,6 +23,8 @@ class Buffer {
 		MemoryAccess& access();
 		void close();
 
+		void setDebugName(const Device& device, const char* name) const;
+
 };
 
 /**
@@ -37,8 +39,15 @@ class BasicBuffer {
 		size_t capacity, count, bytes;
 		MemoryMap map;
 
+		#if !defined(NDEBUG)
+		VkDevice debug_device = VK_NULL_HANDLE;
+		const char* debug_name = nullptr;
+		#endif
+
 		void reallocate(RenderSystem& system, size_t capacity);
 		size_t encompass(size_t target);
+
+		void updateDebugName() const;
 
 	public:
 
@@ -91,5 +100,7 @@ class BasicBuffer {
 
 		/// Frees internal vulkan resources, consider doing it from `RenderSystem.defer()`
 		void close();
+
+		void setDebugName(const Device& device, const char* name);
 
 };

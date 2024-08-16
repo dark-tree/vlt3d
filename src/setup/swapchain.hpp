@@ -42,9 +42,17 @@ class Swapchain {
 
 				for (VkImage vk_image : entries) {
 					Image image {vk_image, vk_surface_format.format};
+					ImageView view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
 
 					images.push_back(image);
-					views.push_back(image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT));
+					views.push_back(view);
+
+					#if !defined(NDEBUG)
+					std::string name {"Swapchain #"};
+					name += std::to_string(images.size() - 1);
+					image.setDebugName(device, name.c_str());
+					view.setDebugName(device, name.c_str());
+					#endif
 				}
 			}
 

@@ -14,6 +14,7 @@ class CompilerResult {
 		const std::string error;
 		const bool successful;
 		const Kind kind;
+		const char* name;
 
 	protected:
 
@@ -27,8 +28,8 @@ class CompilerResult {
 
 	public:
 
-		CompilerResult(const std::vector<uint32_t>& output, const std::string& error, bool successful, Kind kind)
-		: output(output), error(error), successful(successful), kind(kind) {}
+		CompilerResult(const std::vector<uint32_t>& output, const std::string& error, bool successful, Kind kind, const char* name)
+		: output(output), error(error), successful(successful), kind(kind), name(name) {}
 
 		ShaderModule create(Device& device) {
 			if (!successful) {
@@ -36,15 +37,7 @@ class CompilerResult {
 				throw Exception {"Unable to create shader module!"};
 			}
 
-			return {device, data(), bytes(), kind};
-		}
-
-		bool isSuccessful() const {
-			return successful;
-		}
-
-		const std::string& getErrorLog() const {
-			return error;
+			return {device, data(), bytes(), kind, name};
 		}
 
 };
@@ -61,13 +54,14 @@ class Compiler {
 			private:
 
 				Kind kind;
+				const char* name;
 				std::string errors;
 				std::vector<uint32_t> output;
 
 			public:
 
-				CompilerResultBuilder(Kind kind)
-				: kind(kind) {}
+				CompilerResultBuilder(Kind kind, const char* name)
+				: kind(kind), name(name) {}
 
 				template<typename T>
 				void copyMessags(const shaderc::CompilationResult<T>& result) {
@@ -80,16 +74,19 @@ class Compiler {
 				}
 
 				CompilerResult build(bool successful) {
-					return {output, errors, successful, kind};
+					return {output, errors, successful, kind, name};
 				}
 
 		};
 
 	public:
 
-		Compiler(bool optimize = true) {
-			options.SetOptimizationLevel(optimize ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
+		Compiler() {
+			#if defined(NDEBUG)
+			options.SetOptimizationLevel(shaderc_optimization_level_performance);
+			#else
 			options.SetGenerateDebugInfo();
+			#endif
 		}
 
 		// simmilar to adding -Dkey=value
@@ -111,7 +108,7 @@ class Compiler {
 		}
 
 		CompilerResult compileString(const std::string& unit, const std::string& source, Kind kind) {
-			CompilerResultBuilder builder {kind};
+			CompilerResultBuilder builder {kind, unit.c_str()};
 
 			// preprocessor
 			const auto presult = compiler.PreprocessGlsl(source, kind.shaderc, unit.c_str(), options);

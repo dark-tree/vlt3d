@@ -73,6 +73,7 @@ class GraphicsPipelineBuilder {
 		VkRenderPass vk_pass;
 		int subpass = -1;
 		Device& device;
+		const char* name;
 
 		void finalize() {
 
@@ -366,6 +367,16 @@ class GraphicsPipelineBuilder {
 			return *this;
 		}
 
+	// debug build pipeline name Graphics Pipeline
+
+		GraphicsPipelineBuilder& withDebugName(const char* name) {
+			#if !defined(NDEBUG)
+			this->name = name;
+			#endif
+
+			return *this;
+		}
+
 	public:
 
 		GraphicsPipeline build() {
@@ -422,6 +433,9 @@ class GraphicsPipelineBuilder {
 			if (vkCreateGraphicsPipelines(device.vk_device, VK_NULL_HANDLE, 1, &create_info, AllocatorCallbackFactory::named("Pipeline"), &pipeline) != VK_SUCCESS) {
 				throw Exception {"Failed to create graphics pipeline!"};
 			}
+
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_PIPELINE, pipeline, name);
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pipeline_layout, name);
 
 			return {pipeline, pipeline_layout, device.vk_device};
 

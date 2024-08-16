@@ -7,6 +7,7 @@
 #include "attachment.hpp"
 #include "util/pyramid.hpp"
 #include "setup/device.hpp"
+#include "setup/debug.hpp"
 
 class RenderPassBuilder;
 
@@ -345,7 +346,7 @@ class RenderPassBuilder {
 
 	public:
 
-		RenderPass build(Device& device) {
+		RenderPass build(Device& device, const char* name = nullptr) {
 
 			std::vector<VkAttachmentDescription> attachment_descriptions;
 			std::vector<VkSubpassDescription> subpass_descriptions;
@@ -397,6 +398,7 @@ class RenderPassBuilder {
 				throw Exception {"Failed to create render pass!"};
 			}
 
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_RENDER_PASS, render_pass, name);
 			return {device.vk_device, render_pass, values, subpass_attachments};
 
 		}

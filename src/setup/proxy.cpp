@@ -81,3 +81,57 @@ VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures2KHR( VkPhysicalDevice phy
 	return proxy_vkGetPhysicalDeviceFeatures2KHR(physicalDevice, pFeatures);
 }
 
+// Proxy for device function vkSetDebugUtilsObjectNameEXT
+static PFN_vkSetDebugUtilsObjectNameEXT proxy_vkSetDebugUtilsObjectNameEXT = nullptr;
+[[maybe_unused]] static bool symbol_vkSetDebugUtilsObjectNameEXT = [] () {
+	device_proxies["vkSetDebugUtilsObjectNameEXT"] = ((PFN_vkVoidFunction*) &proxy_vkSetDebugUtilsObjectNameEXT);
+	return true;
+}();
+VKAPI_ATTR VkResult VKAPI_CALL vkSetDebugUtilsObjectNameEXT( VkDevice device, const VkDebugUtilsObjectNameInfoEXT* pNameInfo) {
+	#if !defined(NDEBUG)
+	if (!proxy_vkSetDebugUtilsObjectNameEXT) throw Exception {"Proxy device function 'vkSetDebugUtilsObjectNameEXT' was called before being loaded"};
+	#endif
+	return proxy_vkSetDebugUtilsObjectNameEXT(device, pNameInfo);
+}
+
+// Proxy for device function vkCmdBeginDebugUtilsLabelEXT
+static PFN_vkCmdBeginDebugUtilsLabelEXT proxy_vkCmdBeginDebugUtilsLabelEXT = nullptr;
+[[maybe_unused]] static bool symbol_vkCmdBeginDebugUtilsLabelEXT = [] () {
+	device_proxies["vkCmdBeginDebugUtilsLabelEXT"] = ((PFN_vkVoidFunction*) &proxy_vkCmdBeginDebugUtilsLabelEXT);
+	return true;
+}();
+VKAPI_ATTR void VKAPI_CALL vkCmdBeginDebugUtilsLabelEXT( VkCommandBuffer commandBuffer, const VkDebugUtilsLabelEXT* pLabelInfo) {
+	#if !defined(NDEBUG)
+	if (!proxy_vkCmdBeginDebugUtilsLabelEXT) throw Exception {"Proxy device function 'vkCmdBeginDebugUtilsLabelEXT' was called before being loaded"};
+	#endif
+	return proxy_vkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo);
+}
+
+// Proxy for device function vkCmdEndDebugUtilsLabelEXT
+static PFN_vkCmdEndDebugUtilsLabelEXT proxy_vkCmdEndDebugUtilsLabelEXT = nullptr;
+[[maybe_unused]] static bool symbol_vkCmdEndDebugUtilsLabelEXT = [] () {
+	device_proxies["vkCmdEndDebugUtilsLabelEXT"] = ((PFN_vkVoidFunction*) &proxy_vkCmdEndDebugUtilsLabelEXT);
+	return true;
+}();
+VKAPI_ATTR void VKAPI_CALL vkCmdEndDebugUtilsLabelEXT( VkCommandBuffer commandBuffer) {
+	#if !defined(NDEBUG)
+	if (!proxy_vkCmdEndDebugUtilsLabelEXT) throw Exception {"Proxy device function 'vkCmdEndDebugUtilsLabelEXT' was called before being loaded"};
+	#endif
+	return proxy_vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+}
+
+// Proxy for device function vkCmdInsertDebugUtilsLabelEXT
+static PFN_vkCmdInsertDebugUtilsLabelEXT proxy_vkCmdInsertDebugUtilsLabelEXT = nullptr;
+[[maybe_unused]] static bool symbol_vkCmdInsertDebugUtilsLabelEXT = [] () {
+	device_proxies["vkCmdInsertDebugUtilsLabelEXT"] = ((PFN_vkVoidFunction*) &proxy_vkCmdInsertDebugUtilsLabelEXT);
+	return true;
+}();
+VKAPI_ATTR void VKAPI_CALL vkCmdInsertDebugUtilsLabelEXT( VkCommandBuffer commandBuffer, const VkDebugUtilsLabelEXT* pLabelInfo) {
+	#if !defined(NDEBUG)
+	if (!proxy_vkCmdInsertDebugUtilsLabelEXT) throw Exception {"Proxy device function 'vkCmdInsertDebugUtilsLabelEXT' was called before being loaded"};
+	#endif
+	return proxy_vkCmdInsertDebugUtilsLabelEXT(commandBuffer, pLabelInfo);
+}
+
+
+
