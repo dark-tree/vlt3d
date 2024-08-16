@@ -21,15 +21,14 @@ class Instance {
 
 	private:
 
-		DebugMessenger messenger;
-		bool validation;
+		DebugMessenger* messenger;
 		std::vector<DeviceInfo> devices;
 
 	public:
 
 		Instance() = default;
-		Instance(VkInstance vk_instance, DebugMessenger messenger, bool validation)
-		: vk_instance(vk_instance), messenger(messenger), validation(validation) {
+		Instance(VkInstance vk_instance, DebugMessenger* messenger, bool validation)
+		: vk_instance(vk_instance), messenger(messenger) {
 
 			uint32_t count = 0;
 			vkEnumeratePhysicalDevices(vk_instance, &count, nullptr);
@@ -45,7 +44,7 @@ class Instance {
 		}
 
 		void close() {
-			messenger.close();
+			delete messenger;
 			vkDestroyInstance(vk_instance, AllocatorCallbackFactory::named("Instance"));
 		}
 
@@ -61,6 +60,16 @@ class Instance {
 		 */
 		WindowSurface createSurface(Window& window) {
 			return {window, vk_instance};
+		}
+
+		void enterValidationCheckpoint(const std::string& name) {
+			if (messenger) {
+				int errors = messenger->getErrorCount();
+
+				if (errors > 0) {
+					throw Exception {"Vulkan checkpoint '" + name + "', " + std::to_string(errors) + " errors reported!"};
+				}
+			}
 		}
 
 };
@@ -110,8 +119,8 @@ class InstanceBuilder {
 		 * Set a error handler for when a Vulkan API is incorrectly used,
 		 * some validation layer should be enabled for this call to be useful
 		 */
-		void addDebugMessenger(const DebugMessengerConfig::CallbackFunction& callback = DebugMessengerConfig::DefaultExt) {
-			messenger.configure(callback);
+		void addDebugMessenger() {
+			messenger.enable();
 		}
 
 		/**
@@ -141,7 +150,7 @@ class InstanceBuilder {
 				addInstanceExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME).orFail();
 			#endif
 
-			#ifdef API_XLIB
+			#ifdef API_X11
 				addInstanceExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME).orWarn();
 			#endif
 
@@ -179,12 +188,15 @@ class InstanceBuilder {
 
 			VkInstance instance;
 			if (vkCreateInstance(&create_info, AllocatorCallbackFactory::named("Instance"), &instance) != VK_SUCCESS) {
-				throw Exception {"Failed to create Vulkan instance"};
+				throw Exception {"Failed to create Vulkan instance!"};
 			}
 
 			// we need to fetch the functions and this is the earliest point we have the VkInstance
-			loadInstanceFunction(instance, "vkCreateDebugUtilsMessengerEXT");
-			loadInstanceFunction(instance, "vkDestroyDebugUtilsMessengerEXT");
+			if (messenger.isEnabled()) {
+				loadInstanceFunction(instance, "vkCreateDebugUtilsMessengerEXT");
+				loadInstanceFunction(instance, "vkDestroyDebugUtilsMessengerEXT");
+			}
+
 			loadInstanceFunction(instance, "vkGetPhysicalDeviceFeatures2KHR");
 
 			return Instance {instance, messenger.attach(instance), validation_layers.isAnySelected()};

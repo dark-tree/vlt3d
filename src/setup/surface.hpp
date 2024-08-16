@@ -18,7 +18,7 @@ class WindowSurface {
 				Entry {GLFW_PLATFORM_WIN32, platform::createSurfaceWin32},
 			#endif
 
-			#ifdef API_XLIB
+			#ifdef API_X11
 				Entry {GLFW_PLATFORM_X11, platform::createSurfaceXlib},
 			#endif
 

@@ -329,6 +329,9 @@ void RenderSystem::recreateSwapchain() {
 
 	createPipelines();
 	createFrames();
+
+	instance.enterValidationCheckpoint("Render System Swapchain Reload");
+
 }
 
 void RenderSystem::createPipelines() {
@@ -621,12 +624,16 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
+	instance.enterValidationCheckpoint("Render System Phase 1 Initialization");
+
 	// Phase 2
 	// this step needs to be more or less repeated every time the window size changes
 
 	createSwapchain();
 	createRenderPass();
 	createFramebuffers();
+
+	instance.enterValidationCheckpoint("Render System Phase 2 Initialization");
 
 	// Phase 3
 	// this step will need to be repeated each time the resources are reloaded
@@ -646,6 +653,8 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	createPipelines();
 	createFrames();
+
+	instance.enterValidationCheckpoint("Render System Phase 3 Initialization");
 }
 
 void RenderSystem::reloadAssets() {
@@ -672,6 +681,9 @@ void RenderSystem::reloadAssets() {
 		createPipelines();
 		createFrames();
 	}).milliseconds(), "ms");
+
+	instance.enterValidationCheckpoint("Render System Resource Reload");
+
 }
 
 Framebuffer& RenderSystem::acquireScreenFramebuffer() {
