@@ -2,15 +2,6 @@
 
 layout(binding = 0) uniform sampler2D uAtlasSampler;
 
-struct LightSource {
-    vec3 pos;
-    uint color;
-};
-
-layout(push_constant) uniform UniformBufferObject {
-    layout(offset = 64) LightSource sun;
-} uObject;
-
 layout(location = 0) in vec3 vColor;
 layout(location = 1) in vec2 vTexture;
 layout(location = 2) in vec3 vNormal;

@@ -179,7 +179,7 @@ void Skybox::draw(ImmediateRenderer& immediate, Camera& camera) const {
 	}
 
 	glm::vec2 sun_equatorial = getSun((float) glfwGetTime() / 12.0f + 7, glfwGetTime() / 20);
-	glm::vec2 sun_horizontal = adjustForLatitude(sun_equatorial, camera.getPosition().x / 100);
+	glm::vec2 sun_horizontal = adjustForLatitude(sun_equatorial, 0);
 
 	float sun_height = sun_horizontal.y / (M_PI / 2);
 

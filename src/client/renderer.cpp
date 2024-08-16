@@ -187,11 +187,13 @@ void RenderSystem::createRenderPass() {
 
 		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // SSAO
 			.addOutput(ambience, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
 		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Lighting
 			.addInput(ambience, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
 		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Overlay
@@ -326,6 +328,7 @@ void RenderSystem::createPipelines() {
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withRenderPass(lighting_pass, 0)
+		.withDepthTest(VK_COMPARE_OP_GREATER, true, false)
 		.withShaders(assets.state->vert_blit, assets.state->frag_ssao)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(ssao_descriptor_layout)
@@ -335,6 +338,7 @@ void RenderSystem::createPipelines() {
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withRenderPass(lighting_pass, 1)
+		.withDepthTest(VK_COMPARE_OP_GREATER, true, false)
 		.withShaders(assets.state->vert_blit, assets.state->frag_compose)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(ssao_descriptor_layout)

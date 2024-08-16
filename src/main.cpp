@@ -17,9 +17,14 @@
 #include "client/gui/screen/play.hpp"
 #include "world/skybox.hpp"
 
-struct PushConstantBlock {
-	glm::mat4 matrix;
+struct GeometryPushBlock {
+	glm::mat4 mvp;
 	glm::mat4 view;
+};
+
+struct LightingPushBlock {
+	glm::mat4 projection;
+	Sun sun;
 };
 
 int main() {
@@ -57,6 +62,7 @@ int main() {
 
 		glm::mat4 model = glm::identity<glm::mat4>();
 		glm::mat4 view = camera.getView();
+		glm::mat4 light = glm::inverse(view);
 		glm::mat4 projection = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 
 		glm::mat4 mvp = projection * view * model;
@@ -88,15 +94,13 @@ int main() {
 
 		world.update(world_generator, camera.getPosition(), 8);
 
-		Skybox skybox;
-		PushConstantBlock push_constant_block {};
-		push_constant_block.matrix = mvp;
-		push_constant_block.view = view;
-//		push_constant_block.sun = skybox.getSunData(camera.getPosition().x / 100);
+		GeometryPushBlock geometry_push_block {};
+		geometry_push_block.mvp = mvp;
+		geometry_push_block.view = view;
 
 		recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent);
 		recorder.bindPipeline(system.pipeline_3d_terrain);
-		recorder.writePushConstant(system.push_constant, &push_constant_block);
+		recorder.writePushConstant(system.push_constant, &geometry_push_block);
 		recorder.bindDescriptorSet(frame.set_1);
 
 		world_renderer.draw(recorder, frustum);
@@ -104,26 +108,28 @@ int main() {
 
 		recorder.endRenderPass();
 
-		push_constant_block.matrix = projection;
-		push_constant_block.view = view;
+		Skybox skybox;
+		LightingPushBlock lighting_push_block {};
+		lighting_push_block.projection = projection;
+		lighting_push_block.sun = skybox.getSunData(0);
 
 		recorder.beginRenderPass(system.lighting_pass, framebuffer, extent)
 			.bindPipeline(system.pipeline_ssao)
-			.writePushConstant(system.push_constant, &push_constant_block)
+			.writePushConstant(system.push_constant, &lighting_push_block)
 			.bindDescriptorSet(frame.set_2)
 			.draw(3); // draw blit quad
 
+		lighting_push_block.projection = light;
+
 		recorder.nextSubpass()
 			.bindPipeline(system.pipeline_compose)
+			.writePushConstant(system.push_constant, &lighting_push_block)
 			.draw(3);
-
-		push_constant_block.matrix = mvp;
-		push_constant_block.view = mvp;
 
 		recorder.nextSubpass()
 			.bindPipeline(system.pipeline_3d_tint)
 			.bindDescriptorSet(frame.set_1)
-			.writePushConstant(system.push_constant, &push_constant_block)
+			.writePushConstant(system.push_constant, &geometry_push_block)
 			.bindBuffer(frame.immediate_3d.getBuffer())
 			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)

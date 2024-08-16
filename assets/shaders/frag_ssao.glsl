@@ -6,7 +6,6 @@ layout(binding = 0) uniform AmbientOcclusionUniform {
 
 layout(push_constant) uniform SceneUniform {
     mat4 projection;
-    mat4 view;
 } uSceneObject;
 
 layout(binding = 1) uniform sampler2D uNoiseSampler;
