@@ -142,14 +142,14 @@ void RenderSystem::createRenderPass() {
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS)
+		builder.addSubpass("Terrain")
 			.addOutput(albedo, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addOutput(normal, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addOutput(position, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		terrain_pass = builder.build(device, "Terrain");
+		terrain_pass = builder.build(device, "Terrain", 180, 255, 201);
 
 	}
 
@@ -182,13 +182,13 @@ void RenderSystem::createRenderPass() {
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // SSAO
+		builder.addSubpass("SSAO")
 			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(ambience, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		ssao_pass = builder.build(device, "SSAO");
+		ssao_pass = builder.build(device, "SSAO", 255, 223, 180);
 
 	}
 
@@ -231,19 +231,19 @@ void RenderSystem::createRenderPass() {
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Lighting
+		builder.addSubpass("Lighting")
 			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addInput(albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Overlay
+		builder.addSubpass("Overlay")
 			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		lighting_pass = builder.build(device, "Lighting");
+		lighting_pass = builder.build(device, "Compose", 180, 225, 255);
 
 	}
 

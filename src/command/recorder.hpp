@@ -14,6 +14,7 @@ class CommandRecorder {
 		VkCommandBuffer vk_buffer;
 		VkPipelineLayout vk_layout;
 
+
 	public:
 
 		CommandRecorder(VkCommandBuffer vk_buffer)
@@ -21,6 +22,10 @@ class CommandRecorder {
 
 		// TODO clean this one
 		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent) {
+
+			#if !defined(NDEBUG)
+			pushDebugBlock(render_pass.debug_name.c_str(), render_pass.debug_color.toFloat());
+			#endif
 
 			VkRenderPassBeginInfo info {};
 			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -36,6 +41,21 @@ class CommandRecorder {
 			info.pClearValues = values.data();
 
 			vkCmdBeginRenderPass(vk_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+			return *this;
+		}
+
+		CommandRecorder& insertDebugLabel(const char* name, glm::vec3 color) {
+			VulkanDebug::insert(vk_buffer, name, color);
+			return *this;
+		}
+
+		CommandRecorder& pushDebugBlock(const char* name, glm::vec3 color) {
+			VulkanDebug::begin(vk_buffer, name, color);
+			return *this;
+		}
+
+		CommandRecorder& popDebugBlock() {
+			VulkanDebug::end(vk_buffer);
 			return *this;
 		}
 
@@ -73,6 +93,10 @@ class CommandRecorder {
 
 		CommandRecorder& endRenderPass() {
 			vkCmdEndRenderPass(vk_buffer);
+
+			#if !defined(NDEBUG)
+			popDebugBlock();
+			#endif
 			return *this;
 		}
 

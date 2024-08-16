@@ -8,6 +8,7 @@
 #include "util/pyramid.hpp"
 #include "setup/device.hpp"
 #include "setup/debug.hpp"
+#include "util/color.hpp"
 
 class RenderPassBuilder;
 
@@ -152,6 +153,7 @@ class SubpassBuilder {
 		uint32_t attachment_count;
 		Pyramid<uint32_t>& preserve;
 		std::set<uint32_t> references;
+		const char* name;
 
 		std::vector<VkAttachmentReference> inputs;
 		std::vector<VkAttachmentReference> colors;
@@ -215,9 +217,13 @@ class SubpassBuilder {
 
 	public:
 
-		SubpassBuilder(T& builder, VkPipelineBindPoint bind_point, uint32_t attachment_count, Pyramid<uint32_t>& preserve)
+		SubpassBuilder(T& builder, VkPipelineBindPoint bind_point, uint32_t attachment_count, Pyramid<uint32_t>& preserve, const char* name)
 		: builder(builder), attachment_count(attachment_count), preserve(preserve) {
 			description.pipelineBindPoint = bind_point;
+
+			#if !defined(NDEBUG)
+			this->name = name;
+			#endif
 		}
 
 		/// attachments that are read from a shader
@@ -249,7 +255,7 @@ class SubpassBuilder {
 		}
 
 		T& next() {
-			return builder.addSubpass(*this);
+			return builder.addSubpass(this->name, *this);
 		}
 
 };
@@ -263,12 +269,23 @@ class RenderPass {
 		READONLY std::vector<VkClearValue> values;
 		READONLY std::vector<int> subpasses;
 
+		#if !defined(NDEBUG)
+		READONLY Color debug_color;
+		READONLY std::string debug_name;
+		#endif
+
 	public:
 
 		RenderPass() = default;
-		RenderPass(VkDevice vk_device, VkRenderPass vk_pass, std::vector<VkClearValue>& values, std::vector<int>& subpass_attachments)
+		RenderPass(VkDevice vk_device, VkRenderPass vk_pass, std::vector<VkClearValue>& values, std::vector<int>& subpass_attachments, const char* name, Color color)
 		: vk_device(vk_device), vk_pass(vk_pass), values(values), subpasses(subpass_attachments) {
 			values.shrink_to_fit();
+
+			#if !defined(NDEBUG)
+			debug_name = name;
+			debug_color = color;
+			debug_name += " Pass";
+			#endif
 		}
 
 		void close() {
@@ -317,7 +334,7 @@ class RenderPassBuilder {
 
 	public:
 
-		RenderPassBuilder& addSubpass(SubpassBuilder<>& builder) {
+		RenderPassBuilder& addSubpass(const char* name, SubpassBuilder<>& builder) {
 			subpasses.push_back(builder);
 			return *this;
 		}
@@ -325,9 +342,9 @@ class RenderPassBuilder {
 		/**
 		 * Adds a render pass sub-stage, subpasses are executed in order
 		 */
-		SubpassBuilder<> addSubpass(VkPipelineBindPoint bind_point) {
+		SubpassBuilder<> addSubpass(const char* name, VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS) {
 			preserve.push();
-			return {*this, bind_point, (uint32_t) attachments.size(), preserve};
+			return {*this, bind_point, (uint32_t) attachments.size(), preserve, name};
 		}
 
 	public:
@@ -346,7 +363,7 @@ class RenderPassBuilder {
 
 	public:
 
-		RenderPass build(Device& device, const char* name = nullptr) {
+		RenderPass build(Device& device, const char* name, uint8_t r, uint8_t g, uint8_t b) {
 
 			std::vector<VkAttachmentDescription> attachment_descriptions;
 			std::vector<VkSubpassDescription> subpass_descriptions;
@@ -398,8 +415,7 @@ class RenderPassBuilder {
 				throw Exception {"Failed to create render pass!"};
 			}
 
-			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_RENDER_PASS, render_pass, name);
-			return {device.vk_device, render_pass, values, subpass_attachments};
+			return {device.vk_device, render_pass, values, subpass_attachments, name, {r, g, b}};
 
 		}
 

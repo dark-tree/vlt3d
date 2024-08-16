@@ -1,14 +1,14 @@
 
 #include "debug.hpp"
 
-VkDebugUtilsLabelEXT VulkanDebug::getDebugLabel(const char* debug_name, float r, float g, float b) {
+VkDebugUtilsLabelEXT VulkanDebug::getDebugLabel(const char* debug_name, glm::vec3 color) {
 	VkDebugUtilsLabelEXT label {};
 	label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
 	label.pNext = nullptr;
 	label.pLabelName = debug_name;
-	label.color[0] = r;
-	label.color[1] = g;
-	label.color[2] = b;
+	label.color[0] = color.r;
+	label.color[1] = color.g;
+	label.color[2] = color.b;
 	label.color[3] = 1.0f;
 
 	return label;
@@ -68,16 +68,16 @@ void VulkanDebug::name(VkDevice vk_device, VkObjectType type, void* object, cons
 	#endif
 }
 
-void VulkanDebug::insert(VkCommandBuffer vk_buffer, const char* debug_name, float r, float g, float b) {
+void VulkanDebug::insert(VkCommandBuffer vk_buffer, const char* debug_name, glm::vec3 color) {
 	#if !defined(NDEBUG)
-	VkDebugUtilsLabelEXT label = getDebugLabel(debug_name, r, g, b);
+	VkDebugUtilsLabelEXT label = getDebugLabel(debug_name, color);
 	vkCmdInsertDebugUtilsLabelEXT(vk_buffer, &label);
 	#endif
 }
 
-void VulkanDebug::begin(VkCommandBuffer vk_buffer, const char* debug_name, float r, float g, float b) {
+void VulkanDebug::begin(VkCommandBuffer vk_buffer, const char* debug_name, glm::vec3 color) {
 	#if !defined(NDEBUG)
-	VkDebugUtilsLabelEXT label = getDebugLabel(debug_name, r, g, b);
+	VkDebugUtilsLabelEXT label = getDebugLabel(debug_name, color);
 	vkCmdBeginDebugUtilsLabelEXT(vk_buffer, &label);
 	#endif
 }
