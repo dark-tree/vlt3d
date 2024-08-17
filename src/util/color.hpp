@@ -13,8 +13,11 @@ class Color {
 
 	public:
 
-		Color();
-		Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
+		constexpr Color()
+		: Color(255, 255, 255) {}
+
+		constexpr Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
+		: r(r), g(g), b(b), a(a) {}
 
 		glm::vec4 toFloat() const;
 

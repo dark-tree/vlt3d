@@ -1,4 +1,3 @@
-#pragma once
 
 #include "messanger.hpp"
 #include "util/exception.hpp"

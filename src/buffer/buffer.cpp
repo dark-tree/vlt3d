@@ -120,7 +120,9 @@ void BasicBuffer::close() {
 }
 
 void BasicBuffer::setDebugName(const Device& device, const char* name) {
+	#if !defined(NDEBUG)
 	this->debug_device = device.vk_device;
 	this->debug_name = name;
 	updateDebugName();
+	#endif
 }

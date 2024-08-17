@@ -14,6 +14,7 @@ class CommandRecorder {
 		VkCommandBuffer vk_buffer;
 		VkPipelineLayout vk_layout;
 
+		RenderPassTracker tracer;
 
 	public:
 
@@ -23,8 +24,11 @@ class CommandRecorder {
 		// TODO clean this one
 		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent) {
 
+			tracer.reset(render_pass);
+
 			#if !defined(NDEBUG)
-			pushDebugBlock(render_pass.debug_name.c_str(), render_pass.debug_color.toFloat());
+			std::string fullname = render_pass.debug_name + " Pass";
+			pushDebugBlock(fullname.c_str(), render_pass.debug_color.toFloat());
 			#endif
 
 			VkRenderPassBeginInfo info {};
@@ -60,6 +64,7 @@ class CommandRecorder {
 		}
 
 		CommandRecorder& nextSubpass() {
+			tracer.advance();
 			vkCmdNextSubpass(vk_buffer, VK_SUBPASS_CONTENTS_INLINE);
 			return *this;
 		}
@@ -92,6 +97,7 @@ class CommandRecorder {
 		}
 
 		CommandRecorder& endRenderPass() {
+			tracer.end();
 			vkCmdEndRenderPass(vk_buffer);
 
 			#if !defined(NDEBUG)

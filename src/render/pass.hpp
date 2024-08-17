@@ -12,6 +12,29 @@
 
 class RenderPassBuilder;
 
+class Subpass {
+
+	private:
+
+		READONLY uint32_t attachments;
+		READONLY const char* name;
+
+	public:
+
+		Subpass() = default;
+		Subpass(uint32_t attachments, const char* name)
+		: attachments(attachments), name(name) {}
+
+		uint32_t getAttachmentCount() const {
+			return attachments;
+		}
+
+		const char* getDebugName() const {
+			return name;
+		}
+
+};
+
 template<typename T = RenderPassBuilder>
 class AttachmentBuilder {
 
@@ -153,7 +176,7 @@ class SubpassBuilder {
 		uint32_t attachment_count;
 		Pyramid<uint32_t>& preserve;
 		std::set<uint32_t> references;
-		const char* name;
+		const char* debug_name;
 
 		std::vector<VkAttachmentReference> inputs;
 		std::vector<VkAttachmentReference> colors;
@@ -182,7 +205,7 @@ class SubpassBuilder {
 			return !references.contains(attachment);
 		}
 
-		VkSubpassDescription finalize(const std::vector<uint32_t>& preserve, std::vector<int>& subpass_attachments) {
+		VkSubpassDescription finalize(const std::vector<uint32_t>& preserve, std::vector<Subpass>& subpass_attachments) {
 
 			uint32_t input_count = inputs.size();
 			uint32_t color_count = colors.size();
@@ -209,7 +232,7 @@ class SubpassBuilder {
 			// this is here so that the renderpass can retain the information about
 			// how many attachments were there for each subpass - this is then used during pipeline
 			// creation to setup blending for each attachment
-			subpass_attachments.push_back(color_count);
+			subpass_attachments.push_back({color_count, debug_name});
 
 			return description;
 
@@ -222,7 +245,7 @@ class SubpassBuilder {
 			description.pipelineBindPoint = bind_point;
 
 			#if !defined(NDEBUG)
-			this->name = name;
+			this->debug_name = name;
 			#endif
 		}
 
@@ -255,7 +278,7 @@ class SubpassBuilder {
 		}
 
 		T& next() {
-			return builder.addSubpass(this->name, *this);
+			return builder.addSubpass( *this);
 		}
 
 };
@@ -264,10 +287,19 @@ class RenderPass {
 
 	public:
 
+		// Based on: https://www.color-hex.com/color-palette/5361
+		static constexpr Color RED {255, 179, 180};
+		static constexpr Color ORANGE {255, 223, 180};
+		static constexpr Color YELLOW {255, 255, 180};
+		static constexpr Color GREEN {180, 255, 201};
+		static constexpr Color BLUE {180, 225, 255};
+
+	public:
+
 		READONLY VkDevice vk_device;
 		READONLY VkRenderPass vk_pass;
 		READONLY std::vector<VkClearValue> values;
-		READONLY std::vector<int> subpasses;
+		READONLY std::vector<Subpass> subpasses;
 
 		#if !defined(NDEBUG)
 		READONLY Color debug_color;
@@ -277,14 +309,14 @@ class RenderPass {
 	public:
 
 		RenderPass() = default;
-		RenderPass(VkDevice vk_device, VkRenderPass vk_pass, std::vector<VkClearValue>& values, std::vector<int>& subpass_attachments, const char* name, Color color)
-		: vk_device(vk_device), vk_pass(vk_pass), values(values), subpasses(subpass_attachments) {
+		RenderPass(VkDevice vk_device, VkRenderPass vk_pass, std::vector<VkClearValue>& values, std::vector<Subpass>& subpass_info, const char* name, Color color)
+		: vk_device(vk_device), vk_pass(vk_pass), values(values), subpasses(subpass_info) {
 			values.shrink_to_fit();
 
 			#if !defined(NDEBUG)
+			VulkanDebug::name(vk_device, VK_OBJECT_TYPE_RENDER_PASS, vk_pass, name);
 			debug_name = name;
 			debug_color = color;
-			debug_name += " Pass";
 			#endif
 		}
 
@@ -292,7 +324,7 @@ class RenderPass {
 			vkDestroyRenderPass(vk_device, vk_pass, AllocatorCallbackFactory::named("RenderPass"));
 		}
 
-		int getAttachmentCount(int subpass) const {
+		const Subpass& getSubpass(int subpass) const {
 			return subpasses[subpass];
 		}
 
@@ -334,7 +366,7 @@ class RenderPassBuilder {
 
 	public:
 
-		RenderPassBuilder& addSubpass(const char* name, SubpassBuilder<>& builder) {
+		RenderPassBuilder& addSubpass(SubpassBuilder<>& builder) {
 			subpasses.push_back(builder);
 			return *this;
 		}
@@ -342,9 +374,9 @@ class RenderPassBuilder {
 		/**
 		 * Adds a render pass sub-stage, subpasses are executed in order
 		 */
-		SubpassBuilder<> addSubpass(const char* name, VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS) {
+		SubpassBuilder<> addSubpass(VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS) {
 			preserve.push();
-			return {*this, bind_point, (uint32_t) attachments.size(), preserve, name};
+			return {*this, bind_point, (uint32_t) attachments.size(), preserve, "Unnamed"};
 		}
 
 	public:
@@ -363,13 +395,13 @@ class RenderPassBuilder {
 
 	public:
 
-		RenderPass build(Device& device, const char* name, uint8_t r, uint8_t g, uint8_t b) {
+		RenderPass build(Device& device, const char* name, Color color) {
 
 			std::vector<VkAttachmentDescription> attachment_descriptions;
 			std::vector<VkSubpassDescription> subpass_descriptions;
 			std::vector<VkSubpassDependency> dependency_descriptions;
 			std::vector<std::vector<uint32_t>> preserve_indices;
-			std::vector<int> subpass_attachments;
+			std::vector<Subpass> subpass_info;
 
 			auto view = preserve.view();
 
@@ -397,7 +429,7 @@ class RenderPassBuilder {
 					}
 				}
 
-				subpass_descriptions.push_back(subpass.finalize(preserve_indices.back(), subpass_attachments));
+				subpass_descriptions.push_back(subpass.finalize(preserve_indices.back(), subpass_info));
 			}
 
 			VkRenderPassCreateInfo create_info {};
@@ -415,8 +447,55 @@ class RenderPassBuilder {
 				throw Exception {"Failed to create render pass!"};
 			}
 
-			return {device.vk_device, render_pass, values, subpass_attachments, name, {r, g, b}};
+			return {device.vk_device, render_pass, values, subpass_info, name, color};
 
+		}
+
+};
+
+class RenderPassTracker {
+
+	private:
+
+		int index;
+		int count;
+
+		RenderPass* render_pass;
+
+		std::string getNamedError() const {
+			#if !defined(NDEBUG)
+			return "the '" + render_pass->debug_name + "' Render Pass";
+			#endif
+
+			return "Render Pass";
+		}
+
+	public:
+
+		void reset(RenderPass& render_pass) {
+			this->index = 0;
+			this->count = render_pass.getSubpassCount();
+			this->render_pass = &render_pass;
+		}
+
+		void advance() {
+			index ++;
+
+			if (index >= count) {
+				throw Exception {"Unexpected subpass #" + std::to_string(index) + " of " + getNamedError()};
+			}
+		}
+
+		void end() {
+			index ++;
+
+			if (index != count) {
+				throw Exception {"Unexpected end of " + getNamedError()};
+			}
+		}
+
+		const char* getDebugName() const {
+			return render_pass->getSubpass(index).getDebugName();
 		}
 
 };
