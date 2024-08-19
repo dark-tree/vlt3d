@@ -32,6 +32,10 @@ ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRec
 	this->view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
 	this->sampler = view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
 
+	this->image.setDebugName(device, "Atlas");
+	this->view.setDebugName(device, "Atlas");
+	this->sampler.setDebugName(device, "Atlas");
+
 	this->vert_2d = compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device);
 	this->vert_3d = compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device);
 	this->vert_terrain = compiler.compileFile("assets/shaders/vert_terrain.glsl", Kind::VERTEX).create(device);

@@ -158,3 +158,7 @@ ImageViewBuilder Image::getViewBuilder() const {
 void Image::close() {
 	memory.closeImage(vk_image);
 }
+
+void Image::setDebugName(const Device& device, const char* name) const {
+	VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_IMAGE, vk_image, name);
+}

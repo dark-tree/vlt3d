@@ -6,7 +6,7 @@
 #	define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
-#ifdef API_XLIB
+#ifdef API_X11
 #	define GLFW_EXPOSE_NATIVE_X11
 #	define VK_USE_PLATFORM_XLIB_KHR
 #endif
@@ -24,7 +24,7 @@
 // a hack to make this work while i think of a better way to fix this
 // https://stackoverflow.com/a/43854514
 
-#ifdef API_XLIB
+#ifdef API_X11
 	Display* glfwGetX11Display() __attribute__((weak));
 	Window glfwGetX11Window(GLFWwindow* window) __attribute__((weak));
 #endif
@@ -49,7 +49,7 @@
 	}
 #endif
 
-#ifdef API_XLIB
+#ifdef API_X11
 	void platform::createSurfaceXlib(GLFWwindow* window, VkInstance instance, VkSurfaceKHR* surface) {
 
 		VkXlibSurfaceCreateInfoKHR create_info {};

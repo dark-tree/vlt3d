@@ -73,6 +73,7 @@ class GraphicsPipelineBuilder {
 		VkRenderPass vk_pass;
 		int subpass = -1;
 		Device& device;
+		const char* name;
 
 		void finalize() {
 
@@ -352,7 +353,7 @@ class GraphicsPipelineBuilder {
 				throw Exception {"Specified render pass has " + std::to_string(count) + " subpasses but, subpass with index " + std::to_string(subpass_index) + " was requested!"};
 			}
 
-			blending.attachmentCount = render_pass.getAttachmentCount(subpass_index);
+			blending.attachmentCount = render_pass.getSubpass(subpass_index).getAttachmentCount();
 			vk_pass = render_pass.vk_pass;
 			subpass = subpass_index;
 			return *this;
@@ -363,6 +364,16 @@ class GraphicsPipelineBuilder {
 		template<typename... Shaders>
 		GraphicsPipelineBuilder& withShaders(Shaders... shaders) {
 			stages = { shaders... };
+			return *this;
+		}
+
+	// debug build pipeline name Graphics Pipeline
+
+		GraphicsPipelineBuilder& withDebugName(const char* name) {
+			#if !defined(NDEBUG)
+			this->name = name;
+			#endif
+
 			return *this;
 		}
 
@@ -422,6 +433,9 @@ class GraphicsPipelineBuilder {
 			if (vkCreateGraphicsPipelines(device.vk_device, VK_NULL_HANDLE, 1, &create_info, AllocatorCallbackFactory::named("Pipeline"), &pipeline) != VK_SUCCESS) {
 				throw Exception {"Failed to create graphics pipeline!"};
 			}
+
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_PIPELINE, pipeline, name);
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pipeline_layout, name);
 
 			return {pipeline, pipeline_layout, device.vk_device};
 

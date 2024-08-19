@@ -9,6 +9,16 @@
 WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh)
 : pos(pos), buffer(system, mesh.size() * sizeof(VertexTerrain)) {
 	buffer.write(mesh.data(), mesh.size());
+
+	#if !defined(NDEBUG)
+	std::stringstream ss {};
+	ss << "Chunk {";
+	ss << pos;
+	ss << "}";
+	std::string name = ss.str();
+
+	buffer.setDebugName(system.device, name.c_str());
+	#endif
 }
 
 void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder, Frustum& frustum) {

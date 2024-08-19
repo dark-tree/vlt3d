@@ -104,6 +104,7 @@ class Attachment {
 		READONLY Image image;
 		READONLY ImageView view;
 		READONLY ImageSampler sampler;
+		READONLY const char* debug_name;
 
 	public:
 
@@ -136,6 +137,7 @@ class AttachmentImageBuilder {
 		AttachmentImageBuilder& setColorClearValue(float r, float g, float b, float a);
 		AttachmentImageBuilder& setColorClearValue(int r, int g, int b, int a);
 		AttachmentImageBuilder& setDepthClearValue(float depth, uint32_t stencil = 0);
+		AttachmentImageBuilder& setDebugName(const char* name);
 
 		Attachment build() const;
 

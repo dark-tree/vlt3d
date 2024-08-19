@@ -1,5 +1,6 @@
 
 #include "attachment.hpp"
+#include "setup/debug.hpp"
 
 /*
  * Attachment
@@ -17,6 +18,10 @@ void Attachment::allocate(Device& device, VkExtent2D extent, Allocator& allocato
 	image = allocator.allocateImage(info);
 	view = image.getViewBuilder().build(device, vk_aspect);
 	sampler = view.getSamplerBuilder().setFilter(vk_filter).setMode(vk_mode).setBorder(vk_border).build(device);
+
+	image.setDebugName(device, debug_name);
+	view.setDebugName(device, debug_name);
+	sampler.setDebugName(device, debug_name);
 }
 
 void Attachment::close(Device& device) {
@@ -78,6 +83,13 @@ AttachmentImageBuilder& AttachmentImageBuilder::setColorClearValue(int r, int g,
 
 AttachmentImageBuilder& AttachmentImageBuilder::setDepthClearValue(float depth, uint32_t stencil) {
 	attachment.vk_clear.depthStencil = {depth, stencil};
+	return *this;
+}
+
+AttachmentImageBuilder& AttachmentImageBuilder::setDebugName(const char* name) {
+	#if !defined(NDEBUG)
+	attachment.debug_name = name;
+	#endif
 	return *this;
 }
 

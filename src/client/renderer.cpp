@@ -11,6 +11,9 @@
 Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device, const ImageSampler& atlas_sampler)
 : buffer(pool.allocate()), immediate_2d(system, 1024), immediate_3d(system, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
 
+	immediate_2d.setDebugName(device, "Immediate 2D");
+	immediate_3d.setDebugName(device, "Immediate 3D");
+
 	set_1 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
 	set_1.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, atlas_sampler);
 
@@ -139,14 +142,14 @@ void RenderSystem::createRenderPass() {
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS)
+		builder.addSubpass()
 			.addOutput(albedo, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addOutput(normal, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addOutput(position, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		terrain_pass = builder.build(device);
+		terrain_pass = builder.build(device, "Terrain", RenderPass::GREEN);
 
 	}
 
@@ -179,13 +182,13 @@ void RenderSystem::createRenderPass() {
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // SSAO
+		builder.addSubpass()
 			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(ambience, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		ssao_pass = builder.build(device);
+		ssao_pass = builder.build(device, "SSAO", RenderPass::ORANGE);
 
 	}
 
@@ -228,19 +231,19 @@ void RenderSystem::createRenderPass() {
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Lighting
+		builder.addSubpass()
 			.addInput(normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addInput(albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		builder.addSubpass(VK_PIPELINE_BIND_POINT_GRAPHICS) // Overlay
+		builder.addSubpass()
 			.addOutput(color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
-		lighting_pass = builder.build(device);
+		lighting_pass = builder.build(device, "Compose", RenderPass::BLUE);
 
 	}
 
@@ -329,6 +332,9 @@ void RenderSystem::recreateSwapchain() {
 
 	createPipelines();
 	createFrames();
+
+	instance.enterValidationCheckpoint("Render System Swapchain Reload");
+
 }
 
 void RenderSystem::createPipelines() {
@@ -345,6 +351,7 @@ void RenderSystem::createPipelines() {
 		.withBindingLayout(binding_terrain)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(geometry_descriptor_layout)
+		.withDebugName("Terrain")
 		.build();
 
 	pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
@@ -360,6 +367,7 @@ void RenderSystem::createPipelines() {
 		.withBindingLayout(binding_3d)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(geometry_descriptor_layout)
+		.withDebugName("Simple 3D")
 		.build();
 
 	pipeline_2d_tint = GraphicsPipelineBuilder::of(device)
@@ -373,6 +381,7 @@ void RenderSystem::createPipelines() {
 		.withBindingLayout(binding_2d)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(geometry_descriptor_layout)
+		.withDebugName("Simple 2D")
 		.build();
 
 	pipeline_ssao = GraphicsPipelineBuilder::of(device)
@@ -383,6 +392,7 @@ void RenderSystem::createPipelines() {
 		.withShaders(assets.state->vert_blit, assets.state->frag_ssao)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(ssao_descriptor_layout)
+		.withDebugName("SSAO")
 		.build();
 
 	pipeline_compose = GraphicsPipelineBuilder::of(device)
@@ -393,6 +403,7 @@ void RenderSystem::createPipelines() {
 		.withShaders(assets.state->vert_blit, assets.state->frag_compose)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(lighting_descriptor_layout)
+		.withDebugName("Lighting")
 		.build();
 
 }
@@ -458,6 +469,14 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	transfer_queue = device.get(transfer_ref, 0);
 	presentation_queue = device.get(presentation_ref, 0);
 
+	// function for naming things, from the debug utils extension
+	#if !defined(NDEBUG)
+	loadDeviceFunction(device.vk_device, "vkSetDebugUtilsObjectNameEXT");
+	loadDeviceFunction(device.vk_device, "vkCmdBeginDebugUtilsLabelEXT");
+	loadDeviceFunction(device.vk_device, "vkCmdEndDebugUtilsLabelEXT");
+	loadDeviceFunction(device.vk_device, "vkCmdInsertDebugUtilsLabelEXT");
+	#endif
+
 	// create command pools
 	graphics_pool = CommandPool::build(device, graphics_ref, false);
 	transient_pool = CommandPool::build(device, transfer_ref, true);
@@ -511,6 +530,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		.setAspect(VK_IMAGE_ASPECT_DEPTH_BIT)
 		.setDepthClearValue(1.0f)
+		.setDebugName("Depth")
 		.build();
 
 	attachment_albedo = AttachmentImageBuilder::begin()
@@ -518,6 +538,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setColorClearValue(0, 0, 0, 0)
+		.setDebugName("Albedo")
 		.build();
 
 	attachment_normal = AttachmentImageBuilder::begin()
@@ -526,6 +547,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setMode(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
 		.setColorClearValue(0, 0, 0, 0)
+		.setDebugName("Normal")
 		.build();
 
 	attachment_position = AttachmentImageBuilder::begin()
@@ -534,6 +556,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setMode(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
 		.setColorClearValue(0, 0, 0, 0)
+		.setDebugName("Position")
 		.build();
 
 	attachment_ambience = AttachmentImageBuilder::begin()
@@ -541,6 +564,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setColorClearValue(0, 0, 0, 0)
+		.setDebugName("Ambience")
 		.build();
 
 	Random random {42};
@@ -584,9 +608,13 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec4));
 	ssao_config.noise_scale = glm::vec2 {1000.0/4.0, 700.0/4.0};
 
-	this->ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_buffers, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT);
-	this->ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
-	this->ssao_noise_sampler = ssao_noise_view.getSamplerBuilder().setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT).setFilter(VK_FILTER_NEAREST).build(device);
+	ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_buffers, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT);
+	ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
+	ssao_noise_sampler = ssao_noise_view.getSamplerBuilder().setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT).setFilter(VK_FILTER_NEAREST).build(device);
+
+	ssao_noise_image.setDebugName(device, "SSAO Noise");
+	ssao_noise_view.setDebugName(device, "SSAO Noise");
+	ssao_noise_sampler.setDebugName(device, "SSAO Noise");
 
 	BufferInfo ssao_buffer_builder {sizeof(AmbientOcclusionUniform), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
 	ssao_buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -594,6 +622,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	ssao_buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
 	ssao_uniform_buffer = allocator.allocateBuffer(ssao_buffer_builder);
+	ssao_uniform_buffer.setDebugName(device, "SSAO Uniform");
 
 	MemoryMap ssao_map = ssao_uniform_buffer.access().map();
 	ssao_map.write(&ssao_config, sizeof(AmbientOcclusionUniform));
@@ -621,12 +650,16 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
+	instance.enterValidationCheckpoint("Render System Phase 1 Initialization");
+
 	// Phase 2
 	// this step needs to be more or less repeated every time the window size changes
 
 	createSwapchain();
 	createRenderPass();
 	createFramebuffers();
+
+	instance.enterValidationCheckpoint("Render System Phase 2 Initialization");
 
 	// Phase 3
 	// this step will need to be repeated each time the resources are reloaded
@@ -646,6 +679,8 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	createPipelines();
 	createFrames();
+
+	instance.enterValidationCheckpoint("Render System Phase 3 Initialization");
 }
 
 void RenderSystem::reloadAssets() {
@@ -672,6 +707,9 @@ void RenderSystem::reloadAssets() {
 		createPipelines();
 		createFrames();
 	}).milliseconds(), "ms");
+
+	instance.enterValidationCheckpoint("Render System Resource Reload");
+
 }
 
 Framebuffer& RenderSystem::acquireScreenFramebuffer() {

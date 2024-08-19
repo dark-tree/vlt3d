@@ -3,6 +3,7 @@
 #include "external.hpp"
 #include "setup/device.hpp"
 #include "setup/callback.hpp"
+#include "setup/debug.hpp"
 
 class ImageSampler {
 
@@ -19,6 +20,10 @@ class ImageSampler {
 
 		void close(Device& device) {
 			vkDestroySampler(device.vk_device, vk_sampler, AllocatorCallbackFactory::named("Sampler"));
+		}
+
+		void setDebugName(const Device& device, const char* name) const {
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_SAMPLER, vk_sampler, name);
 		}
 
 };
@@ -106,6 +111,10 @@ class ImageView {
 
 		void close(Device& device) {
 			vkDestroyImageView(device.vk_device, vk_view, AllocatorCallbackFactory::named("View"));
+		}
+
+		void setDebugName(const Device& device, const char* name) const {
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_IMAGE_VIEW, vk_view, name);
 		}
 
 };

@@ -34,6 +34,9 @@ class Device {
 			return {info.get(vk_device, index), info};
 		}
 
+		/**
+		 * Waits (blocks) for the Device (GPU) to finish all pending work
+		 */
 		void wait() {
 			vkDeviceWaitIdle(vk_device);
 		}
@@ -42,10 +45,16 @@ class Device {
 			vkDestroyDevice(vk_device, AllocatorCallbackFactory::named("Device"));
 		}
 
+		/**
+		 * A short-cut method for creating Fence objects
+		 */
 		Fence fence(bool signaled = false) const {
 			return {vk_device, signaled};
 		}
 
+		/**
+		 * A short-cut method for creating Semaphore objects
+		 */
 		Semaphore semaphore() const {
 			return {vk_device};
 		}
