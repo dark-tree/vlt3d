@@ -92,7 +92,7 @@ int main() {
 		// so we would need some internal subpass dependency stuff that i know nothing about
 		recorder.bufferTransferBarrier();
 
-		world.update(world_generator, camera.getPosition(), 8);
+		world.update(world_generator, camera.getPosition(), 16);
 
 		GeometryPushBlock geometry_push_block {};
 		geometry_push_block.mvp = mvp;
@@ -104,7 +104,7 @@ int main() {
 		recorder.bindDescriptorSet(frame.set_1);
 
 		world_renderer.draw(recorder, frustum);
-		world_renderer.eraseOutside(camera.getPosition(), 12);
+		world_renderer.eraseOutside(camera.getPosition(), 20);
 
 		recorder.endRenderPass();
 

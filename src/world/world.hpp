@@ -55,10 +55,23 @@ class World {
 		};
 
 		std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
+
+		std::mutex updates_mutex;
 		std::unordered_map<glm::ivec3, uint8_t> updates;
 
 		/// Checks if the chunk `chunk` can be submitted for rendering
 		bool isChunkRenderReady(glm::ivec3 chunk) const;
+
+		/// Simple utility to iterate a 2D plane with ever expanding concentric square rings
+		template <typename Func>
+		void squareRingIterator(int ring, Func func) {
+			for (int i = -ring; i <= ring; i ++) {
+				func(i, -ring);
+				func(i, +ring);
+				func(-ring, i);
+				func(+ring, i);
+			}
+		}
 
 	public:
 
@@ -84,7 +97,10 @@ class World {
 				}
 			}
 
-			updates.clear();
+			{
+				std::lock_guard lock {updates_mutex};
+				updates.clear();
+			}
 
 			// call once for each updated chunk
 			for (auto update : set) {

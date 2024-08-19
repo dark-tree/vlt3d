@@ -1,6 +1,7 @@
 
 #include "world.hpp"
 #include "generator.hpp"
+#include "util/threads.hpp"
 
 /*
  * AccessError
@@ -31,6 +32,7 @@ bool World::isChunkRenderReady(glm::ivec3 chunk) const {
 }
 
 void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t flags) {
+	std::lock_guard lock {updates_mutex};
 	updates[chunk] |= flags;
 }
 
@@ -47,25 +49,48 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 		}
 	}
 
-	// chunk loading
-	for (int cx = -radius; cx <= radius; cx++) {
-		for (int cy = -radius; cy <= radius; cy++) {
-			for (int cz = -radius; cz <= radius; cz++) {
+	// TODO
+	static TaskPool pool {8};
+	static std::unordered_set<glm::ivec3> requested;
+	static std::mutex mutex;
 
+	int rings = (int) radius;
+	int ring = 0;
+
+	while (ring < rings) {
+		squareRingIterator(ring, [&, rings] (int cx, int cz) {
+			for (int cy = -rings; cy <= rings; cy++) {
 				glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
+				std::lock_guard lock {mutex};
 				auto it = chunks.find(key);
 
 				if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
 					if (it == chunks.end()) {
-						chunks[key].reset(generator.get(key));
-						pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
+
+						if (requested.size() > 8 || requested.contains(key)) {
+							continue;
+						}
+
+						requested.insert(key);
+
+						pool.enqueue([this, &generator, key] () {
+							Chunk* chunk = generator.get(key);
+
+							std::lock_guard lock {mutex};
+							chunks[key].reset(chunk);
+							pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
+							requested.erase(key);
+						});
 
 						continue;
 					}
 				}
 			}
-		}
+		});
+
+		ring ++;
 	}
+
 }
 
 std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {
