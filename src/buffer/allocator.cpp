@@ -36,36 +36,24 @@ BufferInfo& BufferInfo::usage(VkBufferUsageFlags usage) {
  * ImageInfo
  */
 
-VkImageType ImageInfo::getImageType() const {
-	if (vk_extent.depth == 1 && vk_extent.height == 1) {
-		return VK_IMAGE_TYPE_1D;
-	}
-
-	if (vk_extent.depth == 1) {
-		return VK_IMAGE_TYPE_2D;
-	}
-
-	return VK_IMAGE_TYPE_3D;
-}
-
-ImageInfo::ImageInfo(size_t width, size_t height, VkFormat format, VkImageUsageFlags usage)
-: AllocationInfo(), vk_format(format), vk_tiling(VK_IMAGE_TILING_OPTIMAL), vk_image_usage(usage), vk_samples(VK_SAMPLE_COUNT_1_BIT) {
+ImageInfo::ImageInfo(int width, int height, VkFormat format, VkImageUsageFlags usage)
+: AllocationInfo(), vk_format(format), vk_image_usage(usage), vk_samples(VK_SAMPLE_COUNT_1_BIT), vk_layers(1) {
 	size(width, height);
 }
 
 ImageInfo::ImageInfo()
-: ImageInfo(0, 0, VK_FORMAT_R8G8B8_UINT, 0) {}
+: ImageInfo(0, 0, VK_FORMAT_R8G8B8A8_UINT, 0) {}
 
 VkImageCreateInfo ImageInfo::getImageInfo() const {
 	VkImageCreateInfo create_info {};
 
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	create_info.imageType = getImageType();
+	create_info.imageType = VK_IMAGE_TYPE_2D;
 	create_info.extent = vk_extent;
 	create_info.mipLevels = 1;
-	create_info.arrayLayers = 1;
+	create_info.arrayLayers = vk_layers;
 	create_info.format = vk_format;
-	create_info.tiling = vk_tiling;
+	create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	create_info.usage = vk_image_usage;
 	create_info.sharingMode = vk_sharing;
@@ -75,10 +63,10 @@ VkImageCreateInfo ImageInfo::getImageInfo() const {
 	return create_info;
 }
 
-ImageInfo& ImageInfo::size(size_t width, size_t height, size_t depth) {
+ImageInfo& ImageInfo::size(int width, int height) {
 	vk_extent.width = width;
 	vk_extent.height = height;
-	vk_extent.depth = depth;
+	vk_extent.depth = 1;
 	return *this;
 }
 
@@ -87,13 +75,13 @@ ImageInfo& ImageInfo::format(VkFormat format) {
 	return *this;
 }
 
-ImageInfo& ImageInfo::tiling(VkImageTiling tiling) {
-	vk_tiling = tiling;
+ImageInfo& ImageInfo::usage(VkImageUsageFlags usage) {
+	vk_image_usage = usage;
 	return *this;
 }
 
-ImageInfo& ImageInfo::usage(VkImageUsageFlags usage) {
-	vk_image_usage = usage;
+ImageInfo& ImageInfo::layers(int layers) {
+	vk_layers = layers;
 	return *this;
 }
 

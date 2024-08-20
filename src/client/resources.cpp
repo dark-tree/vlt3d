@@ -4,6 +4,7 @@
 #include "util/threads.hpp"
 #include "shader/compiler.hpp"
 #include "client/renderer.hpp"
+#include "buffer/array.hpp"
 
 ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRecorder& recorder)
 : device(system.device) {
@@ -22,19 +23,29 @@ ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRec
 		}
 	}
 
+	this->array = SpriteArray::createFromDirectory(8, 8, "assets/blocks", fallback);
 	this->atlas = AtlasBuilder::createSimpleAtlas("assets/sprites", fallback);
 	this->font = Font::loadFromFile(atlas, "assets/font.tt");
 
 	atlas.getImage().save("atlas.png");
+	array.getImage().save("array.png");
 	fallback.close();
 
-	this->image = atlas.getImage().upload(system.allocator, queue, recorder, VK_FORMAT_R8G8B8A8_SRGB);
-	this->view = image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
-	this->sampler = view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
+	this->atlas_image = atlas.upload(system.allocator, queue, recorder);
+	this->atlas_view = atlas_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
+	this->atlas_sampler = atlas_view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
 
-	this->image.setDebugName(device, "Atlas");
-	this->view.setDebugName(device, "Atlas");
-	this->sampler.setDebugName(device, "Atlas");
+	this->atlas_image.setDebugName(device, "Atlas");
+	this->atlas_view.setDebugName(device, "Atlas");
+	this->atlas_sampler.setDebugName(device, "Atlas");
+
+	this->array_image = array.upload(system.allocator, queue, recorder);
+	this->array_view = array_image.getViewBuilder().setType(VK_IMAGE_VIEW_TYPE_2D_ARRAY).build(device, VK_IMAGE_ASPECT_COLOR_BIT, array.getSpriteCount());
+	this->array_sampler = array_view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
+
+	this->array_image.setDebugName(device, "Array");
+	this->array_view.setDebugName(device, "Array");
+	this->array_sampler.setDebugName(device, "Array");
 
 	this->vert_2d = compiler.compileFile("assets/shaders/vert_2d.glsl", Kind::VERTEX).create(device);
 	this->vert_3d = compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device);
@@ -48,9 +59,13 @@ ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRec
 
 ResourceManager::State::~State() {
 	atlas.close();
-	sampler.close(device);
-	view.close(device);
-	image.close();
+	array.close();
+	array_sampler.close(device);
+	array_view.close(device);
+	array_image.close();
+	atlas_sampler.close(device);
+	atlas_view.close(device);
+	atlas_image.close();
 	vert_2d.close(device);
 	vert_3d.close(device);
 	vert_terrain.close(device);
@@ -79,7 +94,7 @@ const Font& ResourceManager::getFont() const {
 }
 
 const ImageSampler& ResourceManager::getAtlasSampler() const {
-	return state->sampler;
+	return state->atlas_sampler;
 }
 
 void ResourceManager::reload(RenderSystem& system, TaskQueue& queue, CommandBuffer buffer) {

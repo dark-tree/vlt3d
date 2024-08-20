@@ -71,7 +71,7 @@ class ChunkRenderPool {
 		bool empty();
 
 		/// emit cube geometry into the given mesh vector
-		void emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, bool west, bool east, bool down, bool up, bool north, bool south, BakedSprite bottom_sprite, BakedSprite top_sprite, BakedSprite side_sprite);
+		void emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, bool west, bool east, bool down, bool up, bool north, bool south, int bottom_sprite, int top_sprite, int side_sprite);
 
 		/// emit the mesh of the given chunk into the render system, @Note this method internally uses threading
 		void emitChunk(std::vector<VertexTerrain>& mesh, std::shared_ptr<Chunk> chunk);

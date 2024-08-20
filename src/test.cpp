@@ -2,7 +2,15 @@
 #include <vstl.hpp>
 #include "util/bits.hpp"
 #include "util/pyramid.hpp"
+#include "util/exception.hpp"
+#include "buffer/array.hpp"
+
 BEGIN(VSTL_MODE_LENIENT)
+
+HANDLER { CATCH_PTR (Exception& exception) {
+	exception.print();
+	FAIL(exception.what())
+} }
 
 TEST(util_bits_width) {
 
@@ -97,3 +105,40 @@ TEST(util_pyramid) {
 	ASSERT(view.collect().empty());
 
 };
+
+TEST(sprite_array) {
+
+	ImageData red = ImageData::allocate(8, 8);
+	red.clear({255, 30, 30, 255});
+
+	ImageData green = ImageData::allocate(8, 8);
+	green.clear({30, 255, 30, 255});
+
+	ImageData blue = ImageData::allocate(8, 8);
+	blue.clear({30, 30, 255, 255});
+
+	SpriteArray array {8, 8};
+	array.submitImage("red", red);
+	array.submitImage("green", green);
+	array.submitImage("blue", blue);
+
+	ASSERT(array.getImage().width() == 8);
+	ASSERT(array.getImage().height() >= (8*3));
+	ASSERT(array.getSpriteIndex("not-a-real-sprite-1") == 0)
+	ASSERT(array.getSpriteIndex("not-a-real-sprite-2") == 0)
+	CHECK(array.getSpriteIndex("red"), 0);
+	CHECK(array.getSpriteIndex("green"), 1);
+	CHECK(array.getSpriteIndex("blue"), 2);
+
+	EXPECT(Exception, {
+		uint8_t pixels[10 * 10 * 4];
+		ImageData big = ImageData::view(pixels, 10, 10);
+		array.submitImage("big", big);
+	});
+
+	red.close();
+	green.close();
+	blue.close();
+
+};
+

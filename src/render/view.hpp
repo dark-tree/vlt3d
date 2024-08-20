@@ -5,6 +5,12 @@
 #include "setup/callback.hpp"
 #include "setup/debug.hpp"
 
+/**
+ * TODO Scrap the whole ImageSampler/ImageView/Image thing
+ *      and replace it with a singular Texture class with a single
+ *      TextureBuilder that combines all the current builders into one
+ */
+
 class ImageSampler {
 
 	public:
@@ -134,18 +140,20 @@ class ImageViewBuilder {
 		ImageViewBuilder(VkImage image, VkFormat format)
 		: image(image), format(format) {}
 
-		void setType(VkImageViewType type) {
+		ImageViewBuilder& setType(VkImageViewType type) {
 			this->type = type;
+			return *this;
 		}
 
-		void setSwizzle(VkComponentSwizzle r, VkComponentSwizzle g, VkComponentSwizzle b, VkComponentSwizzle a) {
+		ImageViewBuilder& setSwizzle(VkComponentSwizzle r, VkComponentSwizzle g, VkComponentSwizzle b, VkComponentSwizzle a) {
 			this->components.r = r;
 			this->components.g = g;
 			this->components.b = b;
 			this->components.a = a;
+			return *this;
 		}
 
-		ImageView build(Device& device, VkImageAspectFlags aspect) {
+		ImageView build(Device& device, VkImageAspectFlags aspect, int layers = 1) {
 
 			VkImageViewCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -159,7 +167,7 @@ class ImageViewBuilder {
 			create_info.subresourceRange.baseMipLevel = 0;
 			create_info.subresourceRange.levelCount = 1;
 			create_info.subresourceRange.baseArrayLayer = 0;
-			create_info.subresourceRange.layerCount = 1;
+			create_info.subresourceRange.layerCount = layers;
 
 			VkImageView view;
 

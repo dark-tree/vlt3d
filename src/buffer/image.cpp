@@ -54,7 +54,7 @@ void ImageData::close() {
 }
 
 void ImageData::clear(std::initializer_list<uint8_t> value) {
-	if (value.size() != channels()) {
+	if ((int) value.size() != channels()) {
 		throw Exception {"Can't clear image with given value, invalid channel count!"};
 	}
 
@@ -66,7 +66,9 @@ void ImageData::clear(std::initializer_list<uint8_t> value) {
 }
 
 void ImageData::save(const std::string& path) const {
-	stbi_write_png(path.c_str(), w, h, c, pixels, w * c);
+	if (!stbi_write_png(path.c_str(), w, h, c, pixels, w * c)) {
+		throw Exception {"Failed to save image '" + path + "'"};
+	}
 }
 
 ImageData ImageData::loadFromFile(const std::string& path, int channels) {
@@ -74,7 +76,7 @@ ImageData ImageData::loadFromFile(const std::string& path, int channels) {
 	void* pixels = stbi_load(path.c_str(), &w, &h, &ignored, channels);
 
 	if (!pixels) {
-		throw Exception {"Failed to load texture from '" + path + "'"};
+		throw Exception {"Failed to load image from '" + path + "'"};
 	}
 
 	return {Type::STB_IMAGE, pixels, w, h, channels};
@@ -89,51 +91,22 @@ ImageData ImageData::view(void* pixels, int w, int h, int channels) {
 }
 
 Image ImageData::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format) const {
-
-	BufferInfo buffer_builder {size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
-	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-	buffer_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-
-	Buffer staging = allocator.allocateBuffer(buffer_builder);
-
-	MemoryMap map = staging.access().map();
-	map.write(data(), size());
-	map.flush();
-	map.unmap();
-
-	ImageInfo image_builder {w, h, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
-	image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	image_builder.tiling(VK_IMAGE_TILING_OPTIMAL);
-	image_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
-
-	Image image = allocator.allocateImage(image_builder);
-
-	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-	recorder.copyBufferToImage(image, staging, w, h);
-	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-	queue.enqueue([staging] () mutable {
-		staging.close();
-	});
-
-	return image;
-
+	return Image::upload(allocator, queue, recorder, data(), width(), height(), channels(), 1, format);
 }
 
-size_t ImageData::size() const {
+int ImageData::size() const {
 	return width() * height() * channels();
 }
 
-size_t ImageData::width() const {
+int ImageData::width() const {
 	return w;
 }
 
-size_t ImageData::height() const {
+int ImageData::height() const {
 	return h;
 }
 
-size_t ImageData::channels() const {
+int ImageData::channels() const {
 	return c;
 }
 
@@ -161,4 +134,43 @@ void Image::close() {
 
 void Image::setDebugName(const Device& device, const char* name) const {
 	VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_IMAGE, vk_image, name);
+}
+
+Image Image::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, const void* pixels, int width, int height, int channels, int layers, VkFormat format) {
+
+	size_t size = (size_t) width * height * channels * layers;
+
+	if (getFormatInfo(format).size != channels) {
+		throw Exception {"The specified image format doesn't match pixel size!"};
+	}
+
+	BufferInfo buffer_builder {size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
+	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+	buffer_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+
+	Buffer staging = allocator.allocateBuffer(buffer_builder);
+
+	MemoryMap map = staging.access().map();
+	map.write(pixels, size);
+	map.flush();
+	map.unmap();
+
+	ImageInfo image_builder {width, height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
+	image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	image_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+	image_builder.layers(layers);
+
+	Image image = allocator.allocateImage(image_builder);
+
+	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED, layers);
+	recorder.copyBufferToImage(image, staging, width, height, layers);
+	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layers);
+
+	queue.enqueue([staging] () mutable {
+		staging.close();
+	});
+
+	return image;
+
 }

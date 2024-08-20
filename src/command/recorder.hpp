@@ -114,7 +114,7 @@ class CommandRecorder {
 			return *this;
 		}
 
-		CommandRecorder& copyBufferToImage(Image dst, Buffer src, size_t width, size_t height, size_t depth = 1) {
+		CommandRecorder& copyBufferToImage(Image dst, Buffer src, size_t width, size_t height, size_t layers) {
 
 			VkBufferImageCopy region {};
 			region.bufferOffset = 0;
@@ -124,18 +124,18 @@ class CommandRecorder {
 			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			region.imageSubresource.mipLevel = 0;
 			region.imageSubresource.baseArrayLayer = 0;
-			region.imageSubresource.layerCount = 1;
+			region.imageSubresource.layerCount = layers;
 
 			region.imageOffset = {0, 0, 0};
 			region.imageExtent.width = width;
 			region.imageExtent.height = height;
-			region.imageExtent.depth = depth;
+			region.imageExtent.depth = 1;
 
 			vkCmdCopyBufferToImage(vk_buffer, src.vk_buffer, dst.vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 			return *this;
 		}
 
-		CommandRecorder& transitionLayout(Image image, VkImageLayout dst, VkImageLayout src) {
+		CommandRecorder& transitionLayout(Image image, VkImageLayout dst, VkImageLayout src, size_t layers) {
 
 			VkPipelineStageFlags src_stage = 0;
 			VkPipelineStageFlags dst_stage = 0;
@@ -153,7 +153,7 @@ class CommandRecorder {
 			barrier.subresourceRange.baseMipLevel = 0;
 			barrier.subresourceRange.levelCount = 1;
 			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
+			barrier.subresourceRange.layerCount = layers;
 
 			if (src == VK_IMAGE_LAYOUT_UNDEFINED && dst == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
 				barrier.srcAccessMask = 0;

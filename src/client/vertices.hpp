@@ -13,13 +13,13 @@ enum struct Normal : uint8_t {
 
 struct VertexTerrain {
 	float x, y, z;
-	float u, v;
-	uint8_t r, g, b;
+	uint16_t i;
+	uint8_t u, v, r, g, b;
 	Normal normal;
 
 	VertexTerrain() = default;
-	VertexTerrain(float x, float y, float z, float u, float v, uint8_t r, uint8_t g, uint8_t b, Normal normal)
-	: x(x), y(y), z(z), u(u), v(v), r(r), g(g), b(b), normal(normal) {}
+	VertexTerrain(float x, float y, float z, float u, float v, int index, uint8_t r, uint8_t g, uint8_t b, Normal normal)
+	: x(x), y(y), z(z), i(index), u(u * 255), v(v * 255), r(r), g(g), b(b), normal(normal) {}
 };
 
 struct Vertex3D {
@@ -43,6 +43,6 @@ struct Vertex2D {
 };
 
 // make sure our Vertices have the correct size
-static_assert(sizeof(VertexTerrain) == 24);
+static_assert(sizeof(VertexTerrain) == 20);
 static_assert(sizeof(Vertex3D) == 24);
 static_assert(sizeof(Vertex2D) == 20);

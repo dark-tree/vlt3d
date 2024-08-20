@@ -33,7 +33,7 @@ int main() {
 
 	SoundSystem sound_system;
 	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
-	sound_system.add(buffer).loop().play();
+//	sound_system.add(buffer).loop().play();
 
 	Window window {1000, 700, "Funny Vulkan App"};
 	RenderSystem system {window, 3};
@@ -98,10 +98,10 @@ int main() {
 		geometry_push_block.mvp = mvp;
 		geometry_push_block.view = view;
 
-		recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent);
-		recorder.bindPipeline(system.pipeline_3d_terrain);
-		recorder.writePushConstant(system.push_constant, &geometry_push_block);
-		recorder.bindDescriptorSet(frame.set_1);
+		recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent)
+			.bindPipeline(system.pipeline_3d_terrain)
+			.writePushConstant(system.push_constant, &geometry_push_block)
+			.bindDescriptorSet(frame.set_0);
 
 		world_renderer.draw(recorder, frustum);
 		world_renderer.eraseOutside(camera.getPosition(), 20);

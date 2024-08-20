@@ -57,6 +57,10 @@ const ImageData& Atlas::getImage() const {
 	return atlas;
 }
 
+Image Atlas::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder) const {
+	return atlas.upload(allocator, queue, recorder, VK_FORMAT_R8G8B8A8_SRGB);
+}
+
 void Atlas::close() {
 	atlas.close();
 	sprites.clear();

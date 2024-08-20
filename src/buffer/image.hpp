@@ -20,7 +20,7 @@ class ImageData {
 
 	private:
 
-		enum Type {
+		enum Type : uint8_t {
 			STB_IMAGE,
 			MALLOCED,
 			VIEW
@@ -28,7 +28,7 @@ class ImageData {
 
 		READONLY Type type;
 		READONLY void* pixels;
-		READONLY size_t w, h, c;
+		READONLY int w, h, c;
 
 	public:
 
@@ -98,16 +98,16 @@ class ImageData {
 	public:
 
 		/// returns the size, in bytes, of the data buffer used by this image
-		size_t size() const;
+		int size() const;
 
 		/// returns the width, in pixels, of the image
-		size_t width() const;
+		int width() const;
 
 		/// returns the height, in pixels, of the image
-		size_t height() const;
+		int height() const;
 
 		/// returns the number of channels (bytes) per pixel
-		size_t channels() const;
+		int channels() const;
 
 		/// returns a pointer to the start of images' data buffer
 		const void* data() const;
@@ -137,5 +137,9 @@ class Image {
 		void close();
 
 		void setDebugName(const Device& device, const char* name) const;
+
+	public:
+
+		static Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, const void* pixels, int width, int height, int channels, int layers, VkFormat format);
 
 };

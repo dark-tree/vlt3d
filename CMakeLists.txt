@@ -145,6 +145,7 @@ file(GLOB_RECURSE VLT3D_SOURCES
 
 # basic unit test are build as a separate target
 list(FILTER VLT3D_SOURCES EXCLUDE REGEX "src[\\/]test\\.cpp$")
+list(FILTER VLT3D_SOURCES EXCLUDE REGEX "src[\\/]main\\.cpp$")
 
 add_library(external
 		lib/stb_image.cpp
@@ -154,11 +155,13 @@ add_library(external
 )
 
 add_executable(main
+		"src/main.cpp"
 		${VLT3D_SOURCES}
 )
 
 add_executable(test
 		"src/test.cpp"
+		${VLT3D_SOURCES}
 )
 
 set(VLT3D_LIBS
@@ -208,4 +211,5 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
 	)
 
 	add_dependencies(main copy-assets)
+	add_dependencies(test copy-assets)
 endif()

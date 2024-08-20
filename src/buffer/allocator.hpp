@@ -86,9 +86,8 @@ class BufferInfo : public AllocationInfo<BufferInfo> {
 
 	public:
 
-		BufferInfo(size_t size, VkBufferUsageFlags usage);
-
 		BufferInfo();
+		BufferInfo(size_t size, VkBufferUsageFlags usage);
 
 		VkBufferCreateInfo getBufferInfo() const;
 
@@ -114,17 +113,14 @@ class ImageInfo : public AllocationInfo<ImageInfo> {
 
 		READONLY VkExtent3D vk_extent;
 		READONLY VkFormat vk_format;
-		READONLY VkImageTiling vk_tiling;
 		READONLY VkImageUsageFlags vk_image_usage;
 		READONLY VkSampleCountFlagBits vk_samples;
-
-		VkImageType getImageType() const;
+		READONLY int vk_layers;
 
 	public:
 
-		ImageInfo(size_t width, size_t height, VkFormat format, VkImageUsageFlags usage);
-
 		ImageInfo();
+		ImageInfo(int width, int height, VkFormat format, VkImageUsageFlags usage);
 
 		VkImageCreateInfo getImageInfo() const;
 
@@ -134,20 +130,13 @@ class ImageInfo : public AllocationInfo<ImageInfo> {
 		 * Sets the dimensions (in pixels) of the image, as images
 		 * can also be 3D there is also an optional depth parameter
 		 */
-		ImageInfo& size(size_t width, size_t height, size_t depth = 1);
+		ImageInfo& size(int width, int height);
 
 		/**
 		 * Sets how the individual pixels will be stored in memory
 		 * and the number of available channels
 		 */
 		ImageInfo& format(VkFormat format);
-
-		/**
-		 * Sets how the individual texels are ordered in memory with `VK_IMAGE_TILING_OPTIMAL` being
-		 * the fast hardware-specific way you want to use 99.99% of the time and `VK_IMAGE_TILING_LINEAR` being
-		 * slow and restricted "[x + y * w]" way, that can sometimes be used during staging
-		 */
-		ImageInfo& tiling(VkImageTiling tiling);
 
 		/**
 		 * Sets a bitfield of flags that specifies the valid usages
@@ -157,10 +146,15 @@ class ImageInfo : public AllocationInfo<ImageInfo> {
 		ImageInfo& usage(VkImageUsageFlags usage);
 
 		/**
+		 * The number of layers in the image
+		 * where each layers has the given dimensions
+		 */
+		 ImageInfo& layers(int layers);
+
+		/**
 		 * The number of samples to use in a multisampling
 		 */
 		ImageInfo& samples(int samples);
-
 
 };
 

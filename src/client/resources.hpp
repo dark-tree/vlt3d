@@ -5,6 +5,7 @@
 #include "buffer/font.hpp"
 #include "render/view.hpp"
 #include "shader/module.hpp"
+#include "buffer/array.hpp"
 
 class CommandBuffer;
 class Device;
@@ -18,12 +19,17 @@ class ResourceManager {
 		struct State {
 
 			Device& device;
+			SpriteArray array;
 			Atlas atlas;
 			Font font;
 
-			Image image;
-			ImageView view;
-			ImageSampler sampler;
+			Image atlas_image;
+			ImageView atlas_view;
+			ImageSampler atlas_sampler;
+
+			Image array_image;
+			ImageView array_view;
+			ImageSampler array_sampler;
 
 			ShaderModule vert_2d;
 			ShaderModule vert_3d;

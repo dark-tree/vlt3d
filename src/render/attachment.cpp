@@ -9,7 +9,6 @@
 void Attachment::allocate(Device& device, VkExtent2D extent, Allocator& allocator) {
 	ImageInfo info {extent.width, extent.height, vk_format, vk_usage};
 	info.required(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	info.tiling(VK_IMAGE_TILING_OPTIMAL);
 
 	// close if it was already allocated
 	close(device);

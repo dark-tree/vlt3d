@@ -58,7 +58,7 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 	int ring = 0;
 
 	while (ring < rings) {
-		squareRingIterator(ring, [&, rings] (int cx, int cz) {
+		planeRingIterator(ring, [&, rings] (int cx, int cz) {
 			for (int cy = -rings; cy <= rings; cy++) {
 				glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
 				std::lock_guard lock {mutex};

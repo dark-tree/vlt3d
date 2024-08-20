@@ -62,14 +62,25 @@ class World {
 		/// Checks if the chunk `chunk` can be submitted for rendering
 		bool isChunkRenderReady(glm::ivec3 chunk) const;
 
-		/// Simple utility to iterate a 2D plane with ever expanding concentric square rings
+		/// Simple utility to iterate a plane with ever expanding concentric square rings
 		template <typename Func>
-		void squareRingIterator(int ring, Func func) {
+		void planeRingIterator(int ring, Func func) {
 			for (int i = -ring; i <= ring; i ++) {
 				func(i, -ring);
 				func(i, +ring);
 				func(-ring, i);
 				func(+ring, i);
+			}
+		}
+
+		/// Simple utility to iterate a line with ever expanding concentric square rings
+		template <typename Func>
+		void lineRingIterator(int radius, Func func) {
+			func(0);
+
+			for (int i = 1; i <= radius; i ++) {
+				func(-i);
+				func(+i);
 			}
 		}
 

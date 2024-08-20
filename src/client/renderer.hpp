@@ -51,7 +51,7 @@ class Frame {
 		Fence flight_fence;
 
 		Uniforms uniforms;
-		DescriptorSet set_1, set_2, set_3;
+		DescriptorSet set_0, set_1, set_2, set_3;
 
 	public:
 

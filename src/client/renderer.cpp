@@ -14,6 +14,9 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	immediate_2d.setDebugName(device, "Immediate 2D");
 	immediate_3d.setDebugName(device, "Immediate 3D");
 
+	set_0 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
+	set_0.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.assets.state->array_sampler);
+
 	set_1 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
 	set_1.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, atlas_sampler);
 
@@ -495,9 +498,10 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	// binding layout used by world renderer
 	binding_terrain = BindingLayoutBuilder::begin()
 		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
-		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
-		.attribute(2, VK_FORMAT_R8G8B8_UNORM)
-		.attribute(3, VK_FORMAT_R8_UINT)
+		.attribute(1, VK_FORMAT_R16_UINT)
+		.attribute(2, VK_FORMAT_R8G8_UNORM)
+		.attribute(3, VK_FORMAT_R8G8B8_UNORM)
+		.attribute(4, VK_FORMAT_R8_UINT)
 		.done();
 
 	// 3D binding layout
