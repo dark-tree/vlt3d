@@ -4,6 +4,7 @@
 #include "util/pyramid.hpp"
 #include "util/exception.hpp"
 #include "buffer/array.hpp"
+#include "util/arena.hpp"
 
 BEGIN(VSTL_MODE_LENIENT)
 
@@ -142,3 +143,77 @@ TEST(sprite_array) {
 
 };
 
+TEST(util_arena) {
+
+	AllocationArena arena {256, 0};
+
+	AllocationBlock* b64_a = arena.allocate(64);
+	AllocationBlock* b64_b = arena.allocate(64);
+	AllocationBlock* b64_c = arena.allocate(64);
+	AllocationBlock* b64_d = arena.allocate(64);
+	AllocationBlock* b64_e = arena.allocate(64);
+
+	ASSERT(b64_a != nullptr);
+	ASSERT(b64_b != nullptr);
+	ASSERT(b64_c != nullptr);
+	ASSERT(b64_d != nullptr);
+	ASSERT(b64_e == nullptr);
+
+	CHECK(b64_a->getOffset(), 0);
+	CHECK(b64_b->getOffset(), 64);
+	CHECK(b64_c->getOffset(), 128);
+	CHECK(b64_d->getOffset(), 192);
+
+	arena.free(b64_b);
+
+	AllocationBlock* b32_b1 = arena.allocate(32);
+	AllocationBlock* b32_b2 = arena.allocate(32);
+
+	ASSERT(b32_b1 != nullptr);
+	ASSERT(b32_b2 != nullptr);
+
+	CHECK(b32_b1->getOffset(), 64);
+	CHECK(b32_b2->getOffset(), 96);
+
+	// free left block then right
+	arena.free(b32_b2);
+	arena.free(b64_c);
+
+	AllocationBlock* b96_b2c_1 = arena.allocate(96);
+	AllocationBlock* b32_b2c_2 = arena.allocate(32);
+
+	ASSERT(b96_b2c_1 != nullptr);
+	ASSERT(b32_b2c_2 == nullptr);
+
+	// free right block then left
+	arena.free(b96_b2c_1);
+	arena.free(b32_b1);
+
+	AllocationBlock* b128_bc = arena.allocate(128);
+
+	ASSERT(b128_bc != nullptr);
+
+	arena.free(b128_bc);
+
+	// restore original state
+	b64_b = arena.allocate(64);
+	b64_c = arena.allocate(64);
+
+	ASSERT(b64_b != nullptr);
+	ASSERT(b64_c != nullptr);
+
+	// test double consolidation
+	arena.free(b64_a);
+	arena.free(b64_c);
+	arena.free(b64_b);
+	arena.free(b64_d);
+
+	AllocationBlock* b256 = arena.allocate(256);
+
+	ASSERT(b256 != nullptr);
+	CHECK(b256->getOffset(), 0);
+
+	// say no to memory leaks
+	arena.free(b256);
+	arena.close();
+};

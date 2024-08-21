@@ -58,6 +58,7 @@ class WorldRenderer {
 		RenderSystem& system;
 		World& world;
 		ChunkRenderPool mesher;
+		std::vector<int> allocations;
 
 		struct ChunkBuffer {
 			glm::ivec3 pos;

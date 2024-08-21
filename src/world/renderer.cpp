@@ -106,7 +106,9 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
 	auto* chunk = new ChunkBuffer(system, pos, mesh);
+
 	std::lock_guard lock {submit_mutex};
+	allocations.push_back(chunk->buffer.getCount());
 	awaiting.write().push_back(chunk);
 	erasures.emplace_back(chunk->pos);
 }
@@ -135,11 +137,29 @@ void WorldRenderer::close() {
 	std::lock_guard lock {submit_mutex};
 	awaiting.swap();
 
+	int count = 0;
+
 	for (auto& [pos, chunk] : buffers) {
 		chunk->dispose(system);
+		count ++;
 	}
 
 	for (auto& chunk : awaiting.read()) {
 		chunk->dispose(system);
+		count ++;
 	}
+
+	logger::debug("Deleted ", count, " chunks");
+
+	// TODO make less cringe or remove once unused
+	{
+		std::sort(allocations.begin(), allocations.end());
+		std::ofstream file {"allocations.csv"};
+
+		for (int allocation : allocations) {
+			file << allocation;
+			file << "\n";
+		}
+	}
+
 }
