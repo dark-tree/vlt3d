@@ -7,27 +7,20 @@
  */
 
 WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh)
-: pos(pos), buffer(system, mesh.size() * sizeof(VertexTerrain)) {
-	buffer.write(mesh.data(), mesh.size());
-
-	#if !defined(NDEBUG)
-	std::stringstream ss {};
-	ss << "Chunk {";
-	ss << pos;
-	ss << "}";
-	std::string name = ss.str();
-
-	buffer.setDebugName(system.device, name.c_str());
-	#endif
+: pos(pos), block(nullptr), empty(mesh.empty()), count(mesh.size()) {
+	if (!empty) {
+		this->block = system.unified_buffer.write(mesh.data(), mesh.size());
+	}
 }
 
-void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder, Frustum& frustum) {
-	if (!buffer.empty()) {
+void WorldRenderer::ChunkBuffer::draw(RenderSystem& system, CommandRecorder& recorder, Frustum& frustum) {
+	if (!empty) {
 		glm::vec3 world_pos {pos * Chunk::size};
 		world_pos -= 0.5f;
 
 		if (frustum.testBox3D(world_pos, world_pos + (float) Chunk::size)) {
-			buffer.draw(recorder);
+			recorder.bindBuffer(system.unified_buffer.buffer, block->getOffset() * 16);
+			recorder.draw(count);
 		}
 	}
 }
@@ -36,13 +29,13 @@ void WorldRenderer::ChunkBuffer::dispose(RenderSystem& system) {
 
 	// empty buffers can just be tossed away, they don't actually hold
 	// any vulkan resources and never were actually passed to the GPU
-	if (buffer.empty()) {
+	if (empty) {
 		delete this;
 		return;
 	}
 
-	system.defer([this] () {
-		this->buffer.close();
+	system.defer([this, &system] () {
+		system.unified_buffer.free(this->block);
 		delete this;
 	});
 }
@@ -83,32 +76,38 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 	});
 
 	// first upload all awaiting meshes so that the PCI has something to do
-	for (ChunkBuffer* chunk : awaiting.read()) {
-		chunk->buffer.upload(recorder);
-	}
+//	for (ChunkBuffer* chunk : awaiting.read()) {
+//		chunk->buffer.upload(recorder);
+//	}
+
+	system.unified_buffer.upload(recorder);
 
 }
 
 void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
+	recorder.bindBuffer(system.unified_buffer.buffer);
+
 	// begin rendering chunks that did not change, to not waste time during the upload from `prepare()`
+	recorder.insertDebugLabel("World Draw Static", {1, 1, 1});
 	for (auto& [pos, chunk] : buffers) {
-		chunk->draw(recorder, frustum);
+		chunk->draw(system, recorder, frustum);
 	}
 
 	// render all new chunks and copy them into static chunk map
+	recorder.insertDebugLabel("World Draw Updated", {1, 1, 1});
 	for (ChunkBuffer* chunk : awaiting.read()) {
 		buffers[chunk->pos] = chunk;
-		chunk->draw(recorder, frustum);
+		chunk->draw(system, recorder, frustum);
 	}
 
 }
 
-void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
+void WorldRenderer::submitChunk(glm::ivec3 pos, const std::vector<VertexTerrain>& mesh) {
 	auto* chunk = new ChunkBuffer(system, pos, mesh);
 
 	std::lock_guard lock {submit_mutex};
-	allocations.push_back(chunk->buffer.getCount());
+	//allocations.push_back(chunk->buffer.getCount());
 	awaiting.write().push_back(chunk);
 	erasures.emplace_back(chunk->pos);
 }

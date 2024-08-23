@@ -20,7 +20,7 @@ InputResult GridScreen::onEvent(ScreenStack& stack, InputContext& input, const I
 	return context.onEvent(stack, input, event);
 }
 
-void GridScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
+void GridScreen::draw(RenderSystem& system, ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
 	if (should_rebuild) {
 		should_rebuild = false;
 		GuiComposed::Builder builder = GuiComposed::of();

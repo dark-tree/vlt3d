@@ -82,6 +82,8 @@ class RenderSystem {
 
 	public:
 
+		UnifiedBuffer unified_buffer;
+
 		Window& window;
 		WindowSurface surface;
 

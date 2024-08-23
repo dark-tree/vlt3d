@@ -22,7 +22,7 @@ class ScreenStack : public InputConsumer {
 		 */
 		InputResult onEvent(InputContext& context, const InputEvent& event) override;
 
-		void draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera);
+		void draw(RenderSystem& system, ImmediateRenderer& renderer, InputContext& input, Camera& camera);
 
 	public:
 

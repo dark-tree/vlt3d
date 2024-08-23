@@ -12,6 +12,9 @@ find_package(Threads REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(OpenAL)
 
+add_compile_options(-fsanitize=address -fsanitize-recover=address)
+add_link_options(-fsanitize=address -fsanitize-recover=address)
+
 # Try: cmake . -B build && cmake --build build/
 if (CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
 	message(FATAL_ERROR "In source building is deprecated, select another build directory!")

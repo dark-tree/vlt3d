@@ -25,7 +25,7 @@ InputResult ScreenStack::onEvent(InputContext& input, const InputEvent& event) {
 	return InputResult::PASS;
 }
 
-void ScreenStack::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
+void ScreenStack::draw(RenderSystem& system, ImmediateRenderer& renderer, InputContext& input, Camera& camera) {
 	std::lock_guard lock {mutex};
 
 	for (auto it = screens.rbegin(); it != screens.rend();) {
@@ -45,7 +45,7 @@ void ScreenStack::draw(ImmediateRenderer& renderer, InputContext& input, Camera&
 			continue;
 		}
 
-		screen->draw(renderer, input, camera, next(it) == screens.rend());
+		screen->draw(system, renderer, input, camera, next(it) == screens.rend());
 		std::advance(it, 1);
 	}
 }

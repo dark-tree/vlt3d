@@ -7,17 +7,27 @@ class AllocationBlock {
 
 	private:
 
-		bool free;
+		struct Comparator {
+			bool operator() (const AllocationBlock* lhs, const AllocationBlock* rhs) const {
+				return lhs->offset < rhs->offset;
+			}
+		};
+
+		enum State {
+			USED      = 0,
+			FREE      = 1,
+			RECLAIMED = 2
+		};
+
+		State state;
 		size_t offset;
 		size_t length;
 
 		AllocationBlock* left;
 		AllocationBlock* right;
 
-		void fastEraseFrom(std::vector<AllocationBlock*>& collection) {
-			auto it = std::find(collection.begin(), collection.end(), this);
-			*it = std::move(collection.back());
-			collection.pop_back();
+		void fastEraseFrom(std::set<AllocationBlock*, AllocationBlock::Comparator>& collection) {
+			collection.erase(this);
 		}
 
 	private:
@@ -29,7 +39,7 @@ class AllocationBlock {
 			this->length = length;
 			this->left = left;
 			this->right = right;
-			this->free = true;
+			this->state = FREE;
 
 			if (left) {
 				left->right = this;
@@ -40,7 +50,7 @@ class AllocationBlock {
 			}
 		}
 
-		AllocationBlock* getNewBlock(std::vector<AllocationBlock*>& unused, size_t bytes, size_t margin = 0) {
+		AllocationBlock* getNewBlock(std::set<AllocationBlock*, AllocationBlock::Comparator>& unused, size_t bytes, size_t margin = 0) {
 
 			// check if we even fit, otherwise return an empty block
 			if (bytes > length) {
@@ -63,14 +73,14 @@ class AllocationBlock {
 			return new AllocationBlock {start, bytes, left, this};
 		}
 
-		void consolidate(std::vector<AllocationBlock*>& unused) {
+		void consolidate(std::set<AllocationBlock*, AllocationBlock::Comparator>& unused) {
 
-			if (!this->free) {
-				throw Exception {"Unable to consolidate non-free blocks!"};
+			if (this->state == USED) {
+				throw Exception {"Unable to consolidate used blocks!"};
 			}
 
 			// try merging `right` into `this`
-			if (this->right && this->right->free) {
+			if (this->right && this->right->state) {
 				AllocationBlock* right = this->right;
 				size_t bytes = right->length;
 				AllocationBlock* next = right->right;
@@ -87,7 +97,7 @@ class AllocationBlock {
 			}
 
 			// try merging `this` into `left`
-			if (this->left && this->left->free) {
+			if (this->left && this->left->state) {
 				AllocationBlock* left = this->left;
 				size_t bytes = this->length;
 				AllocationBlock* next = this->right;
@@ -104,8 +114,8 @@ class AllocationBlock {
 			}
 		}
 
-		void setFree(bool flag) {
-			this->free = flag;
+		void setState(State state) {
+			this->state = state;
 		}
 
 	public:
@@ -125,20 +135,43 @@ class AllocationArena {
 	private:
 
 		size_t margin, total;
-		std::vector<AllocationBlock*> unused;
+		std::set<AllocationBlock*, AllocationBlock::Comparator> unused;
 
 	public:
 
+		struct Range {
+
+			size_t start;
+			size_t end;
+
+		};
+
+		struct Stats {
+
+			size_t total;
+			size_t free;
+			size_t reclaimed;
+			size_t used;
+			size_t blocks;
+
+			std::vector<Range> ranges;
+
+		};
+
+	public:
+
+		AllocationArena() = default;
 		AllocationArena(size_t bytes, size_t margin) {
 			this->margin = margin;
-			this->total = bytes;
-			unused.push_back(new AllocationBlock {0, bytes, nullptr, nullptr});
+			this->total = 0;
+
+			expand(bytes);
 		}
 
 		AllocationBlock* allocate(size_t bytes) {
 			for (auto it = unused.begin(); it != unused.end(); it ++) {
 				if (AllocationBlock* allocation = (*it)->getNewBlock(unused, bytes, margin)) {
-					allocation->setFree(false);
+					allocation->setState(AllocationBlock::USED);
 					return allocation;
 				}
 			}
@@ -147,8 +180,9 @@ class AllocationArena {
 		}
 
 		void free(AllocationBlock* block) {
-			block->setFree(true);
-			unused.push_back(block);
+			block->setState(AllocationBlock::RECLAIMED);
+			unused.insert(block);
+
 			block->consolidate(unused);
 		}
 
@@ -169,6 +203,34 @@ class AllocationArena {
 			if (leaked > 0) {
 				logger::warn("Arena leaked ", leaked, " bytes of memory, some blocks are still in use!");
 			}
+		}
+
+		void expand(size_t bytes) {
+			this->unused.insert(new AllocationBlock {this->total, bytes, nullptr, nullptr});
+			this->total += bytes;
+		}
+
+		Stats getStats() const {
+
+			Stats info {};
+			info.used = total;
+			info.total = total;
+
+			for (AllocationBlock* block : unused) {
+				if (block->state) {
+					info.blocks ++;
+					info.ranges.push_back({block->offset, block->offset + block->length});
+
+					if (block->state == AllocationBlock::FREE) info.free += block->length;
+					if (block->state == AllocationBlock::RECLAIMED) info.reclaimed += block->length;
+				}
+			}
+
+			info.used -= info.reclaimed;
+			info.used -= info.free;
+
+			return info;
+
 		}
 
 };

@@ -25,6 +25,7 @@ struct GeometryPushBlock {
 struct LightingPushBlock {
 	glm::mat4 projection;
 	Sun sun;
+	char pad [3*4*4];
 };
 
 int main() {
@@ -72,7 +73,7 @@ int main() {
 		frame.execute();
 
 		immediate.prepare(swapchain.vk_extent);
-		stack.draw(immediate, window.getInputContext(), camera);
+		stack.draw(system, immediate, window.getInputContext(), camera);
 
 		Framebuffer& framebuffer = system.acquireScreenFramebuffer();
 		VkExtent2D extent = system.swapchain.vk_extent;
@@ -92,7 +93,7 @@ int main() {
 		// so we would need some internal subpass dependency stuff that i know nothing about
 		recorder.bufferTransferBarrier();
 
-		world.update(world_generator, camera.getPosition(), 16);
+		world.update(world_generator, camera.getPosition(), 4);
 
 		GeometryPushBlock geometry_push_block {};
 		geometry_push_block.mvp = mvp;
@@ -104,7 +105,7 @@ int main() {
 			.bindDescriptorSet(frame.set_0);
 
 		world_renderer.draw(recorder, frustum);
-		world_renderer.eraseOutside(camera.getPosition(), 20);
+		world_renderer.eraseOutside(camera.getPosition(), 4);
 
 		recorder.endRenderPass();
 

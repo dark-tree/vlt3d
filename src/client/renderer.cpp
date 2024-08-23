@@ -546,7 +546,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.build();
 
 	attachment_normal = AttachmentImageBuilder::begin()
-		.setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+		.setFormat(VK_FORMAT_R8G8B8A8_SNORM)
 		.setUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
 		.setAspect(VK_IMAGE_ASPECT_COLOR_BIT)
 		.setMode(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
@@ -685,6 +685,10 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	createFrames();
 
 	instance.enterValidationCheckpoint("Render System Phase 3 Initialization");
+
+	// 4GB of Unified Buffer and 100MB of staging
+	unified_buffer = UnifiedBuffer {*this, 4'000'000'000, 100'000'000};
+
 }
 
 void RenderSystem::reloadAssets() {

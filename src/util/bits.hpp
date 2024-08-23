@@ -114,4 +114,19 @@ class Bits {
 			return x ^ (x >> 1);
 		}
 
+		/**
+		 * Performs an aligned division (the result is the ceil() of
+		 * the division) can be used to transition to aligned address space
+		 */
+		template <std::unsigned_integral T>
+		static inline constexpr T adiv(T value, T alignment) {
+			T aligned = value / alignment;
+
+			if (value & (alignment - 1)) {
+				aligned ++;
+			}
+
+			return aligned;
+		}
+
 };

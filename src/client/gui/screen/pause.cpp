@@ -28,11 +28,11 @@ InputResult PauseScreen::onEvent(ScreenStack& stack, InputContext& input, const 
 	return GridScreen::onEvent(stack, input, event);
 }
 
-void PauseScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
+void PauseScreen::draw(RenderSystem& system, ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
 	if (focused) {
 		input.setMouseCapture(false);
 	}
 
-	GridScreen::draw(renderer, input, camera, focused);
+	GridScreen::draw(system, renderer, input, camera, focused);
 }
 

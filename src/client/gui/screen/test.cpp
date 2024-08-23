@@ -1,6 +1,7 @@
 
 #include "test.hpp"
 #include "pause.hpp"
+#include "client/renderer.hpp"
 
 TestScreen::TestScreen(Profiler& profiler)
 : profiler(profiler) {}
@@ -23,7 +24,14 @@ InputResult TestScreen::onEvent(ScreenStack& stack, InputContext& input, const I
 	return InputResult::PASS;
 }
 
-void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
+void TestScreen::draw(RenderSystem& system, ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
+
+	AllocationArena::Stats stats;
+
+	{
+		std::lock_guard lock{unified_mutex};
+		stats = system.unified_buffer.arena.getStats();
+	}
 
 	if (focused) {
 		input.setMouseCapture(true);
@@ -46,27 +54,7 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.setTint(255, 255, 255);
 	renderer.drawPatch(renderer.getWidth() - 160 - 32, 32, 10, 10, 16, renderer.getNinePatch("gui", 8));
 
-	renderer.setTint(50, 255, 50);
-	renderer.setFontSize(2);
-
-	renderer.setAlignment(HorizontalAlignment::LEFT);
-	renderer.setAlignment(VerticalAlignment::TOP);
-	renderer.drawText(500, 500, "LEFT TOP");
-
-	renderer.setAlignment(HorizontalAlignment::RIGHT);
-	renderer.setAlignment(VerticalAlignment::TOP);
-	renderer.drawText(500, 500, "RIGHT TOP");
-
-	renderer.setAlignment(HorizontalAlignment::LEFT);
-	renderer.setAlignment(VerticalAlignment::BOTTOM);
-	renderer.drawText(500, 500, "LEFT BOTTOM");
-
-	renderer.setAlignment(HorizontalAlignment::RIGHT);
-	renderer.setAlignment(VerticalAlignment::BOTTOM);
-	renderer.drawText(500, 500, "RIGHT BOTTOM");
-
 	renderer.setFacing(camera);
-
 	renderer.setFontSize(2);
 	renderer.setLineSize(4);
 	renderer.setAlignment(HorizontalAlignment::LEFT);
@@ -76,9 +64,27 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	glm::vec3 pos = camera.getPosition();
 	renderer.drawText(10, 10, "FPS: " + std::to_string(profiler.getCountPerSecond()));
 	renderer.drawText(10, 10 + 9 * 2, "X: " + std::to_string(pos.x) + ", Y: " + std::to_string(pos.y) + ", Z: " + std::to_string(pos.z));
+	renderer.drawText(10, 10 + 9 * 4, "U: " + std::to_string(stats.used / 1024) + " KiB, R: " + std::to_string(stats.reclaimed / 1024) + " KiB, F: " + std::to_string(stats.free / 1024) + " KiB, in " + std::to_string(stats.blocks) + " blocks");
 
-	renderer.drawText(10, 10 + 9 * 4, "Press [SPACE] to hide");
-	renderer.drawText(10, 10 + 9 * 6, "Press [ESCAPE] to close");
+	renderer.drawText(10, 10 + 9 * 6, "Press [SPACE] to hide");
+	renderer.drawText(10, 10 + 9 * 8, "Press [ESCAPE] to close");
+
+	renderer.setTint(200, 50, 50, 80);
+	renderer.drawSprite(10, renderer.getHeight() - 30, renderer.getWidth() - 20, 20, renderer.getSprite("blank"));
+
+	for (AllocationArena::Range range : stats.ranges) {
+		double start = range.start / (double) stats.total;
+		double end = range.end / (double) stats.total;
+
+		start *= (renderer.getWidth() - 20);
+		end *= (renderer.getWidth() - 20);
+
+		renderer.setTint(50, 200, 50, 80);
+		renderer.drawSprite(10 + start, renderer.getHeight() - 30, end - start, 20, renderer.getSprite("blank"));
+
+		renderer.setTint(50, 200, 50, 80);
+		renderer.drawSprite(10 + start, renderer.getHeight() - 50, 1, 20, renderer.getSprite("blank"));
+	}
 
 	renderer.setTint(255, 255, 255);
 	renderer.setFontSize(0.05);
@@ -104,10 +110,5 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	renderer.drawLine(0 - 0.5, 0 - 0.5, 32 - 0.5, 32 - 0.5, 0 - 0.5, 32 - 0.5);
 	renderer.drawLine(32 - 0.5, -32 - 0.5, 0 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
 	renderer.drawLine(0 - 0.5, -32 - 0.5, 32 - 0.5, 32 - 0.5, -32 - 0.5, 32 - 0.5);
-
-	renderer.setTint(255, 255, 255);
-	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, 1, renderer.getSprite("button"), 4, 4, 0, 32);
-	renderer.drawBar(renderer.getWidth() - 32 - 228, renderer.getHeight() - 64, 228, 32, (sin(t * 2) + 1) / 2, renderer.getSprite("button"), 4, 4, 1, 32);
-
 
 }

@@ -69,6 +69,20 @@ TEST(util_bits_decompose) {
 
 };
 
+TEST(util_bits_adiv) {
+
+	uint64_t a = Bits::adiv<uint64_t>(0, 16);
+	uint64_t b = Bits::adiv<uint64_t>(0x00F1'00F0, 16);
+	uint64_t c = Bits::adiv<uint64_t>(0x00F1'00F1, 16);
+	uint64_t d = Bits::adiv<uint64_t>(0b0111'1111, 8);
+
+	CHECK(a, 0);
+	CHECK(b, 0x00F1'00F);
+	CHECK(c, 0x00F1'010);
+	CHECK(d, 0b1000'0);
+
+};
+
 TEST(util_pyramid) {
 
 	Pyramid<int> pyramid;
@@ -143,9 +157,10 @@ TEST(sprite_array) {
 
 };
 
-TEST(util_arena) {
+TEST(util_arena_basic) {
 
-	AllocationArena arena {256, 0};
+	AllocationArena arena;
+	arena = AllocationArena {256, 0};
 
 	AllocationBlock* b64_a = arena.allocate(64);
 	AllocationBlock* b64_b = arena.allocate(64);
@@ -217,3 +232,38 @@ TEST(util_arena) {
 	arena.free(b256);
 	arena.close();
 };
+
+TEST(util_arena_resize) {
+
+	AllocationArena arena {64, 0};
+
+	AllocationBlock* b32_1 = arena.allocate(32);
+	AllocationBlock* b32_2 = arena.allocate(32);
+	AllocationBlock* b32_3 = arena.allocate(32);
+
+	ASSERT(b32_1 != nullptr);
+	ASSERT(b32_2 != nullptr);
+	ASSERT(b32_3 == nullptr);
+
+	arena.expand(32);
+	b32_3 = arena.allocate(32);
+
+	ASSERT(b32_3 != nullptr);
+
+	CHECK(b32_1->getOffset(), 0);
+	CHECK(b32_2->getOffset(), 32);
+	CHECK(b32_3->getOffset(), 64);
+
+	arena.free(b32_1);
+	arena.free(b32_2);
+	arena.free(b32_3);
+
+	AllocationBlock* b96 = arena.allocate(96);
+
+	// AllocationArena doesn't support merging expanded blocks
+	// this is an implementation quirk. If ever fixed change
+	// this assertion to match
+	ASSERT(b96 == nullptr);
+
+};
+

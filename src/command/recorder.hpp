@@ -85,9 +85,8 @@ class CommandRecorder {
 			return *this;
 		}
 		
-		CommandRecorder& bindBuffer(const Buffer& buffer) {
-			VkDeviceSize offsets[] = {0};
-			vkCmdBindVertexBuffers(vk_buffer, 0, 1, &buffer.vk_buffer, offsets);
+		CommandRecorder& bindBuffer(const Buffer& buffer, VkDeviceSize offset = 0) {
+			vkCmdBindVertexBuffers(vk_buffer, 0, 1, &buffer.vk_buffer, &offset);
 			return *this;
 		}
 
@@ -106,9 +105,11 @@ class CommandRecorder {
 			return *this;
 		}
 
-		CommandRecorder& copyBufferToBuffer(Buffer dst, Buffer src, size_t size) {
+		CommandRecorder& copyBufferToBuffer(Buffer dst, Buffer src, size_t size, size_t dst_off = 0, size_t src_off = 0) {
 			VkBufferCopy region {};
 			region.size = size;
+			region.dstOffset = dst_off;
+			region.srcOffset = src_off;
 
 			vkCmdCopyBuffer(vk_buffer, src.vk_buffer, dst.vk_buffer, 1, &region);
 			return *this;

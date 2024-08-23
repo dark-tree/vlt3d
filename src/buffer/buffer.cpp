@@ -8,8 +8,45 @@
  * Buffer
  */
 
+BufferInfo Buffer::getHostBufferBuilder(size_t capacity, VkBufferUsageFlags usage) {
+	BufferInfo builder {capacity, usage};
+
+	builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	builder.preferred(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+	builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+
+	return builder;
+}
+
+BufferInfo Buffer::getDeviceBufferBuilder(size_t capacity, VkBufferUsageFlags usage) {
+	BufferInfo builder {capacity, usage};
+
+	builder.required(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+
+	return builder;
+}
+
 Buffer::Buffer(VkBuffer vk_buffer, const MemoryAccess& memory)
 : vk_buffer(vk_buffer), memory(memory) {}
+
+void Buffer::realloc(RenderSystem& system, const BufferInfo& info, NULLABLE CommandRecorder* recorder) {
+
+	Buffer buffer = system.allocator.allocateBuffer(info);
+
+	if (recorder) {
+		recorder->copyBufferToBuffer(*this, buffer, info.getBufferInfo().size);
+	}
+
+	system.defer([*this] () mutable {
+		close();
+	});
+
+	this->vk_buffer = buffer.vk_buffer;
+	this->memory = buffer.memory;
+
+}
 
 MemoryAccess& Buffer::access() {
 	return memory;
@@ -28,22 +65,12 @@ void Buffer::setDebugName(const Device& device, const char* name) const {
  */
 
 void BasicBuffer::reallocate(RenderSystem& system, size_t capacity) {
-	BufferInfo staged_builder {capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
-	staged_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	staged_builder.preferred(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	staged_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-	staged_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-
-	BufferInfo buffer_builder {capacity, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT};
-	buffer_builder.required(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	buffer_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
-
 	system.defer([*this] () mutable {
 		close();
 	});
 
-	this->buffer = system.allocator.allocateBuffer(buffer_builder);
-	this->staged = system.allocator.allocateBuffer(staged_builder);
+	this->buffer = system.allocator.allocateBuffer(Buffer::getDeviceBufferBuilder(capacity, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+	this->staged = system.allocator.allocateBuffer(Buffer::getHostBufferBuilder(capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT));
 	this->map = staged.access().map();
 	this->capacity = capacity;
 
@@ -81,10 +108,16 @@ BasicBuffer::BasicBuffer(RenderSystem& system, size_t initial)
 	}
 }
 
-void BasicBuffer::reserve(RenderSystem& system, size_t bytes) {
+void BasicBuffer::reserveToFit(RenderSystem& system, size_t bytes) {
 	if (bytes > capacity && bytes != 0) {
 		reallocate(system, encompass(bytes));
 	}
+}
+
+size_t BasicBuffer::expand(RenderSystem& system) {
+	size_t expansion = capacity;
+	reallocate(system, expansion * 2);
+	return expansion;
 }
 
 void BasicBuffer::upload(CommandRecorder& recorder) {
@@ -125,4 +158,25 @@ void BasicBuffer::setDebugName(const Device& device, const char* name) {
 	this->debug_name = name;
 	updateDebugName();
 	#endif
+}
+
+UnifiedBuffer::UnifiedBuffer(RenderSystem& system, size_t buffer_size, size_t staged_size)
+: arena(buffer_size / 16, 512), offset(0), buffer_size(buffer_size), staged_size(staged_size) {
+	this->buffer = system.allocator.allocateBuffer(Buffer::getDeviceBufferBuilder(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+	this->staged = system.allocator.allocateBuffer(Buffer::getHostBufferBuilder(staged_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT));
+	this->map = staged.access().map();
+}
+
+std::mutex unified_mutex;
+
+void UnifiedBuffer::upload(CommandRecorder& recorder) {
+
+	std::lock_guard lock {unified_mutex};
+
+	for (Transfer transfer : transfers) {
+		recorder.copyBufferToBuffer(buffer, staged, transfer.length, transfer.target, transfer.offset);
+	}
+
+	offset = 0;
+	transfers.clear();
 }

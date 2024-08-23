@@ -62,12 +62,14 @@ class WorldRenderer {
 
 		struct ChunkBuffer {
 			glm::ivec3 pos;
-			BasicBuffer buffer;
+			AllocationBlock* block;
+			bool empty;
+			size_t count;
 
 			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh);
 
 			/// draw this buffer
-			void draw(CommandRecorder& recorder, Frustum& frustum);
+			void draw(RenderSystem& system, CommandRecorder& recorder, Frustum& frustum);
 
 			/// dispose of this buffer as soon as it's valid to do so
 			void dispose(RenderSystem& system);
@@ -105,7 +107,7 @@ class WorldRenderer {
 		void draw(CommandRecorder& recorder, Frustum& frustum);
 
 		/// Submit a buffer, mesh can be empty
-		void submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh);
+		void submitChunk(glm::ivec3 pos, const std::vector<VertexTerrain>& mesh);
 
 		/// Discard the chunk at the given coordinates
 		void eraseChunk(glm::ivec3 pos);

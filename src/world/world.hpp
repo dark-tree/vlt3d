@@ -92,6 +92,7 @@ class World {
 
 			std::unordered_set<ChunkUpdate, ChunkUpdate::Hasher> set;
 			set.reserve(updates.size() * 2);
+			std::lock_guard lock {updates_mutex};
 
 			// propagate updates
 			for (auto& [pos, flags] : updates) {
@@ -109,7 +110,7 @@ class World {
 			}
 
 			{
-				std::lock_guard lock {updates_mutex};
+
 				updates.clear();
 			}
 

@@ -21,7 +21,7 @@ InputResult PlayScreen::onEvent(ScreenStack& stack, InputContext& input, const I
 	return InputResult::BLOCK;
 }
 
-void PlayScreen::draw(ImmediateRenderer& immediate, InputContext& input, Camera& camera, bool focused) {
+void PlayScreen::draw(RenderSystem& system, ImmediateRenderer& immediate, InputContext& input, Camera& camera, bool focused) {
 
 	if (focused) {
 		camera.update();

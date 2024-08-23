@@ -24,6 +24,6 @@ InputResult Screen::onEvent(ScreenStack& stack, InputContext& input, const Input
 	return InputResult::PASS; // override to implement custom behavior
 }
 
-void Screen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
+void Screen::draw(RenderSystem& system, ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
 	// override to implement custom behavior
 }
