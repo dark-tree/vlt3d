@@ -27,11 +27,7 @@ InputResult TestScreen::onEvent(ScreenStack& stack, InputContext& input, const I
 void TestScreen::draw(RenderSystem& system, ImmediateRenderer& renderer, InputContext& input, Camera& camera, bool focused) {
 
 	AllocationArena::Stats stats;
-
-	{
-		std::lock_guard lock{unified_mutex};
-		stats = system.unified_buffer.arena.getStats();
-	}
+	stats = system.unified_buffer.arena.getStats();
 
 	if (focused) {
 		input.setMouseCapture(true);

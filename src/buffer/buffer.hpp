@@ -137,6 +137,7 @@ class UnifiedBuffer {
 
 		size_t staged_size;
 		Buffer staged;
+		Buffer staged_back;
 
 		std::vector<Transfer> transfers;
 		AllocationArena arena;
@@ -165,6 +166,8 @@ class UnifiedBuffer {
 
 			transfers.emplace_back(offset, bytes, block->getOffset() * 16);
 			offset += bytes;
+
+
 
 //			if (block == nullptr) {
 //				arena.expand(buffer.expand(system));

@@ -37,7 +37,7 @@ int main() {
 //	sound_system.add(buffer).loop().play();
 
 	Window window {1000, 700, "Funny Vulkan App"};
-	RenderSystem system {window, 3};
+	RenderSystem system {window, 1};
 
 	// for now
 	Swapchain& swapchain = system.swapchain;
@@ -61,12 +61,11 @@ int main() {
 		
 		Frame& frame = system.getFrame();
 
-		glm::mat4 model = glm::identity<glm::mat4>();
 		glm::mat4 view = camera.getView();
 		glm::mat4 light = glm::inverse(view);
 		glm::mat4 projection = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
 
-		glm::mat4 mvp = projection * view * model;
+		glm::mat4 mvp = projection * view;
 		Frustum frustum = camera.getFrustum(projection);
 
 		frame.wait();
@@ -93,7 +92,7 @@ int main() {
 		// so we would need some internal subpass dependency stuff that i know nothing about
 		recorder.bufferTransferBarrier();
 
-		world.update(world_generator, camera.getPosition(), 4);
+		world.update(world_generator, camera.getPosition(), 16);
 
 		GeometryPushBlock geometry_push_block {};
 		geometry_push_block.mvp = mvp;
@@ -105,7 +104,7 @@ int main() {
 			.bindDescriptorSet(frame.set_0);
 
 		world_renderer.draw(recorder, frustum);
-		world_renderer.eraseOutside(camera.getPosition(), 4);
+		world_renderer.eraseOutside(camera.getPosition(), 17);
 
 		recorder.endRenderPass();
 

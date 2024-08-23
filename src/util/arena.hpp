@@ -169,8 +169,12 @@ class AllocationArena {
 		}
 
 		AllocationBlock* allocate(size_t bytes) {
-			for (auto it = unused.begin(); it != unused.end(); it ++) {
-				if (AllocationBlock* allocation = (*it)->getNewBlock(unused, bytes, margin)) {
+			if (bytes == 0) {
+				return nullptr;
+			}
+
+			for (auto block : unused) {
+				if (AllocationBlock* allocation = block->getNewBlock(unused, bytes, margin)) {
 					allocation->setState(AllocationBlock::USED);
 					return allocation;
 				}

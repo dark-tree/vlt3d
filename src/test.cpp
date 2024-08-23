@@ -267,3 +267,39 @@ TEST(util_arena_resize) {
 
 };
 
+TEST(util_arena_margin) {
+
+	AllocationArena arena {1024, 64};
+
+	AllocationBlock* b0 = arena.allocate(0);
+	AllocationBlock* b32 = arena.allocate(32);
+	AllocationBlock* b64 = arena.allocate(64);
+	AllocationBlock* b128 = arena.allocate(128);
+
+	ASSERT(b0 == nullptr);
+	ASSERT(b32 != nullptr);
+	ASSERT(b64 != nullptr);
+	ASSERT(b128 != nullptr);
+
+	CHECK(b32->getLength(), 32);
+	CHECK(b64->getLength(), 64);
+	CHECK(b128->getLength(), 128);
+
+	CHECK(b32->getOffset(), 0);
+	CHECK(b64->getOffset(), 32);
+	CHECK(b128->getOffset(), 32 + 64);
+
+	arena.free(b32);
+	arena.free(b64);
+	arena.free(b128);
+
+	AllocationBlock* b1000 = arena.allocate(1000);
+	AllocationBlock* b8 = arena.allocate(8);
+
+	ASSERT(b1000 != nullptr);
+	ASSERT(b8 == nullptr);
+
+	CHECK(b1000->getLength(), 1024);
+	CHECK(b1000->getOffset(), 0);
+
+};

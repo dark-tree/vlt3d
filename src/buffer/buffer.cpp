@@ -164,6 +164,7 @@ UnifiedBuffer::UnifiedBuffer(RenderSystem& system, size_t buffer_size, size_t st
 : arena(buffer_size / 16, 512), offset(0), buffer_size(buffer_size), staged_size(staged_size) {
 	this->buffer = system.allocator.allocateBuffer(Buffer::getDeviceBufferBuilder(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
 	this->staged = system.allocator.allocateBuffer(Buffer::getHostBufferBuilder(staged_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT));
+	this->staged_back = system.allocator.allocateBuffer(Buffer::getHostBufferBuilder(staged_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT));
 	this->map = staged.access().map();
 }
 
@@ -179,4 +180,8 @@ void UnifiedBuffer::upload(CommandRecorder& recorder) {
 
 	offset = 0;
 	transfers.clear();
+	std::swap(staged, staged_back);
+
+	map.unmap();
+	map = staged.access().map();
 }
