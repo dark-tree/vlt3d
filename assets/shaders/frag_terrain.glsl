@@ -14,8 +14,14 @@ layout(location = 2) out vec4 fPosition;
 void main() {
 
     // do we need to normalize vNormal here?
-    fAlbedo = texture(uArraySampler, vTexture).rgba * vec4(vColor, 1.0f);
+    fAlbedo = texture(uArraySampler, vTexture).rgba ; //* vec4(vColor, 1.0f);
     fNormal = vec4(normalize(vNormal), 0.0f);
     fPosition = vec4(vPosition, 0);
+
+//    // wireframe view
+//    vec3 d = fwidth(vColor);
+//    vec3 a3 = smoothstep(vec3(0.0), d, vColor);
+//    float edgeFactor = min(min(a3.x, a3.y), a3.z);
+//    fAlbedo = vec4(mix(vec3(1.0), fAlbedo.rgb, edgeFactor), fAlbedo.a);
 
 }

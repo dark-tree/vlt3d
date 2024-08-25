@@ -497,11 +497,11 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	// binding layout used by world renderer
 	binding_terrain = BindingLayoutBuilder::begin()
-		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
-		.attribute(1, VK_FORMAT_R16_UINT)
-		.attribute(2, VK_FORMAT_R8G8_UNORM)
-		.attribute(3, VK_FORMAT_R8G8B8_UNORM)
-		.attribute(4, VK_FORMAT_R8_UINT)
+		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT) // xyz
+		.attribute(1, VK_FORMAT_R32_UINT)         // sprite index
+		.attribute(2, VK_FORMAT_R32_UINT)         // packed UV
+		.attribute(3, VK_FORMAT_R8G8B8_UNORM)     // rgb
+		.attribute(4, VK_FORMAT_R8_UINT)          // normal
 		.done();
 
 	// 3D binding layout

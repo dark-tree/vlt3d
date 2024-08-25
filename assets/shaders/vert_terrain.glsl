@@ -7,7 +7,7 @@ layout(push_constant) uniform SceneUniform {
 
 layout(location = 0) in vec3 iPosition;
 layout(location = 1) in uint iSprite;
-layout(location = 2) in vec2 iTexture;
+layout(location = 2) in uint iTexture;
 layout(location = 3) in vec3 iColor;
 layout(location = 4) in uint iNorm;
 
@@ -32,7 +32,7 @@ void main() {
 
     gl_Position = uSceneObject.mvp * vec4(iPosition, 1.0);
     vColor = iColor;
-    vTexture = vec3(iTexture, iSprite);
+    vTexture = vec3(unpackHalf2x16(iTexture), iSprite);
 
     // view space
     vNormal = normal_matrix * normals[iNorm];

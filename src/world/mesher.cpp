@@ -84,58 +84,63 @@ void ChunkRenderPool::emitCube(std::vector<VertexTerrain>& mesh, float x, float 
 	const BakedSprite sprite = BakedSprite::identity();
 
 	if (south) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::SOUTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::SOUTH);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v1, side_sprite, r, g, b, Normal::SOUTH);
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::SOUTH);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, r, g, b, Normal::SOUTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::SOUTH);
+		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::SOUTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::SOUTH);
+		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v1, side_sprite, 0, 0, 255, Normal::SOUTH);
+
+		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::SOUTH);
+		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, 0, 255, 0, Normal::SOUTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::SOUTH);
 	}
 
 	if (north) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::NORTH);
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, r, g, b, Normal::NORTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::NORTH);
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::NORTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::NORTH);
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u2, sprite.v2, side_sprite, r, g, b, Normal::NORTH);
+		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::NORTH);
+		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, 0, 255, 0, Normal::NORTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::NORTH);
+
+		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::NORTH);
+		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::NORTH);
+		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u2, sprite.v2, side_sprite, 0, 0, 255, Normal::NORTH);
 	}
 
 	if (east) {
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, r, g, b, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, r, g, b, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, 0, 0, 255, Normal::EAST);
+
+		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, 0, 255, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::EAST);
 	}
 
 	if (west) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, r, g, b, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, 0, 255, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::WEST);
 
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, r, g, b, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, r, g, b, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, r, g, b, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, 0, 0, 255, Normal::WEST);
 	}
 
 	if (up) {
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, top_sprite, r, g, b, Normal::UP);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v2, top_sprite, r, g, b, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, top_sprite, r, g, b, Normal::UP);
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, top_sprite, r, g, b, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, top_sprite, r, g, b, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, top_sprite, r, g, b, Normal::UP);
+		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, top_sprite, 255, 0, 0, Normal::UP);
+		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v2, top_sprite, 0, 255, 0, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, top_sprite, 0, 0, 255, Normal::UP);
+
+		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, top_sprite, 255, 0, 0, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, top_sprite, 0, 255, 0, Normal::UP);
+		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, top_sprite, 0, 0, 255, Normal::UP);
 	}
 
 	if (down) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v1, bottom_sprite, r, g, b, Normal::DOWN);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, bottom_sprite, r, g, b, Normal::DOWN);
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, bottom_sprite, r, g, b, Normal::DOWN);
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v1, bottom_sprite, r, g, b, Normal::DOWN);
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u2, sprite.v1, bottom_sprite, r, g, b, Normal::DOWN);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, bottom_sprite, r, g, b, Normal::DOWN);
+		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v1, bottom_sprite, 255, 0, 0, Normal::DOWN);
+		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, bottom_sprite, 0, 255, 0, Normal::DOWN);
+		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, bottom_sprite, 0, 0, 255, Normal::DOWN);
+
+		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v1, bottom_sprite, 255, 0, 0, Normal::DOWN);
+		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u2, sprite.v1, bottom_sprite, 0, 255, 0, Normal::DOWN);
+		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, bottom_sprite, 0, 0, 255, Normal::DOWN);
 	}
 }
 
