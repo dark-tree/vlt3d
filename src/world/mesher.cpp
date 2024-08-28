@@ -80,112 +80,196 @@ bool ChunkRenderPool::empty() {
 	return set.empty();
 }
 
-void ChunkRenderPool::emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, bool west, bool east, bool down, bool up, bool north, bool south, int bottom_sprite, int top_sprite, int side_sprite) {
-	const BakedSprite sprite = BakedSprite::identity();
+template <Normal normal>
+void emitQuad(std::vector<VertexTerrain>& mesh, float x, float y, float z, float slice, float alpha, float beta, float width, float height, uint16_t index, BakedSprite sprite) {
 
-	if (south) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::SOUTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::SOUTH);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v1, side_sprite, 0, 0, 255, Normal::SOUTH);
+	const float aps = -(alpha - 0.5f);
+	const float bps = -(beta - 0.5f);
+	const float apo = width - aps;
+	const float bpo = height - bps;
 
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::SOUTH);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, 0, 255, 0, Normal::SOUTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::SOUTH);
+	BakedSprite scaled {sprite.u1, sprite.v1, sprite.u2 * width, sprite.v2 * height};
+
+	if constexpr (normal == Normal::EAST) {
+		x += slice;
+
+		mesh.emplace_back(x + 0.5, y - aps, z - bps, scaled.u1, scaled.v2, index, 255, 0, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + apo, z + bpo, scaled.u2, scaled.v1, index, 0, 255, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y - aps, z + bpo, scaled.u2, scaled.v2, index, 0, 0, 255, Normal::EAST);
+
+		mesh.emplace_back(x + 0.5, y - aps, z - bps, scaled.u1, scaled.v2, index, 255, 0, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + apo, z - bps, scaled.u1, scaled.v1, index, 0, 255, 0, Normal::EAST);
+		mesh.emplace_back(x + 0.5, y + apo, z + bpo, scaled.u2, scaled.v1, index, 0, 0, 255, Normal::EAST);
 	}
 
-	if (north) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::NORTH);
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, 0, 255, 0, Normal::NORTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::NORTH);
+	if constexpr (normal == Normal::WEST) {
+		x += slice;
 
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::NORTH);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::NORTH);
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u2, sprite.v2, side_sprite, 0, 0, 255, Normal::NORTH);
+		mesh.emplace_back(x - 0.5, y - aps, z - bps, scaled.u1, scaled.v2, index, 255, 0, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y - aps, z + bpo, scaled.u2, scaled.v2, index, 0, 255, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y + apo, z + bpo, scaled.u2, scaled.v1, index, 0, 0, 255, Normal::WEST);
+
+		mesh.emplace_back(x - 0.5, y - aps, z - bps, scaled.u1, scaled.v2, index, 255, 0, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y + apo, z + bpo, scaled.u2, scaled.v1, index, 0, 255, 0, Normal::WEST);
+		mesh.emplace_back(x - 0.5, y + apo, z - bps, scaled.u1, scaled.v1, index, 0, 0, 255, Normal::WEST);
 	}
 
-	if (east) {
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, 0, 0, 255, Normal::EAST);
+	if constexpr (normal == Normal::UP) {
+		y += slice;
 
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, 0, 255, 0, Normal::EAST);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::EAST);
+		mesh.emplace_back(x - aps, y + 0.5, z - bps, scaled.u1, scaled.v1, index, 255, 0, 0, Normal::UP);
+		mesh.emplace_back(x - aps, y + 0.5, z + bpo, scaled.u1, scaled.v2, index, 0, 255, 0, Normal::UP);
+		mesh.emplace_back(x + apo, y + 0.5, z + bpo, scaled.u2, scaled.v2, index, 0, 0, 255, Normal::UP);
+
+		mesh.emplace_back(x - aps, y + 0.5, z - bps, scaled.u1, scaled.v1, index, 255, 0, 0, Normal::UP);
+		mesh.emplace_back(x + apo, y + 0.5, z + bpo, scaled.u2, scaled.v2, index, 0, 255, 0, Normal::UP);
+		mesh.emplace_back(x + apo, y + 0.5, z - bps, scaled.u2, scaled.v1, index, 0, 0, 255, Normal::UP);
 	}
 
-	if (west) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, side_sprite, 0, 255, 0, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 0, 255, Normal::WEST);
+	if constexpr (normal == Normal::DOWN) {
+		y += slice;
 
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v2, side_sprite, 255, 0, 0, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v1, side_sprite, 0, 255, 0, Normal::WEST);
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, side_sprite, 0, 0, 255, Normal::WEST);
+		mesh.emplace_back(x - aps, y - 0.5, z - bps, scaled.u1, scaled.v1, index, 255, 0, 0, Normal::DOWN);
+		mesh.emplace_back(x + apo, y - 0.5, z + bpo, scaled.u2, scaled.v2, index, 0, 255, 0, Normal::DOWN);
+		mesh.emplace_back(x - aps, y - 0.5, z + bpo, scaled.u1, scaled.v2, index, 0, 0, 255, Normal::DOWN);
+
+		mesh.emplace_back(x - aps, y - 0.5, z - bps, scaled.u1, scaled.v1, index, 255, 0, 0, Normal::DOWN);
+		mesh.emplace_back(x + apo, y - 0.5, z - bps, scaled.u2, scaled.v1, index, 0, 255, 0, Normal::DOWN);
+		mesh.emplace_back(x + apo, y - 0.5, z + bpo, scaled.u2, scaled.v2, index, 0, 0, 255, Normal::DOWN);
 	}
 
-	if (up) {
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, top_sprite, 255, 0, 0, Normal::UP);
-		mesh.emplace_back(x - 0.5, y + 0.5, z + 0.5, sprite.u1, sprite.v2, top_sprite, 0, 255, 0, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, top_sprite, 0, 0, 255, Normal::UP);
+	if constexpr (normal == Normal::SOUTH) {
+		z += slice;
 
-		mesh.emplace_back(x - 0.5, y + 0.5, z - 0.5, sprite.u1, sprite.v1, top_sprite, 255, 0, 0, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z + 0.5, sprite.u2, sprite.v2, top_sprite, 0, 255, 0, Normal::UP);
-		mesh.emplace_back(x + 0.5, y + 0.5, z - 0.5, sprite.u2, sprite.v1, top_sprite, 0, 0, 255, Normal::UP);
+		mesh.emplace_back(x - aps, y - bps, z + 0.5, scaled.u1, scaled.v2, index, 255, 0, 0, normal);
+		mesh.emplace_back(x + apo, y + bpo, z + 0.5, scaled.u2, scaled.v1, index, 0, 255, 0, normal);
+		mesh.emplace_back(x - aps, y + bpo, z + 0.5, scaled.u1, scaled.v1, index, 0, 0, 255, normal);
+
+		mesh.emplace_back(x - aps, y - bps, z + 0.5, scaled.u1, scaled.v2, index, 255, 0, 0, normal);
+		mesh.emplace_back(x + apo, y - bps, z + 0.5, scaled.u2, scaled.v2, index, 0, 255, 0, normal);
+		mesh.emplace_back(x + apo, y + bpo, z + 0.5, scaled.u2, scaled.v1, index, 0, 0, 255, normal);
 	}
 
-	if (down) {
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v1, bottom_sprite, 255, 0, 0, Normal::DOWN);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, bottom_sprite, 0, 255, 0, Normal::DOWN);
-		mesh.emplace_back(x - 0.5, y - 0.5, z + 0.5, sprite.u1, sprite.v2, bottom_sprite, 0, 0, 255, Normal::DOWN);
+	if constexpr (normal == Normal::NORTH) {
+		z += slice;
 
-		mesh.emplace_back(x - 0.5, y - 0.5, z - 0.5, sprite.u1, sprite.v1, bottom_sprite, 255, 0, 0, Normal::DOWN);
-		mesh.emplace_back(x + 0.5, y - 0.5, z - 0.5, sprite.u2, sprite.v1, bottom_sprite, 0, 255, 0, Normal::DOWN);
-		mesh.emplace_back(x + 0.5, y - 0.5, z + 0.5, sprite.u2, sprite.v2, bottom_sprite, 0, 0, 255, Normal::DOWN);
+		mesh.emplace_back(x - aps, y - bps, z - 0.5, scaled.u1, scaled.v2, index, 255, 0, 0, Normal::NORTH);
+		mesh.emplace_back(x - aps, y + bpo, z - 0.5, scaled.u1, scaled.v1, index, 0, 255, 0, Normal::NORTH);
+		mesh.emplace_back(x + apo, y + bpo, z - 0.5, scaled.u2, scaled.v1, index, 0, 0, 255, Normal::NORTH);
+
+		mesh.emplace_back(x - aps, y - bps, z - 0.5, scaled.u1, scaled.v2, index, 255, 0, 0, Normal::NORTH);
+		mesh.emplace_back(x + apo, y + bpo, z - 0.5, scaled.u2, scaled.v1, index, 0, 255, 0, Normal::NORTH);
+		mesh.emplace_back(x + apo, y - bps, z - 0.5, scaled.u2, scaled.v2, index, 0, 0, 255, Normal::NORTH);
 	}
+
 }
 
-void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, std::shared_ptr<Chunk> chunk) {
-	WorldRenderView view {world, chunk, Direction::ALL};
-	const SpriteArray& array = system.assets.state->array;
+template <Normal normal>
+void emitPlane(std::vector<VertexTerrain>& mesh, glm::ivec3 chunk, int slice, ChunkPlane& plane) {
+	const BakedSprite sprite = BakedSprite::identity();
 
-	// failed to lock the view, this chunk must have fallen outside the render distance
-	if (view.failed()) {
-		return;
+	for (int a = 0; a < Chunk::size; a ++) {
+		uint16_t last = 0;
+		uint16_t streak = 0;
+
+		for (int b = 0; b < Chunk::size; b ++) {
+			uint16_t index = plane.at(a, b);
+
+			if (index) {
+
+				if (last == index) {
+					streak ++;
+					continue;
+				}
+
+				if (last) {
+					emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a, b - streak, 1, streak, last, sprite);
+				}
+
+				last = index;
+				streak = 1;
+				continue;
+
+			}
+
+			if (last) {
+				emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a, b - streak, 1, streak, last, sprite);
+			}
+
+			last = 0;
+			streak = 0;
+		}
+
+		if (last) {
+			emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a, 32 - streak, 1, streak, last, sprite);
+		}
 	}
 
-	int gray_sprite = array.getSpriteIndex("gray");
-	int clay_sprite = array.getSpriteIndex("clay");
-	int moss_sprite = array.getSpriteIndex("moss");
-	int side_sprite = array.getSpriteIndex("side");
+}
 
-	for (int z = 0; z < Chunk::size; z ++) {
-		for (int y = 0; y < Chunk::size; y ++) {
-			for (int x = 0; x < Chunk::size; x ++) {
-				Block block = chunk->getBlock(x, y, z);
+void ChunkRenderPool::emitChunk(ChunkFaceBuffer& buffer, std::vector<VertexTerrain>& mesh, std::shared_ptr<Chunk> chunk) {
 
-				if (!block.isAir()) {
+	logger::info("Chunk meshing took: ", Timer::of([&] {
+
+		WorldRenderView view{world, chunk, Direction::ALL};
+		const SpriteArray& array = system.assets.state->array;
+
+		// failed to lock the view, this chunk must have fallen outside the render distance
+		if (view.failed()) {
+			return;
+		}
+
+		buffer.clear();
+
+		int gray_sprite = array.getSpriteIndex("gray");
+		int clay_sprite = array.getSpriteIndex("clay");
+		int moss_sprite = array.getSpriteIndex("moss");
+		int side_sprite = array.getSpriteIndex("side");
+
+		glm::ivec3 world_pos = chunk->pos * Chunk::size;
+
+		for (int z = 0; z < Chunk::size; z++) {
+			for (int y = 0; y < Chunk::size; y++) {
+				for (int x = 0; x < Chunk::size; x++) {
+					Block block = chunk->getBlock(x, y, z);
+
+					if (block.isAir()) {
+						continue;
+					}
+
+					BlockPlaneView faces = buffer.getBlockView(x, y, z);
+					glm::ivec3 pos = world_pos + glm::ivec3{x, y, z};
 					int sprite = (block.block_type % 2 == 1) ? gray_sprite : clay_sprite;
-					glm::ivec3 pos = chunk->pos * Chunk::size + glm::ivec3 {x, y, z};
 
-					bool draw_top = view.getBlock(pos.x, pos.y + 1, pos.z).isAir();
-					bool draw_mossy = block.block_type % 2 == 0;
+					bool west = view.getBlock(pos.x - 1, pos.y, pos.z).isAir();
+					bool east = view.getBlock(pos.x + 1, pos.y, pos.z).isAir();
+					bool down = view.getBlock(pos.x, pos.y - 1, pos.z).isAir();
+					bool up = view.getBlock(pos.x, pos.y + 1, pos.z).isAir();
+					bool north = view.getBlock(pos.x, pos.y, pos.z - 1).isAir();
+					bool south = view.getBlock(pos.x, pos.y, pos.z + 1).isAir();
 
-					emitCube(
-						mesh,
-						pos.x, pos.y, pos.z,
-						255, 255, 255,
-						view.getBlock(pos.x - 1, pos.y, pos.z).isAir(),
-						view.getBlock(pos.x + 1, pos.y, pos.z).isAir(),
-						view.getBlock(pos.x, pos.y - 1, pos.z).isAir(),
-						draw_top,
-						view.getBlock(pos.x, pos.y, pos.z - 1).isAir(),
-						view.getBlock(pos.x, pos.y, pos.z + 1).isAir(),
-						sprite, (draw_top && draw_mossy) ? moss_sprite : sprite, (draw_top && draw_mossy) ? side_sprite : sprite
-					);
+					*faces.west = west * sprite;
+					*faces.east = east * sprite;
+					*faces.down = down * sprite;
+					*faces.up = up * sprite;
+					*faces.north = north * sprite;
+					*faces.south = south * sprite;
 				}
 			}
 		}
-	}
+
+		for (int slice = 0; slice < Chunk::size; slice ++) {
+			emitPlane<Normal::WEST>(mesh, world_pos, slice, buffer.getX(slice, 0));
+			emitPlane<Normal::EAST>(mesh, world_pos, slice, buffer.getX(slice, 1));
+
+			emitPlane<Normal::DOWN>(mesh, world_pos, slice, buffer.getY(slice, 0));
+			emitPlane<Normal::UP>(mesh, world_pos, slice, buffer.getY(slice, 1));
+
+			emitPlane<Normal::NORTH>(mesh, world_pos, slice, buffer.getZ(slice, 0));
+			emitPlane<Normal::SOUTH>(mesh, world_pos, slice, buffer.getZ(slice, 1));
+		}
+
+	}).milliseconds(), "ms");
 
 	renderer.submitChunk(chunk->pos, mesh);
 }
@@ -196,6 +280,7 @@ void ChunkRenderPool::run() {
 	glm::ivec3 pos;
 	std::vector<VertexTerrain> mesh;
 	mesh.reserve(4096);
+	ChunkFaceBuffer buffer;
 
 	while (true) {
 		{
@@ -218,11 +303,10 @@ void ChunkRenderPool::run() {
 		if (const auto chunk = world.getChunk(pos.x, pos.y, pos.z).lock()) {
 			if (!chunk->empty()) {
 				mesh.clear();
-				emitChunk(mesh, chunk);
+				emitChunk(buffer, mesh, chunk);
 			}
 		}
 	}
-
 }
 
 ChunkRenderPool::ChunkRenderPool(WorldRenderer& renderer, RenderSystem& system, World& world)

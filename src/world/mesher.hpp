@@ -34,6 +34,84 @@ class WorldRenderView {
 
 };
 
+struct BlockPlaneView {
+
+	uint16_t* west;
+	uint16_t* east;
+	uint16_t* down;
+	uint16_t* up;
+	uint16_t* north;
+	uint16_t* south;
+
+};
+
+struct ChunkPlane {
+
+	uint16_t faces[Chunk::size * Chunk::size];
+
+	uint16_t& at(int alpha, int beta) {
+		return faces[beta + alpha * Chunk::size];
+	}
+
+};
+
+struct ChunkFaceBuffer {
+
+	private:
+
+		static constexpr size_t planes_along_axis = Chunk::size;
+		static constexpr size_t planes_per_axis = 2;
+		static constexpr size_t size = 3 /* 3D */ * planes_along_axis * planes_per_axis;
+
+		ChunkPlane* buffer = nullptr;
+
+		ChunkPlane& get(int value, int offset) {
+			return buffer[planes_per_axis * value + offset];
+		}
+
+	public:
+
+		ChunkFaceBuffer() {
+			this->buffer = new ChunkPlane[size];
+		}
+
+		~ChunkFaceBuffer() {
+			delete[] this->buffer;
+		}
+
+		void clear() {
+			memset(this->buffer, 0, size * sizeof(ChunkPlane));
+		}
+
+		ChunkPlane& getX(int x, int offset) {
+			return get(x, offset);
+		}
+
+		ChunkPlane& getY(int y, int offset) {
+			return get(y, offset + 1 * planes_along_axis * planes_per_axis);
+		}
+
+		ChunkPlane& getZ(int z, int offset) {
+			return get(z, offset + 2 * planes_along_axis * planes_per_axis);
+		}
+
+		BlockPlaneView getBlockView(int x, int y, int z) {
+			BlockPlaneView view;
+
+			view.west = &getX(x, 0).at(y, z);
+			view.east = &getX(x, 1).at(y, z);
+			view.down = &getY(y, 0).at(x, z);
+			view.up = &getY(y, 1).at(x, z);
+			view.north = &getZ(z, 0).at(x, y);
+			view.south = &getZ(z, 1).at(x, y);
+
+			return view;
+		}
+
+
+
+};
+
 class ChunkRenderPool {
 
 	private:
@@ -71,10 +149,10 @@ class ChunkRenderPool {
 		bool empty();
 
 		/// emit cube geometry into the given mesh vector
-		void emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, bool west, bool east, bool down, bool up, bool north, bool south, int bottom_sprite, int top_sprite, int side_sprite);
+		void emitCube(std::vector<VertexTerrain>& mesh, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, BlockPlaneView faces);
 
 		/// emit the mesh of the given chunk into the render system, @Note this method internally uses threading
-		void emitChunk(std::vector<VertexTerrain>& mesh, std::shared_ptr<Chunk> chunk);
+		void emitChunk(ChunkFaceBuffer& buffer, std::vector<VertexTerrain>& mesh, std::shared_ptr<Chunk> chunk);
 
 		/// the worker threads' main function
 		void run();

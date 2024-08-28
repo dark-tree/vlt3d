@@ -190,7 +190,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	endif()
 
 	target_compile_options(external PRIVATE -Wno-volatile)
-	target_compile_options(main PRIVATE -Wno-volatile -Wall -Werror=return-type)
+	target_compile_options(main PRIVATE -Wno-volatile -Wall -Werror=return-type -Werror=return-local-addr)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
