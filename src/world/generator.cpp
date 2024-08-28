@@ -10,6 +10,18 @@ Chunk* WorldGenerator::get(glm::ivec3 pos) {
 
 	Chunk* chunk = new Chunk(pos);
 
+	if (pos == glm::ivec3 {0, 4, 0}) {
+		for (int x = 0; x < Chunk::size; x++) {
+			for (int y = 0; y < Chunk::size; y++) {
+				for (int z = 0; z < Chunk::size; z++) {
+					chunk->setBlock(x, y, z, Block {1});
+				}
+			}
+		}
+
+		return chunk;
+	}
+
 	for (int x = 0; x < Chunk::size; x++) {
 		for (int z = 0; z < Chunk::size; z++) {
 			int xpos = pos.x * Chunk::size + x;

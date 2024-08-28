@@ -164,47 +164,86 @@ void emitQuad(std::vector<VertexTerrain>& mesh, float x, float y, float z, float
 
 }
 
+struct QuadDelegate {
+	uint16_t offset;
+	uint16_t index;
+	uint16_t streak;
+	uint16_t extend;
+
+	bool canMergeWith(const QuadDelegate& other) const {
+		return (other.index == index) && (other.streak == streak) && (other.offset == offset);
+	}
+};
+
 template <Normal normal>
 void emitPlane(std::vector<VertexTerrain>& mesh, glm::ivec3 chunk, int slice, ChunkPlane& plane) {
 	const BakedSprite sprite = BakedSprite::identity();
 
+	std::vector<QuadDelegate> delegates;
+	delegates.emplace_back(0, 0, 1, 1);
+
+	uint32_t back[Chunk::size];
+	uint32_t front[Chunk::size];
+
 	for (int a = 0; a < Chunk::size; a ++) {
-		uint16_t last = 0;
-		uint16_t streak = 0;
+		size_t prev = 0;
 
 		for (int b = 0; b < Chunk::size; b ++) {
 			uint16_t index = plane.at(a, b);
 
 			if (index) {
+				QuadDelegate& quad = delegates[prev];
 
-				if (last == index) {
-					streak ++;
+				if (index == quad.index) {
+					quad.streak ++;
+					front[b] = delegates.size() - 1;
 					continue;
 				}
 
-				if (last) {
-					emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a, b - streak, 1, streak, last, sprite);
+				delegates.emplace_back(b, index, 1, 1);
+				front[b] = prev = delegates.size() - 1;
+				continue;
+			}
+
+			prev = 0;
+			front[b] = 0;
+		}
+
+		if (a != 0) {
+
+			// merge and emit rows
+			for (int i = 0; i < Chunk::size;) {
+				QuadDelegate& quad = delegates[back[i]];
+
+				if (quad.index) {
+					QuadDelegate& next = delegates[front[i]];
+
+					if (quad.canMergeWith(next)) {
+						quad.extend ++;
+						std::swap(quad, next);
+					} else {
+						emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a - quad.extend, i, quad.extend, quad.streak, quad.index, sprite);
+					}
 				}
 
-				last = index;
-				streak = 1;
-				continue;
-
+				i += quad.streak;
 			}
 
-			if (last) {
-				emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a, b - streak, 1, streak, last, sprite);
-			}
-
-			last = 0;
-			streak = 0;
 		}
 
-		if (last) {
-			emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a, 32 - streak, 1, streak, last, sprite);
-		}
+		std::swap(back, front);
 	}
 
+	// emit the trailing row
+	for (int i = 0; i < Chunk::size;) {
+		QuadDelegate& quad = delegates[back[i]];
+
+		if (quad.index) {
+			emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, Chunk::size - quad.extend, i, quad.extend, quad.streak, quad.index, sprite);
+		}
+
+		i += quad.streak;
+	}
 }
 
 void ChunkRenderPool::emitChunk(ChunkFaceBuffer& buffer, std::vector<VertexTerrain>& mesh, std::shared_ptr<Chunk> chunk) {
