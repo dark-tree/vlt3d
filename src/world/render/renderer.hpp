@@ -1,13 +1,14 @@
 #pragma once
 
-#include "chunk.hpp"
-#include "world.hpp"
+#include "world/chunk.hpp"
+#include "world/world.hpp"
 #include "mesher.hpp"
 #include "client/vertices.hpp"
 #include "client/renderer.hpp"
 #include "command/recorder.hpp"
 #include "client/immediate.hpp"
 #include "client/frustum.hpp"
+#include "pool.hpp"
 
 // move this somewhere else?
 template <typename T>

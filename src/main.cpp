@@ -7,7 +7,7 @@
 
 // for now
 #include "world/world.hpp"
-#include "world/renderer.hpp"
+#include "world/render/renderer.hpp"
 #include "world/generator.hpp"
 #include "client/frustum.hpp"
 #include "client/gui/stack.hpp"
