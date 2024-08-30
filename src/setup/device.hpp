@@ -20,12 +20,13 @@ class Device {
 		READONLY VkDevice vk_device;
 		READONLY ExtendedFeatureSet features;
 		READONLY MemoryInfo memory;
+		READONLY VkPhysicalDeviceLimits vk_limits;
 
 	public:
 
 		Device() = default;
-		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, ExtendedFeatureSet& features)
-		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features), memory(vk_physical_device, vk_device) {}
+		Device(VkPhysicalDevice& vk_physical_device, VkDevice& vk_device, ExtendedFeatureSet& features, VkPhysicalDeviceLimits vk_limits)
+		: vk_physical_device(vk_physical_device), vk_device(vk_device), features(features), memory(vk_physical_device, vk_device), vk_limits(vk_limits) {}
 
 		/**
 		 * Get a previously requested Vulkan Queue from the device
@@ -75,6 +76,7 @@ class DeviceBuilder {
 
 		READONLY ExtendedFeatureSet supported_features;
 		READONLY ExtendedFeatureSet selected_features;
+		READONLY VkPhysicalDeviceLimits vk_limits;
 
 	public:
 
@@ -137,7 +139,7 @@ class DeviceBuilder {
 				throw Exception {"Failed to create logical device!"};
 			}
 
-			return {vk_device, device, selected_features};
+			return {vk_device, device, selected_features, vk_limits};
 
 		}
 
@@ -145,8 +147,8 @@ class DeviceBuilder {
 
 		friend class DeviceInfo;
 
-		DeviceBuilder(VkPhysicalDevice& vk_device, std::vector<QueueFamily>& families, ExtendedFeatureSet features)
-		: vk_device(vk_device), families(families), device_extensions(vk_device), supported_features(features) {}
+		DeviceBuilder(VkPhysicalDevice& vk_device, std::vector<QueueFamily>& families, ExtendedFeatureSet features, VkPhysicalDeviceLimits vk_limits)
+		: vk_device(vk_device), families(families), device_extensions(vk_device), supported_features(features), vk_limits(vk_limits) {}
 
 };
 
@@ -224,7 +226,7 @@ class DeviceInfo {
 		}
 
 		DeviceBuilder builder() {
-			return {vk_device, families, features};
+			return {vk_device, families, features, vk_properties.limits};
 		}
 
 };

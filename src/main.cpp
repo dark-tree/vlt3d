@@ -69,6 +69,17 @@ int main() {
 		frame.wait();
 		frame.execute();
 
+		if (!frame.first()) {
+			Query start = frame.timestamp_query.read(0);
+			Query end = frame.timestamp_query.read(1);
+
+			if (start.present() && end.present() && (end.value > start.value)) {
+				size_t frame_time = (end.value - start.value);
+				frame_time *= system.device.vk_limits.timestampPeriod; // convert to nanoseconds
+				profiler.addFrameTime(frame_time / 1000000.0);
+			}
+		}
+
 		immediate.prepare(swapchain.vk_extent);
 		stack.draw(immediate, window.getInputContext(), camera);
 
@@ -77,6 +88,8 @@ int main() {
 
 		// record commands
 		CommandRecorder recorder = frame.buffer.record();
+		recorder.resetQueryPool(frame.timestamp_query);
+		recorder.queryTimestamp(frame.timestamp_query, 0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
 		immediate.write(system, frame.immediate_3d, frame.immediate_2d);
 		frame.immediate_2d.upload(recorder);
@@ -137,6 +150,7 @@ int main() {
 			.draw(frame.immediate_2d.getCount())
 			.endRenderPass();
 
+		recorder.queryTimestamp(frame.timestamp_query, 1, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 		recorder.done();
 
 		frame.buffer.submit()

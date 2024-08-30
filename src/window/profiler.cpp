@@ -19,6 +19,23 @@ void Profiler::next() {
 	}
 }
 
+void Profiler::addFrameTime(double millis) {
+	history.insert(millis);
+	running.insert(millis);
+}
+
 int Profiler::getCountPerSecond() {
 	return this->result;
+}
+
+double Profiler::getAvgFrameTime() {
+	return std::reduce(running.begin(), running.end()) / running.size();
+}
+
+double Profiler::getMaxFrameTime() {
+	return *std::max_element(running.begin(), running.end());
+}
+
+auto Profiler::getAvgFrameTimeHistory() -> std::add_lvalue_reference<decltype(history)>::type {
+	return history;
 }

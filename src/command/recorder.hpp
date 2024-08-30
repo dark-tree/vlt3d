@@ -6,6 +6,7 @@
 #include "buffer/allocator.hpp"
 #include "descriptor/descriptor.hpp"
 #include "render/framebuffer.hpp"
+#include "buffer/query.hpp"
 
 class CommandRecorder {
 
@@ -45,6 +46,16 @@ class CommandRecorder {
 			info.pClearValues = values.data();
 
 			vkCmdBeginRenderPass(vk_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+			return *this;
+		}
+
+		CommandRecorder& resetQueryPool(QueryPool& pool) {
+			vkCmdResetQueryPool(vk_buffer, pool.vk_pool, 0, pool.count);
+			return *this;
+		}
+
+		CommandRecorder& queryTimestamp(QueryPool& pool, uint32_t index, VkPipelineStageFlagBits stage) {
+			vkCmdWriteTimestamp(vk_buffer, stage, pool.vk_pool, index);
 			return *this;
 		}
 

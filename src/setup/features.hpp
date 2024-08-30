@@ -5,6 +5,7 @@
 
 #define FEATURE_ENABLE_IF(device_builder, feature_name) if (device_builder.supported_features.feature_name) device_builder.selected_features.feature_name = VK_TRUE
 #define FEATURE_ENABLE_OR_FAIL(device_builder, feature_name) FEATURE_ENABLE_IF(device_builder, feature_name); else throw Exception {"Device feature '" #feature_name "' not available!"}
+#define FEATURE_ENABLE_OR_WARN(device_builder, feature_name) FEATURE_ENABLE_IF(device_builder, feature_name); else logger::warn("Device feature '" #feature_name "' not available!")
 
 class ExtendedFeatureSet {
 

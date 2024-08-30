@@ -9,7 +9,7 @@
  */
 
 Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device, const ImageSampler& atlas_sampler)
-: buffer(pool.allocate()), immediate_2d(system, 1024), immediate_3d(system, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
+: sequence(INITIAL), buffer(pool.allocate()), immediate_2d(system, 1024), immediate_3d(system, 1024), available_semaphore(device.semaphore()), finished_semaphore(device.semaphore()), flight_fence(device.fence(true)) {
 
 	immediate_2d.setDebugName(device, "Immediate 2D");
 	immediate_3d.setDebugName(device, "Immediate 3D");
@@ -32,6 +32,7 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	set_3.sampler(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_albedo.sampler);
 	set_3.sampler(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_ambience.sampler);
 
+	timestamp_query = QueryPool(system.device, VK_QUERY_TYPE_TIMESTAMP, 2);
 }
 
 Frame::~Frame() {
@@ -49,6 +50,13 @@ void Frame::wait() {
 
 void Frame::execute() {
 	queue.execute();
+
+	if (sequence == FIRST) sequence = SUBSEQUENT;
+	if (sequence == INITIAL) sequence = FIRST;
+}
+
+bool Frame::first() const {
+	return sequence != SUBSEQUENT;
 }
 
 /*

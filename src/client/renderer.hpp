@@ -24,11 +24,21 @@ class Frame {
 
 	private:
 
+		enum Sequence : uint8_t {
+			INITIAL,
+			FIRST,
+			SUBSEQUENT
+		};
+
 		friend class RenderSystem;
 
 		/// this needs to be before any BasicBuffer so that the internal mutex is ready
 		/// before the BasicBuffer constructor runs as it uses `system.defer()`
 		TaskQueue queue;
+
+		/// used to identify if this frame is being rendered for the first time or not
+		/// with INITIAL and FIRST corresponding to being used for the first time
+		Sequence sequence;
 
 	public:
 
@@ -52,6 +62,7 @@ class Frame {
 
 		Uniforms uniforms;
 		DescriptorSet set_0, set_1, set_2, set_3;
+		QueryPool timestamp_query;
 
 	public:
 
@@ -75,6 +86,11 @@ class Frame {
 		 * for running cleanup hooks
 		 */
 		void execute();
+
+		/**
+		 * Check if this frame is being used for the first time
+		 */
+		bool first() const;
 
 };
 

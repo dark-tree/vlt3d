@@ -5,7 +5,7 @@
 #include "util/exception.hpp"
 #include "buffer/array.hpp"
 #include "util/arena.hpp"
-
+#include "util/ring.hpp"
 BEGIN(VSTL_MODE_LENIENT)
 
 HANDLER { CATCH_PTR (Exception& exception) {
@@ -108,7 +108,7 @@ TEST(util_threads_queue) {
 
 	CHECK(list[0], 1111);
 
-}
+};
 
 TEST(util_threads_mailbox) {
 
@@ -145,6 +145,95 @@ TEST(util_threads_mailbox) {
 
 	delegator.wait();
 	CHECK(counter, 1025);
+
+};
+
+TEST(util_ring_basic) {
+
+	RingBuffer<int, 5> buffer;
+
+	// 00 00 00 00 00
+	buffer.clear(0);
+	CHECK(buffer.size(), 0);
+	CHECK(buffer.empty(), true);
+	CHECK(buffer.newest(), 0);
+	CHECK(buffer.oldest(), 0);
+
+	// 11 00 00 00 00
+	buffer.insert(11);
+	CHECK(buffer.full(), false);
+	CHECK(buffer.empty(), false);
+	CHECK(buffer.size(), 1);
+	CHECK(buffer.at(0), 11);
+	CHECK(buffer.newest(), 11);
+	CHECK(buffer.oldest(), 0);
+
+	// 11 12 00 00 00
+	buffer.insert(12);
+	CHECK(buffer.full(), false);
+	CHECK(buffer.size(), 2);
+	CHECK(buffer.newest(), 12);
+	CHECK(buffer.oldest(), 0);
+
+	// 11 12 13 00 00
+	buffer.insert(13);
+	CHECK(buffer.full(), false);
+	CHECK(buffer.size(), 3);
+	CHECK(buffer.newest(), 13);
+	CHECK(buffer.oldest(), 0);
+
+	// 11 12 13 14 00
+	buffer.insert(14);
+	CHECK(buffer.full(), false);
+	CHECK(buffer.size(), 4);
+	CHECK(buffer.newest(), 14);
+	CHECK(buffer.oldest(), 0);
+
+	// 11 12 13 14 15
+	buffer.insert(15);
+	CHECK(buffer.full(), true);
+	CHECK(buffer.size(), 5);
+	CHECK(buffer.newest(), 15);
+	CHECK(buffer.oldest(), 11);
+
+	// 16 12 13 14 15
+	buffer.insert(16);
+	CHECK(buffer.full(), true);
+	CHECK(buffer.size(), 5);
+	CHECK(buffer.newest(), 16);
+	CHECK(buffer.oldest(), 12);
+
+	// 16 17 13 14 15
+	buffer.insert(17);
+	CHECK(buffer.full(), true);
+	CHECK(buffer.size(), 5);
+	CHECK(buffer.newest(), 17);
+	CHECK(buffer.oldest(), 13);
+
+	CHECK(buffer.at(0), 16);
+	CHECK(buffer.at(1), 17);
+	CHECK(buffer.at(2), 13);
+	CHECK(buffer.at(3), 14);
+	CHECK(buffer.at(4), 15);
+
+	buffer.clear(1);
+	CHECK(buffer.size(), 0);
+	CHECK(buffer.empty(), true);
+	CHECK(buffer.full(), false);
+	CHECK(buffer.at(0), 1);
+
+};
+
+TEST(util_ring_reduce) {
+
+	RingBuffer<int, 3> buffer;
+
+	buffer.clear(0);
+	buffer.insert(1);
+	buffer.insert(2);
+	buffer.insert(3);
+
+	CHECK(std::reduce(buffer.begin(), buffer.end()), 1+2+3);
 
 }
 

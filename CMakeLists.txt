@@ -198,9 +198,16 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		target_compile_options(main PRIVATE -g)
 	endif()
 
+	set(VLT3D_WARNING_FLAGS
+			-Wno-volatile
+			-Wall
+			-Werror=return-type
+			-Werror=return-local-addr
+	)
+
 	target_compile_options(external PRIVATE -Wno-volatile)
-	target_compile_options(main PRIVATE -Wno-volatile -Wall -Werror=return-type -Werror=return-local-addr)
-	target_compile_options(test PRIVATE -Wno-volatile)
+	target_compile_options(main PRIVATE ${VLT3D_WARNING_FLAGS})
+	target_compile_options(test PRIVATE ${VLT3D_WARNING_FLAGS})
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

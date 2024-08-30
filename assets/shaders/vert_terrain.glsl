@@ -36,5 +36,5 @@ void main() {
 
     // view space
     vNormal = normal_matrix * normals[iNorm];
-    vPosition = (uSceneObject.view *  vec4(iPosition, 1.0)).xyz;
+    vPosition = (uSceneObject.view * vec4(iPosition, 1.0)).xyz;
 }
