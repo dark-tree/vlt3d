@@ -13,6 +13,11 @@ HANDLER { CATCH_PTR (Exception& exception) {
 	FAIL(exception.what())
 } }
 
+#define SYNCHRONIZED() \
+	static std::atomic<bool> __vstl_running {false}; \
+	if (__vstl_running.exchange(true)) { FAIL("Multiple threads detected in synchronized function!"); } \
+	struct VstlGuard { ~VstlGuard() { __vstl_running = false; } } __vstl_guard;
+
 TEST(util_bits_width) {
 
 	// unsigned
@@ -68,6 +73,80 @@ TEST(util_bits_decompose) {
 	CHECK(c16, 16);
 
 };
+
+TEST(util_threads_queue) {
+
+	std::vector<int> list;
+	TaskQueue queue;
+
+	queue.enqueue([&] () {
+		list.push_back(1);
+	});
+
+	queue.enqueue([&] () {
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		list.push_back(11);
+	});
+
+	queue.enqueue([&] () {
+		list.push_back(111);
+	});
+
+	queue.execute();
+
+	queue.enqueue([&] () {
+		list.push_back(1111);
+	});
+
+	CHECK(list.size(), 3);
+	CHECK(list[0], 1);
+	CHECK(list[1], 11);
+	CHECK(list[2], 111);
+
+	list.clear();
+	queue.execute();
+
+	CHECK(list[0], 1111);
+
+}
+
+TEST(util_threads_mailbox) {
+
+	int counter = 0;
+	auto main = std::this_thread::get_id();
+	const char* message = nullptr;
+
+	auto function = [&] () {
+		try {
+			SYNCHRONIZED();
+			counter++;
+
+			if (main == std::this_thread::get_id()) {
+				message = "Delegated function is running on the calling thread!";
+			}
+		} catch(...) {
+			message = "Exception thrown in delegated function!";
+		}
+
+	};
+
+	TaskPool pool {4};
+	MailboxTaskDelegator delegator {pool};
+
+	delegator.enqueue(function);
+	if (message) FAIL(message);
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+	for (int i = 0; i < 1024; i ++) {
+		delegator.enqueue(function);
+		if (message) FAIL(message);
+	}
+
+	delegator.wait();
+	CHECK(counter, 1025);
+
+}
 
 TEST(util_pyramid) {
 

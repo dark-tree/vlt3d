@@ -7,6 +7,15 @@ namespace util {
 	template<typename A, typename B>
 	using Comparator = bool (*) (const A&, const B&);
 
+	template <typename T>
+	void fastVectorErase(std::vector<T>& vector, typename std::vector<T>::iterator it) {
+		if (vector.size() != 1) {
+			std::swap(vector.back(), *it);
+		}
+
+		vector.pop_back();
+	}
+
 	/// check if collection contains the element
 	template<trait::IterableContainer T, typename V>
 	bool contains(const T& collection, const V& needle, Comparator<V, V> comparator = +[] (const V& a, const V& b) -> bool { return a == b; }) {

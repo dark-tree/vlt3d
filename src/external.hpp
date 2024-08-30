@@ -68,6 +68,9 @@
 #include "tt.hpp"
 #include "bt.hpp"
 
+// ankerl
+#include "ankerl/unordered_dense.h"
+
 // Perlin noise
 #include "PerlinNoise.hpp"
 

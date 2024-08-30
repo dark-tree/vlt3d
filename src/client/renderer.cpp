@@ -725,10 +725,16 @@ Framebuffer& RenderSystem::acquireScreenFramebuffer() {
 	return framebuffers[image_index];
 }
 
-void RenderSystem::presentScreenFramebuffer(Framebuffer& framebuffer) {
-	if (swapchain.present(presentation_queue, getFrame().finished_semaphore, framebuffer.presentation_index).mustReplace()) {
-		recreateSwapchain();
-	}
+void RenderSystem::presentScreenFramebuffer(const Framebuffer& framebuffer) {
+	auto image_index = framebuffer.presentation_index;
+	auto semaphore = getFrame().finished_semaphore;
+
+	//TODO rn it sometimes causes the queue submission to fail
+	//presenter.enqueue([this, image_index, semaphore] () {
+		if (swapchain.present(presentation_queue, semaphore, image_index).mustReplace()) {
+			recreateSwapchain();
+		}
+	//});
 }
 
 Frame& RenderSystem::getFrame() {

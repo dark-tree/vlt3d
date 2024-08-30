@@ -2,6 +2,7 @@
 #include "world.hpp"
 #include "generator.hpp"
 #include "util/threads.hpp"
+#include "util/util.hpp"
 
 /*
  * AccessError
@@ -51,7 +52,7 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 
 	// TODO
 	static TaskPool pool {8};
-	static std::unordered_set<glm::ivec3> requested;
+	static std::vector<glm::ivec3> requested;
 	static std::mutex mutex;
 
 	int rings = (int) radius;
@@ -59,19 +60,25 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 
 	while (ring < rings) {
 		planeRingIterator(ring, [&, rings] (int cx, int cz) {
+
+			std::lock_guard lock {mutex};
 			for (int cy = -rings; cy <= rings; cy++) {
+
 				glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
-				std::lock_guard lock {mutex};
 				auto it = chunks.find(key);
 
 				if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
 					if (it == chunks.end()) {
 
-						if (requested.size() > 8 || requested.contains(key)) {
+						if (requested.size() > 8) {
+							return;
+						}
+
+						if (std::find(requested.begin(), requested.end(), key) != requested.end()) {
 							continue;
 						}
 
-						requested.insert(key);
+						requested.push_back(key);
 
 						pool.enqueue([this, &generator, key] () {
 							Chunk* chunk = generator.get(key);
@@ -79,7 +86,7 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 							std::lock_guard lock {mutex};
 							chunks[key].reset(chunk);
 							pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
-							requested.erase(key);
+							util::fastVectorErase(requested, std::find(requested.begin(), requested.end(), key));
 						});
 
 						continue;

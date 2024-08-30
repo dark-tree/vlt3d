@@ -66,7 +66,7 @@ class Swapchain {
 			return {vkAcquireNextImageKHR(device->vk_device, vk_swapchain, UINT64_MAX, semaphore.vk_semaphore, VK_NULL_HANDLE, image_index)};
 		}
 
-		PresentResult present(Queue queue, Semaphore& await, uint32_t image_index) {
+		PresentResult present(Queue queue, const Semaphore& await, uint32_t image_index) {
 
 			VkPresentInfoKHR info {};
 			info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

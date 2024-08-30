@@ -9,7 +9,7 @@ PauseScreen::PauseScreen()
 void PauseScreen::buildModel(GuiComposed::Builder& builder) {
 	builder.add(1, 0, GuiImage::of().box(3, 3).inset(0.05).sprite("vkblob"));
 	builder.then(Chain::AFTER, GuiText::of().text("Hello World!").box(6, 2).center().tint(50, 50, 50).italics());
-	builder.then(Chain::BELOW, GuiButton::of().box(3, 1).inset(0.05).text("Okay").sprite("button").then([&] (auto& stack) { logger::info("Okay pressed!"); exit(0); }));
+	builder.then(Chain::BELOW, GuiButton::of().box(3, 1).inset(0.05).text("Okay").sprite("button").then([&] (auto& stack) { logger::info("Okay pressed!"); std::quick_exit(0); }));
 	builder.then(Chain::AFTER, GuiButton::of().box(3, 1).inset(0.05).text("Cancel").sprite("button").then([&] (auto& stack) { logger::info("Cancel pressed!"); remove(); }));
 	builder.add(5, 5);
 	builder.then(Chain::BELOW, GuiImage::of().box(3, 3).inset(0.05).sprite("vkblob"));

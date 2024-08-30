@@ -102,8 +102,6 @@ TaskPool::~TaskPool() {
 	for (auto& worker : this->workers) {
 		worker.join();
 	}
-
-	logger::info("Stopped thread pool ", this);
 }
 
 void TaskPool::enqueue(const Task& task) {

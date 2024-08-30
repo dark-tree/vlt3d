@@ -29,8 +29,6 @@ struct LightingPushBlock {
 
 int main() {
 
-	TaskPool pool;
-
 	SoundSystem sound_system;
 	SoundBuffer buffer {"assets/sounds/Project_1_mono.ogg"};
 //	sound_system.add(buffer).loop().play();

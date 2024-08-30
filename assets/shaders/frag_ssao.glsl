@@ -17,9 +17,9 @@ layout(binding = 3) uniform sampler2D uPositionSampler;
 layout(location = 0) in vec2 vTexture;
 layout(location = 0) out float fAmbience;
 
-const float bias = 0.025;
-const int kernel_size = 24;
-const float radius = 2.5;
+const float bias = 0.001;   // smaller value => more/stronger occlusion
+const int kernel_size = 20; // number of random samples to use, max 64
+const float radius = 3;
 
 void main() {
 
@@ -48,7 +48,7 @@ void main() {
         offset.xyz = (offset.xyz / offset.w) * 0.5 + 0.5;
 
         float depth = texture(uPositionSampler, offset.xy).z;
-        float limit = smoothstep(0.0, 1.0, radius / (8 * abs(position.z - depth)));
+        float limit = smoothstep(0.0, 1.0, radius / (8.5 * abs(position.z - depth)));
         occlusion += (depth >= pos.z + bias ? 1.0 : 0.0) * limit;
     }
 

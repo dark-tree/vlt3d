@@ -79,6 +79,13 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+		ankerl
+		GIT_REPOSITORY https://github.com/martinus/unordered_dense
+		GIT_TAG v4.4.0
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
 		format
 		GIT_REPOSITORY https://github.com/magistermaks/lib-format
 		GIT_TAG v0.1.1
@@ -123,7 +130,7 @@ set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
 # ... And finally add shaderc!
 add_subdirectory(${shaderc_SOURCE_DIR} ${shaderc_BINARY_DIR})
-FetchContent_MakeAvailable(glfw vma stb glm siv format vstl)
+FetchContent_MakeAvailable(glfw vma stb glm siv format vstl ankerl)
 
 include_directories(
 		src/
@@ -137,6 +144,7 @@ include_directories(
 		${siv_SOURCE_DIR}                        # Headers in ./
 		${format_SOURCE_DIR}/src                 # Headers in ./
 		${vstl_SOURCE_DIR}                       # Headers in ./
+		${ankerl_SOURCE_DIR}/include             # Headers in ./ankerl
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES
@@ -173,6 +181,7 @@ set(VLT3D_LIBS
 		lib-format-bt
 		shaderc
 		external
+		unordered_dense::unordered_dense
 )
 
 target_link_libraries(main PRIVATE ${VLT3D_LIBS})
@@ -191,6 +200,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 	target_compile_options(external PRIVATE -Wno-volatile)
 	target_compile_options(main PRIVATE -Wno-volatile -Wall -Werror=return-type -Werror=return-local-addr)
+	target_compile_options(test PRIVATE -Wno-volatile)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

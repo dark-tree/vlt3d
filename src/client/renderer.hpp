@@ -82,6 +82,9 @@ class RenderSystem {
 
 	public:
 
+		TaskPool pool {3};
+		MailboxTaskDelegator presenter {pool};
+
 		Window& window;
 		WindowSurface surface;
 
@@ -212,7 +215,7 @@ class RenderSystem {
 		Framebuffer& acquireScreenFramebuffer();
 
 		/// Queue the given framebuffer for rendering on the screen
-		void presentScreenFramebuffer(Framebuffer& framebuffer);
+		void presentScreenFramebuffer(const Framebuffer& framebuffer);
 
 		/// Get a reference to the current frame state
 		Frame& getFrame();

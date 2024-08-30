@@ -5,6 +5,7 @@
 #include "logger.hpp"
 #include "timer.hpp"
 #include "external.hpp"
+#include "exception.hpp"
 
 using Task = std::function<void()>;
 
@@ -103,6 +104,28 @@ class TaskPool {
 		}
 
 		/**
+		 * Executes two tasks after one after another, ensures the second
+		 * task runs even if an error occurrs during the first one
+		 *
+		 * @param first the first task to execute
+		 * @param then the seconds task to execute on the same thread
+		 */
+		template <typename First, typename Then>
+		void chained(const First& first, const Then& then) {
+			enqueue([first, then] () {
+				try {
+					first();
+				} catch (Exception& exception) {
+					exception.print();
+				} catch (...) {
+					logger::error("Unknown error occurred in primary chained task!");
+				}
+
+				then();
+			});
+		}
+
+		/**
 		 * Wraps the given function in a std::future and returns it
 		 * while enqueuing the task for execution on this thread pool
 		 */
@@ -123,6 +146,42 @@ class TaskPool {
 			});
 
 			return future;
+		}
+
+};
+
+class MailboxTaskDelegator {
+
+	private:
+
+		std::mutex mutex;
+		TaskPool& pool;
+
+	public:
+
+		MailboxTaskDelegator(TaskPool& pool)
+		: pool(pool) {}
+
+		/**
+		 * Enqueue task to the parent pool in such a way that
+		 * only one task will be allowed to execute at a time
+		 * if enqueue is called before the previous task is done
+		 * it will block until the task completes
+		 */
+		void enqueue(const Task& task) {
+			mutex.lock();
+
+			pool.chained(task, [this] () {
+				mutex.unlock();
+			});
+		}
+
+		/**
+		 * Wait for the previously added task to complete,
+		 * can be safely called even if no task has yet been enqueue
+		 */
+		void wait() {
+			std::lock_guard {mutex};
 		}
 
 };

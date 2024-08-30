@@ -54,10 +54,9 @@ class World {
 
 		};
 
-		std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
-
 		std::mutex updates_mutex;
-		std::unordered_map<glm::ivec3, uint8_t> updates;
+		ankerl::unordered_dense::map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
+		ankerl::unordered_dense::map<glm::ivec3, uint8_t> updates;
 
 		/// Checks if the chunk `chunk` can be submitted for rendering
 		bool isChunkRenderReady(glm::ivec3 chunk) const;
