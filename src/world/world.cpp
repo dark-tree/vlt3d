@@ -16,20 +16,9 @@ const char* AccessError::what() const noexcept {
  * World
  */
 
-bool World::isChunkRenderReady(glm::ivec3 chunk) const {
-	if (!chunks.contains(chunk)) {
-		return false;
-	}
-
-	for (Direction direction : Bits::decompose(Direction::ALL)) {
-		glm::ivec3 neighbour = Direction::offset(direction) + chunk;
-
-		if (!chunks.contains(neighbour)) {
-			return false;
-		}
-	}
-
-	return true;
+WorldView World::getUnsafeView(glm::ivec3 chunk, Direction directions) {
+	std::shared_ptr<Chunk> center = getUnsafeChunk(chunk.x, chunk.y, chunk.z).lock();
+	return WorldView {*this, center, directions};
 }
 
 void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t flags) {
@@ -41,66 +30,87 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 	glm::ivec3 pos = {origin.x / Chunk::size, origin.y / Chunk::size, origin.z / Chunk::size};
 	float magnitude = radius * radius;
 
-	// chunk unloading
-	for (auto it = chunks.begin(); it != chunks.end();) {
-		if (glm::distance2(glm::vec3(it->first), glm::vec3(pos)) >= magnitude) {
-			it = chunks.erase(it);
-		} else {
-			it ++;
+	double time = Timer::of([&] () {
+
+		std::lock_guard chunks_lock {chunks_mutex};
+
+		// chunk unloading
+		for (auto it = chunks.begin(); it != chunks.end();) {
+			if (glm::distance2(glm::vec3(it->first), glm::vec3(pos)) >= magnitude) {
+				it = chunks.erase(it);
+				continue;
+			}
+
+			std::advance(it, 1);
 		}
-	}
 
-	// TODO
-	static TaskPool pool {8};
-	static std::vector<glm::ivec3> requested;
-	static std::mutex mutex;
+		// TODO
+		static TaskPool pool {8};
+		static std::vector<glm::ivec3> requested;
+		static std::mutex request_mutex;
 
-	int rings = (int) radius;
-	int ring = 0;
+		int rings = (int) radius;
+		int ring = 0;
 
-	while (ring < rings) {
-		planeRingIterator(ring, [&, rings] (int cx, int cz) {
+		while (ring < rings) {
+			std::lock_guard request_lock {request_mutex};
 
-			std::lock_guard lock {mutex};
-			for (int cy = -rings; cy <= rings; cy++) {
+			planeRingIterator(ring, [&, rings] (int cx, int cz) {
+				for (int cy = -rings; cy <= rings; cy++) {
 
-				glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
-				auto it = chunks.find(key);
+					glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
+					if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
+						if (!chunks.contains(key)) {
 
-				if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
-					if (it == chunks.end()) {
+							if (requested.size() > 8) {
+								return;
+							}
 
-						if (requested.size() > 8) {
-							return;
-						}
+							if (std::find(requested.begin(), requested.end(), key) != requested.end()) {
+								continue;
+							}
 
-						if (std::find(requested.begin(), requested.end(), key) != requested.end()) {
+							requested.push_back(key);
+
+							pool.enqueue([this, &generator, key]() {
+								Chunk* chunk = generator.get(key);
+
+								{
+									std::lock_guard lock {chunks_mutex};
+									chunks[key].reset(chunk);
+								}
+
+								pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
+
+								{
+									std::lock_guard lock {request_mutex};
+									util::fastVectorErase(requested, std::find(requested.begin(), requested.end(), key));
+								}
+							});
+
 							continue;
 						}
-
-						requested.push_back(key);
-
-						pool.enqueue([this, &generator, key] () {
-							Chunk* chunk = generator.get(key);
-
-							std::lock_guard lock {mutex};
-							chunks[key].reset(chunk);
-							pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
-							util::fastVectorErase(requested, std::find(requested.begin(), requested.end(), key));
-						});
-
-						continue;
 					}
 				}
-			}
-		});
+			});
 
-		ring ++;
+			ring++;
+		}
+
+	}).milliseconds();
+
+	times.insert(time);
+
+	if (times.full()) {
+		float avg = std::reduce(times.begin(), times.end()) / times.size();
+
+		logger::info("Avg update time: ", avg, "ms");
+		times.clear(0);
 	}
 
 }
 
-std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {
+std::weak_ptr<Chunk> World::getUnsafeChunk(int cx, int cy, int cz) {
 	const glm::ivec3 key {cx, cy, cz};
 	auto it = chunks.find(key);
 
@@ -109,6 +119,11 @@ std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {
 	}
 
 	return it->second;
+}
+
+std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {
+	std::lock_guard lock {chunks_mutex};
+	return getUnsafeChunk(cx, cy, cz);
 }
 
 Block World::getBlock(int x, int y, int z) {

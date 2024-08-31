@@ -10,7 +10,7 @@ Chunk* WorldGenerator::get(glm::ivec3 pos) {
 
 	Chunk* chunk;
 
-	logger::info("Chunk generation took: ", Timer::of([&] () {
+	/*logger::info("Chunk generation took: ", Timer::of(*/[&] () {
 
 		const float noise_scale = 16.0f;
 		const int max_height = 60;
@@ -58,7 +58,7 @@ Chunk* WorldGenerator::get(glm::ivec3 pos) {
 			}
 		}
 
-	}).milliseconds(), "ms");
+	}();/*).milliseconds(), "ms");*/
 
 	return chunk;
 }

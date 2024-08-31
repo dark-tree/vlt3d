@@ -42,6 +42,7 @@ Frame::~Frame() {
 	available_semaphore.close();
 	finished_semaphore.close();
 	flight_fence.close();
+	timestamp_query.close();
 }
 
 void Frame::wait() {

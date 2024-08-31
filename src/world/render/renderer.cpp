@@ -1,6 +1,7 @@
 
 #include "renderer.hpp"
 #include "mesher.hpp"
+#include "world/view.hpp"
 
 /*
  * ChunkBuffer
@@ -55,7 +56,7 @@ void WorldRenderer::eraseBuffer(glm::ivec3 pos) {
 	auto it = buffers.find(pos);
 
 	if (it != buffers.end()) {
-		buffers.extract(it).mapped()->dispose(system);
+		buffers.extract(it).second->dispose(system);
 	}
 }
 
@@ -78,8 +79,8 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 	}
 
 	// iterate all chunks that were updated this frame and need to be re-meshed
-	world.consumeUpdates([&] (glm::ivec3 pos, bool important) {
-		mesher.push(pos, important);
+	world.consumeUpdates([&] (WorldView&& view, bool important) {
+		mesher.push(std::move(view), important);
 	});
 
 	// first upload all awaiting meshes so that the PCI has something to do

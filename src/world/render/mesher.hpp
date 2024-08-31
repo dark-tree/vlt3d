@@ -5,8 +5,8 @@
 #include "world/chunk.hpp"
 #include "buffer/sprites.hpp"
 
-class WorldRenderView;
 class SpriteArray;
+class WorldView;
 
 struct BlockFaceView {
 
@@ -233,7 +233,7 @@ class GreedyMesher {
 
 	public:
 
-		static void emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, std::shared_ptr<Chunk> chunk, WorldRenderView& view, const SpriteArray& array);
+		static void emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array);
 
 };
 

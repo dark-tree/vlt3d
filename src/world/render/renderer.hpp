@@ -85,7 +85,7 @@ class WorldRenderer {
 
 		// this holds the meshes of chunks that did not change (at least from
 		// a rendering stand point - no new mesh is yet submitted for them)
-		std::unordered_map<glm::ivec3, ChunkBuffer*> buffers;
+		ankerl::unordered_dense::map<glm::ivec3, ChunkBuffer*> buffers;
 
 		// this holds the buffers that have the new meshes written
 		// but are not yet uploaded (copied from staging to device)

@@ -1,7 +1,7 @@
 
 #include "mesher.hpp"
 #include "renderer.hpp"
-#include "view.hpp"
+#include "world/view.hpp"
 
 /*
  * ChunkPlane
@@ -64,21 +64,22 @@ bool GreedyMesher::QuadDelegate::canMergeWith(const QuadDelegate& other) const {
 	return (other.offset == offset) && (other.index == index) && (other.streak == streak);
 }
 
-void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, std::shared_ptr<Chunk> chunk, WorldRenderView& view, const SpriteArray& array) {
+void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array) {
 
 	buffer.clear();
+	Chunk* self = view.getOriginChunk();
 
 	int gray_sprite = array.getSpriteIndex("gray");
 	int clay_sprite = array.getSpriteIndex("clay");
 	int moss_sprite = array.getSpriteIndex("moss");
 	int side_sprite = array.getSpriteIndex("side");
 
-	glm::ivec3 offset = chunk->pos * Chunk::size;
+	glm::ivec3 offset = view.origin() * Chunk::size;
 
 	for (int z = 0; z < Chunk::size; z++) {
 		for (int y = 0; y < Chunk::size; y++) {
 			for (int x = 0; x < Chunk::size; x++) {
-				Block block = chunk->getBlock(x, y, z);
+				Block block = self->getBlock(x, y, z);
 
 				if (block.isAir()) {
 					continue;

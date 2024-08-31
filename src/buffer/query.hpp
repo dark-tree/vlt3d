@@ -9,6 +9,10 @@ struct Query {
 	READONLY uint64_t value;
 	READONLY uint64_t status;
 
+	/**
+	 * Verify that this method returns true before trying to
+	 * read the value returned by the query read (.value)
+	 */
 	bool present() const {
 		return status != 0;
 	}
@@ -17,6 +21,10 @@ struct Query {
 
 static_assert(sizeof(Query) == 2 * sizeof(uint64_t));
 
+/**
+ * For information regarding Vulkan Timestamps see
+ * https://nikitablack.github.io/post/how_to_use_vulkan_timestamp_queries/
+ */
 class QueryPool {
 
 	public:
