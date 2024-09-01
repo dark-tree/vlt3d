@@ -77,3 +77,4 @@
 // usage hints
 #define READONLY
 #define NULLABLE
+#define UNREACHABLE __builtin_unreachable() /* TODO: msvc */

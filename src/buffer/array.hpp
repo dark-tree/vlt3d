@@ -10,7 +10,7 @@ class SpriteArray {
 		static constexpr const char* FALLBACK_KEY = "@fallback";
 
 		int width, height;
-		ImageData atlas;
+		ManagedImageDataSet atlas;
 
 		// mutable as when a sprite is missing we need to insert the
 		// fallback index so that the warning is only printed once
@@ -38,7 +38,7 @@ class SpriteArray {
 		 */
 		uint32_t getSpriteCount() const;
 
-		const ImageData& getImage() const;
+		const ManagedImageDataSet& getImage() const;
 		Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder) const;
 
 		void close();

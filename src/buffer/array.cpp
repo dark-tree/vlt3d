@@ -1,28 +1,16 @@
 
 #include "array.hpp"
 #include "util/exception.hpp"
+#include "util/format.hpp"
+#include "allocator.hpp"
 
 int SpriteArray::packImage(ImageData image) {
-	int index = sprites.size();
-	int offset = index * height;
-
-	if (image.width() != width || image.height() != height) {
-		throw Exception {"Image dimensions don't match the sprite array!"};
-	}
-
-	if (atlas.height() <= offset + height) {
-		atlas.resize(width, atlas.height() * 2);
-	}
-
-	atlas.blit(0, offset, image);
-	return index;
+	atlas.addLayer(image, ImageScaling::NEAREST);
+	return sprites.size();
 }
 
-SpriteArray::SpriteArray(int width, int height) {
-	this->atlas = ImageData::allocate(width, height);
-	this->width = width;
-	this->height = height;
-}
+SpriteArray::SpriteArray(int width, int height)
+: width(width), height(height), atlas(width, height, 4, true) {}
 
 void SpriteArray::submitFile(const std::string& identifier, const std::string& path) {
 	submitImage(identifier, ImageData::loadFromFile(path));
@@ -52,19 +40,18 @@ uint32_t SpriteArray::getSpriteCount() const {
 	return sprites.size();
 }
 
-const ImageData& SpriteArray::getImage() const {
+const ManagedImageDataSet& SpriteArray::getImage() const {
 	return atlas;
 }
 
 Image SpriteArray::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder) const {
-	return Image::upload(allocator, queue, recorder, atlas.data(), width, height, atlas.channels(), getSpriteCount(), VK_FORMAT_R8G8B8A8_SRGB);
+	return atlas.upload(allocator, queue, recorder, VK_FORMAT_R8G8B8A8_SRGB);
 }
 
 void SpriteArray::close() {
 	atlas.close();
 	sprites.clear();
 }
-
 
 SpriteArray SpriteArray::createFromDirectory(int width, int height, const std::string& root, ImageData fallback) {
 	SpriteArray array {width, height};

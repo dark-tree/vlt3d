@@ -82,10 +82,13 @@ class ImageSamplerBuilder {
 			create_info.compareEnable = VK_FALSE;
 			create_info.compareOp = VK_COMPARE_OP_ALWAYS;
 
+			// TODO remove mipmaping blob
 			create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			create_info.mipLodBias = 0.0f;
+			create_info.mipLodBias = -1.0f;
+			create_info.minFilter = VK_FILTER_NEAREST;
+			create_info.magFilter = VK_FILTER_NEAREST;
 			create_info.minLod = 0.0f;
-			create_info.maxLod = 0.0f;
+			create_info.maxLod = 4.0f;
 
 			VkSampler sampler;
 
@@ -153,7 +156,7 @@ class ImageViewBuilder {
 			return *this;
 		}
 
-		ImageView build(Device& device, VkImageAspectFlags aspect, int layers = 1) {
+		ImageView build(Device& device, VkImageAspectFlags aspect, int layers = 1, int levels = 1) {
 
 			VkImageViewCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -165,7 +168,7 @@ class ImageViewBuilder {
 
 			create_info.subresourceRange.aspectMask = aspect;
 			create_info.subresourceRange.baseMipLevel = 0;
-			create_info.subresourceRange.levelCount = 1;
+			create_info.subresourceRange.levelCount = levels;
 			create_info.subresourceRange.baseArrayLayer = 0;
 			create_info.subresourceRange.layerCount = layers;
 

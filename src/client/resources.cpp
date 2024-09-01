@@ -40,7 +40,7 @@ ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRec
 	this->atlas_sampler.setDebugName(device, "Atlas");
 
 	this->array_image = array.upload(system.allocator, queue, recorder);
-	this->array_view = array_image.getViewBuilder().setType(VK_IMAGE_VIEW_TYPE_2D_ARRAY).build(device, VK_IMAGE_ASPECT_COLOR_BIT, array.getSpriteCount());
+	this->array_view = array_image.getViewBuilder().setType(VK_IMAGE_VIEW_TYPE_2D_ARRAY).build(device, VK_IMAGE_ASPECT_COLOR_BIT, array.getSpriteCount(), 4); // TODO cleanup
 	this->array_sampler = array_view.getSamplerBuilder().setFilter(VK_FILTER_NEAREST).build(device);
 
 	this->array_image.setDebugName(device, "Array");

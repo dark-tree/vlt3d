@@ -17,9 +17,9 @@ layout(binding = 3) uniform sampler2D uPositionSampler;
 layout(location = 0) in vec2 vTexture;
 layout(location = 0) out float fAmbience;
 
-const float bias = 0.001;   // smaller value => more/stronger occlusion
+const float bias = 0.02;    // smaller value => more/stronger occlusion
 const int kernel_size = 20; // number of random samples to use, max 64
-const float radius = 3;
+const float radius = 4;
 
 void main() {
 

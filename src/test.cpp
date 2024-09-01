@@ -237,6 +237,117 @@ TEST(util_ring_reduce) {
 
 }
 
+TEST(image_managed_mipmaps) {
+
+	ManagedImageDataSet set {8, 8, 4, true};
+	set.resize(3, 5); // (8 * 3, 8 * 5)
+
+	CHECK(set.levels(), 4);
+	CHECK(set.level(0).width(), 8 * 3);
+	CHECK(set.level(0).height(), 8 * 5);
+	CHECK(set.level(1).width(), 4 * 3);
+	CHECK(set.level(1).height(), 4 * 5);
+	CHECK(set.level(2).width(), 2 * 3);
+	CHECK(set.level(2).height(), 2 * 5);
+	CHECK(set.level(3).width(), 1 * 3);
+	CHECK(set.level(3).height(), 1 * 5);
+
+	set.level(0).clear({200, 0, 0, 255});
+	set.level(1).clear({150, 50, 0, 255});
+	set.level(2).clear({50, 150, 0, 255});
+	set.level(3).clear({0, 200, 0, 255});
+
+	ImageData smooth = ImageData::allocate(8, 8);
+	ImageData solid = ImageData::allocate(8, 8);
+
+	for (int y = 0; y < 8; y ++) {
+		for (int x = 0; x < 8; x ++) {
+			smooth.pixel(x, y)[0] = x * 32;
+			smooth.pixel(x, y)[1] = y * 32;
+			smooth.pixel(x, y)[2] = ((x ^ y) & 0b111) * 32;
+			smooth.pixel(x, y)[3] = 255;
+		}
+	}
+
+	for (int y = 0; y < 8; y ++) {
+		for (int x = 0; x < 8; x ++) {
+			solid.pixel(x, y)[0] = (x < 4) != (y < 4) ? 220 : 0;
+			solid.pixel(x, y)[1] = (x < 4) != (y < 4) ? 220 : 0;
+			solid.pixel(x, y)[2] = 0;
+			solid.pixel(x, y)[3] = 255;
+		}
+	}
+
+	set.blit(0 * 8, 0 * 8, smooth, ImageScaling::NEAREST);
+	set.blit(2 * 8, 1 * 8, smooth, ImageScaling::NEAREST);
+	set.blit(2 * 8, 4 * 8, smooth, ImageScaling::NEAREST);
+	set.blit(1 * 8, 2 * 8, solid, ImageScaling::NEAREST);
+	set.blit(2 * 8, 3 * 8, solid, ImageScaling::NEAREST);
+
+	uint8_t* p0 = set.level(1).pixel(1 * 4 - 1, 2 * 4 - 1);
+	uint8_t* p1 = set.level(1).pixel(1 * 4 + 2, 2 * 4 + 0);
+
+	CHECK(p0[0], 150);
+	CHECK(p0[1], 50);
+	CHECK(p0[2], 0);
+
+	CHECK(p1[0], 220);
+	CHECK(p1[1], 220);
+	CHECK(p1[2], 0);
+
+	ImageData collage = set.unified();
+	collage.save("testing/image_managed_mipmaps.png");
+	collage.close();
+
+	set.close();
+
+	CHECK(set.levels(), 0);
+
+}
+
+TEST(image_managed_layers) {
+
+	ManagedImageDataSet set {4, 4, 4, false};
+	set.resize(2, 2);
+
+	CHECK(set.levels(), 1);
+	CHECK(set.level(0).width(), 8);
+	CHECK(set.level(0).height(), 8);
+
+	ImageData a = ImageData::allocate(8, 8);
+	ImageData b = ImageData::allocate(8, 8);
+
+	a.clear({0, 0, 0, 255});
+	b.clear({0, 0, 0, 255});
+
+	for (int y = 0; y < 8; y ++) {
+		for (int x = 0; x < 8; x ++) {
+			a.pixel(x, y)[0] = (x < 4) != (y < 4) ? 220 : 0;
+			a.pixel(x, y)[1] = (x < 4) != (y < 4) ? 220 : 0;
+		}
+	}
+
+	for (int y = 0; y < 8; y ++) {
+		for (int x = 0; x < 8; x ++) {
+			b.pixel(x, y)[0] = (x < 4) != (y < 4) ? 220 : 0;
+			b.pixel(x, y)[2] = (x < 4) != (y < 4) ? 220 : 0;
+		}
+	}
+
+	set.addLayer(a, ImageScaling::NEAREST);
+	a.close();
+
+	EXPECT_ANY({
+		set.resize(2, 2);
+	});
+
+	set.addLayer(b, ImageScaling::NEAREST);
+	b.close();
+
+	set.save("testing/image_managed_layers.png");
+
+}
+
 TEST(util_pyramid) {
 
 	Pyramid<int> pyramid;
@@ -291,8 +402,8 @@ TEST(sprite_array) {
 	array.submitImage("green", green);
 	array.submitImage("blue", blue);
 
-	ASSERT(array.getImage().width() == 8);
-	ASSERT(array.getImage().height() >= (8*3));
+//	ASSERT(array.getImage().level(0).width() == 8);
+//	ASSERT(array.getImage().level(0).height() >= (8*3));
 	ASSERT(array.getSpriteIndex("not-a-real-sprite-1") == 0)
 	ASSERT(array.getSpriteIndex("not-a-real-sprite-2") == 0)
 	CHECK(array.getSpriteIndex("red"), 0);

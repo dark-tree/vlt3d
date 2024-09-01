@@ -116,6 +116,7 @@ class ImageInfo : public AllocationInfo<ImageInfo> {
 		READONLY VkImageUsageFlags vk_image_usage;
 		READONLY VkSampleCountFlagBits vk_samples;
 		READONLY int vk_layers;
+		READONLY int vk_levels;
 
 	public:
 
@@ -150,6 +151,12 @@ class ImageInfo : public AllocationInfo<ImageInfo> {
 		 * where each layers has the given dimensions
 		 */
 		 ImageInfo& layers(int layers);
+
+		/**
+		 * The number of minification (mip)
+		 * levels in the image
+		 */
+		ImageInfo& levels(int levels);
 
 		/**
 		 * The number of samples to use in a multisampling

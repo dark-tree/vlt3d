@@ -37,7 +37,7 @@ BufferInfo& BufferInfo::usage(VkBufferUsageFlags usage) {
  */
 
 ImageInfo::ImageInfo(int width, int height, VkFormat format, VkImageUsageFlags usage)
-: AllocationInfo(), vk_format(format), vk_image_usage(usage), vk_samples(VK_SAMPLE_COUNT_1_BIT), vk_layers(1) {
+: AllocationInfo(), vk_format(format), vk_image_usage(usage), vk_samples(VK_SAMPLE_COUNT_1_BIT), vk_layers(1), vk_levels(1) {
 	size(width, height);
 }
 
@@ -50,7 +50,7 @@ VkImageCreateInfo ImageInfo::getImageInfo() const {
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	create_info.imageType = VK_IMAGE_TYPE_2D;
 	create_info.extent = vk_extent;
-	create_info.mipLevels = 1;
+	create_info.mipLevels = vk_levels;
 	create_info.arrayLayers = vk_layers;
 	create_info.format = vk_format;
 	create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -82,6 +82,11 @@ ImageInfo& ImageInfo::usage(VkImageUsageFlags usage) {
 
 ImageInfo& ImageInfo::layers(int layers) {
 	vk_layers = layers;
+	return *this;
+}
+
+ImageInfo& ImageInfo::levels(int levels) {
+	vk_levels = levels;
 	return *this;
 }
 
