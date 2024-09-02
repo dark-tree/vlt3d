@@ -104,7 +104,7 @@ class ImageData {
 		 * Records a copy-to-GPU-memory operation into the
 		 * given command buffer, a staging buffer IS used and resulting image returned
 		 */
-		Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format) const;
+		Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format, bool mipmaps) const;
 
 	public:
 
@@ -133,7 +133,7 @@ class ManagedImageDataSet {
 		int height;
 
 		// number of layers
-		int layers;
+		int layer;
 
 		// mipmaps array
 		// TODO std::vector<ImageData>*
@@ -146,8 +146,11 @@ class ManagedImageDataSet {
 
 		ManagedImageDataSet() = default;
 		ManagedImageDataSet(int w, int h, int channels, bool mipmaps);
+		ManagedImageDataSet(ImageData image, bool mipmaps);
 
 		int levels() const;
+		int layers() const;
+
 		ImageData level(int level) const;
 
 		/**
@@ -223,10 +226,5 @@ class Image {
 		void close();
 
 		void setDebugName(const Device& device, const char* name) const;
-
-	public:
-
-		[[deprecated("Use MangedImageDataSet::upload()")]]
-		static Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, const void* pixels, int width, int height, int channels, int layers, VkFormat format);
 
 };

@@ -621,7 +621,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec4));
 	ssao_config.noise_scale = glm::vec2 {1000.0/4.0, 700.0/4.0};
 
-	ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_buffers, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT);
+	ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_buffers, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT, false);
 	ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
 	ssao_noise_sampler = ssao_noise_view.getSamplerBuilder().setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT).setFilter(VK_FILTER_NEAREST).build(device);
 

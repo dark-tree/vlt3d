@@ -115,8 +115,15 @@ ImageData ImageData::view(void* pixels, int w, int h, int channels) {
 	return {Type::VIEW, pixels, w, h, channels};
 }
 
-Image ImageData::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format) const {
-	return Image::upload(allocator, queue, recorder, data(), width(), height(), channels(), 1, format);
+Image ImageData::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, VkFormat format, bool mipmaps) const {
+	ManagedImageDataSet set {*this, mipmaps};
+	Image image = set.upload(allocator, queue, recorder, format);
+
+	for (int i = 1; i < set.levels(); i ++) {
+		set.level(i).close();
+	}
+
+	return image;
 }
 
 int ImageData::size() const {
@@ -149,9 +156,13 @@ void ManagedImageDataSet::resizeImages(int ws, int hs) {
 	}
 }
 
-ManagedImageDataSet::ManagedImageDataSet(int w, int h, int channels, bool mipmaps) {
-	ImageData image = ImageData::allocate(w, h, channels);
+ManagedImageDataSet::ManagedImageDataSet(int w, int h, int channels, bool mipmaps)
+: ManagedImageDataSet(ImageData::allocate(w, h, channels), mipmaps) {}
+
+ManagedImageDataSet::ManagedImageDataSet(ImageData image, bool mipmaps) {
 	images.push_back(image);
+	height = image.height();
+	layer = 0;
 
 	if (mipmaps) {
 		while (image.width() != 1 || image.height() != 1) {
@@ -159,13 +170,14 @@ ManagedImageDataSet::ManagedImageDataSet(int w, int h, int channels, bool mipmap
 			images.push_back(image);
 		}
 	}
-
-	height = h;
-	layers = 1;
 }
 
 int ManagedImageDataSet::levels() const {
 	return images.size();
+}
+
+int ManagedImageDataSet::layers() const {
+	return std::max(1, layer);
 }
 
 ImageData ManagedImageDataSet::level(int level) const {
@@ -175,7 +187,7 @@ ImageData ManagedImageDataSet::level(int level) const {
 void ManagedImageDataSet::resize(int ws, int hs) {
 
 	// once we have layers you can no longer resize the image vertically
-	if ((layers > 1) && (hs != 1)) {
+	if ((layer != 0) && (hs != 1)) {
 		throw Exception {"Can't resize the image vertically after a layer was already added!"};
 	}
 
@@ -215,7 +227,7 @@ void ManagedImageDataSet::blit(int ox, int oy, ImageData image, ImageScaling sca
 void ManagedImageDataSet::addLayer(ImageData image, ImageScaling scaling) {
 
 	// offset to the next empty spot
-	const int offset = (layers - 1) * height;
+	const int offset = layer * height;
 
 	// width never changes when adding layers, the image only gets longer
 	if (image.width() != level(0).width() || image.height() != height) {
@@ -228,7 +240,7 @@ void ManagedImageDataSet::addLayer(ImageData image, ImageScaling scaling) {
 	}
 
 	blit(0, offset, image, scaling);
-	layers ++;
+	layer ++;
 
 }
 
@@ -283,7 +295,7 @@ Image ManagedImageDataSet::upload(Allocator& allocator, TaskQueue& queue, Comman
 	// dimensions of the base layer in the base level
 	int layer_width = level(0).width();
 	int layer_height = this->height;
-	int layer_count = this->layers - 1;
+	int layer_count = layers();
 
 	// total image size (all layers and levels)
 	size_t total = size();
@@ -361,43 +373,4 @@ void Image::close() {
 
 void Image::setDebugName(const Device& device, const char* name) const {
 	VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_IMAGE, vk_image, name);
-}
-
-Image Image::upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder, const void* pixels, int width, int height, int channels, int layers, VkFormat format) {
-
-	size_t size = (size_t) width * height * channels * layers;
-
-	if (getFormatInfo(format).size != channels) {
-		throw Exception {"The specified image format doesn't match pixel size!"};
-	}
-
-	BufferInfo buffer_builder {size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
-	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-	buffer_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-
-	Buffer staging = allocator.allocateBuffer(buffer_builder);
-
-	MemoryMap map = staging.access().map();
-	map.write(pixels, size);
-	map.flush();
-	map.unmap();
-
-	ImageInfo image_builder {width, height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
-	image_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	image_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
-	image_builder.layers(layers);
-
-	Image image = allocator.allocateImage(image_builder);
-
-	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED, layers, 1);
-	recorder.copyBufferToImage(image, staging, 0, width, height, layers, 0);
-	recorder.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layers, 1);
-
-	queue.enqueue([staging] () mutable {
-		staging.close();
-	});
-
-	return image;
-
 }
