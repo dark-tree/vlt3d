@@ -14,11 +14,22 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	immediate_2d.setDebugName(device, "Immediate 2D");
 	immediate_3d.setDebugName(device, "Immediate 3D");
 
+	BufferInfo uniform_builder {sizeof(uniforms), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
+	uniform_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	uniform_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	uniform_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+	uniform_buffer = system.allocator.allocateBuffer(uniform_builder);
+	uniform_buffer.setDebugName(device, "Frame Uniform");
+	uniform_map = uniform_buffer.access().map();
+
 	set_0 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
-	set_0.sampler(0, system.assets.state->array_sampler);
+	set_0.buffer(0, uniform_buffer, sizeof(uniforms));
+	set_0.sampler(1, system.assets.state->array_sampler);
 
 	set_1 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
-	set_1.sampler(0, atlas_sampler);
+	set_1.buffer(0, uniform_buffer, sizeof(uniforms));
+	set_1.sampler(1, atlas_sampler);
 
 	set_2 = system.descriptor_pool.allocate(system.ssao_descriptor_layout);
 	set_2.buffer(0, system.ssao_uniform_buffer, sizeof(AmbientOcclusionUniform));
@@ -58,6 +69,11 @@ void Frame::execute() {
 
 bool Frame::first() const {
 	return sequence != SUBSEQUENT;
+}
+
+void Frame::flushUniformBuffer() {
+	uniform_map.write(&uniforms, sizeof(uniforms));
+	uniform_map.flush();
 }
 
 /*
@@ -618,7 +634,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	ssao_noise_sampler.setDebugName(device, "SSAO Noise");
 
 	BufferInfo ssao_buffer_builder {sizeof(AmbientOcclusionUniform), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
-	ssao_buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	ssao_buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	ssao_buffer_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	ssao_buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
@@ -627,6 +643,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	MemoryMap ssao_map = ssao_uniform_buffer.access().map();
 	ssao_map.write(&ssao_config, sizeof(AmbientOcclusionUniform));
+	ssao_map.flush();
 	ssao_map.unmap();
 
 	transient_recorder.done();
@@ -651,7 +668,8 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.done(device);
 
 	geometry_descriptor_layout = DescriptorSetLayoutBuilder::begin()
-		.descriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
 	descriptor_pool = DescriptorPoolBuilder::begin()

@@ -1,8 +1,9 @@
 #version 450
 
-layout(push_constant) uniform SceneUniform {
+layout(binding = 0) uniform SceneUniform {
     mat4 mvp;
     mat4 view;
+    mat4 normal;
 } uSceneObject;
 
 layout(location = 0) in vec3 iPosition;
@@ -27,14 +28,11 @@ void main() {
         {0, 0, +1},
     };
 
-    // TODO any better ideas? Can we do the SSAO in some other coordinate space?
-    mat3 normal_matrix = transpose(inverse(mat3(uSceneObject.view)));
-
     gl_Position = uSceneObject.mvp * vec4(iPosition, 1.0);
     vColor = iColor;
     vTexture = vec3(unpackHalf2x16(iTexture), iSprite);
 
     // view space
-    vNormal = normal_matrix * normals[iNorm];
+    vNormal = mat3(uSceneObject.normal) * normals[iNorm];
     vPosition = (uSceneObject.view * vec4(iPosition, 1.0)).xyz;
 }

@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 0) uniform sampler2DArray uArraySampler;
+layout(binding = 1) uniform sampler2DArray uArraySampler;
 
 layout(location = 0) in vec3 vColor;
 layout(location = 1) in vec3 vTexture;

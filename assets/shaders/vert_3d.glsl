@@ -1,7 +1,9 @@
 #version 450
 
-layout(push_constant) uniform SceneUniform {
+layout(binding = 0) uniform SceneUniform {
     mat4 mvp;
+    mat4 view;
+    mat4 normal;
 } uSceneObject;
 
 layout(location = 0) in vec3 iPosition;

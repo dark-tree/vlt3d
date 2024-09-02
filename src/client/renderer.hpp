@@ -11,8 +11,10 @@
 #include "util/threads.hpp"
 #include "resources.hpp"
 
-struct Uniforms {
+struct SceneUniform {
 	glm::mat4 mvp;
+	glm::mat4 view;
+	glm::mat4 normal;
 };
 
 struct AmbientOcclusionUniform {
@@ -40,6 +42,14 @@ class Frame {
 		/// with INITIAL and FIRST corresponding to being used for the first time
 		Sequence sequence;
 
+		/// Small buffer used to store uniform variables
+		/// after writing data to `uniforms` call uploadUniformBuffer()
+		Buffer uniform_buffer;
+
+		/// The memory map backing the uniform_buffer
+		/// Uniform buffer doesn't use staging so this is just some host memory map
+		MemoryMap uniform_map;
+
 	public:
 
 		CommandBuffer buffer;
@@ -60,7 +70,7 @@ class Frame {
 		/// and waited on using `wait()` before starting the rendering of a frame, it is used to keep CPU and GPU in sync
 		Fence flight_fence;
 
-		Uniforms uniforms;
+		SceneUniform uniforms;
 		DescriptorSet set_0, set_1, set_2, set_3;
 		QueryPool timestamp_query;
 
@@ -91,6 +101,11 @@ class Frame {
 		 * Check if this frame is being used for the first time
 		 */
 		bool first() const;
+
+		/**
+		 * Write data into the mapped memory of the shared uniform buffer
+		 */
+		void flushUniformBuffer();
 
 };
 

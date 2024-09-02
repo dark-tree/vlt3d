@@ -17,11 +17,6 @@
 #include "client/gui/screen/play.hpp"
 #include "world/skybox.hpp"
 
-struct GeometryPushBlock {
-	glm::mat4 mvp;
-	glm::mat4 view;
-};
-
 struct LightingPushBlock {
 	glm::mat4 projection;
 	Sun sun;
@@ -66,6 +61,11 @@ int main() {
 		glm::mat4 mvp = projection * view * model;
 		Frustum frustum = camera.getFrustum(projection);
 
+		frame.uniforms.mvp = mvp;
+		frame.uniforms.view = view;
+		frame.uniforms.normal = transpose(inverse(frame.uniforms.view));
+		frame.flushUniformBuffer();
+
 		frame.wait();
 		frame.execute();
 
@@ -105,13 +105,9 @@ int main() {
 
 		world.update(world_generator, camera.getPosition(), 16);
 
-		GeometryPushBlock geometry_push_block {};
-		geometry_push_block.mvp = mvp;
-		geometry_push_block.view = view;
 
 		recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent)
 			.bindPipeline(system.pipeline_3d_terrain)
-			.writePushConstant(system.push_constant, &geometry_push_block)
 			.bindDescriptorSet(frame.set_0);
 
 		world_renderer.draw(recorder, frustum);
@@ -142,7 +138,6 @@ int main() {
 		recorder.nextSubpass()
 			.bindPipeline(system.pipeline_3d_tint)
 			.bindDescriptorSet(frame.set_1)
-			.writePushConstant(system.push_constant, &geometry_push_block)
 			.bindBuffer(frame.immediate_3d.getBuffer())
 			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)
