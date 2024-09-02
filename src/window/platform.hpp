@@ -1,3 +1,7 @@
+#pragma once
+
+#include "system.hpp"
+#include "external.hpp"
 
 namespace platform {
 

@@ -22,7 +22,6 @@ class CommandRecorder {
 		CommandRecorder(VkCommandBuffer vk_buffer)
 		: vk_buffer(vk_buffer), vk_layout(nullptr) {}
 
-		// TODO clean this one
 		CommandRecorder& beginRenderPass(RenderPass& render_pass, Framebuffer& framebuffer, VkExtent2D extent) {
 
 			tracer.reset(render_pass);

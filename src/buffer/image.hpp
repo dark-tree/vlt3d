@@ -136,7 +136,6 @@ class ManagedImageDataSet {
 		int layer;
 
 		// mipmaps array
-		// TODO std::vector<ImageData>*
 		std::vector<ImageData> images;
 
 		// unconditionaly resizes all image levels

@@ -171,12 +171,12 @@ void RenderSystem::createRenderPass() {
 
 		Attachment::Ref depth = builder.addAttachment(attachment_depth)
 			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) // TODO VK_ATTACHMENT_STORE_OP_NONE_KHR
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
 		Attachment::Ref normal = builder.addAttachment(attachment_normal)
 			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) // TODO VK_ATTACHMENT_STORE_OP_NONE_KHR
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			.next();
 
 		Attachment::Ref ambience = builder.addAttachment(attachment_ambience)

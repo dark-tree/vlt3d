@@ -2,6 +2,7 @@
 
 #include "external.hpp"
 #include "window/window.hpp"
+#include "window/platform.hpp"
 #include "util/logger.hpp"
 #include "callback.hpp"
 
@@ -44,6 +45,7 @@ class WindowSurface {
 				if (platform == entry.first) {
 					entry.second(window.glfw_window, vk_instance, &vk_surface);
 					created = true;
+					break;
 				}
 			}
 

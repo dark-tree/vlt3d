@@ -16,7 +16,6 @@
 #	define VK_USE_PLATFORM_WAYLAND_KHR
 #endif
 
-#include "external.hpp"
 #include "platform.hpp"
 #include "setup/callback.hpp"
 #include "util/exception.hpp"
@@ -58,7 +57,7 @@
 		create_info.window = glfwGetX11Window(window);
 
 		if (vkCreateXlibSurfaceKHR(instance, &create_info, AllocatorCallbackFactory::named("SurfaceKHR"), surface) != VK_SUCCESS) {
-			throw Exception {"Failed to create Xlib window surface!"};
+			throw Exception {"Failed to create X11 window surface!"};
 		}
 
 	}

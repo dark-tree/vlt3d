@@ -1,7 +1,6 @@
 #pragma once
 
-#include "config.hpp"
-#include "system.hpp"
+#include "macro.hpp"
 
 // C libs
 #include <cstring>
@@ -74,7 +73,3 @@
 // Perlin noise
 #include "PerlinNoise.hpp"
 
-// usage hints
-#define READONLY
-#define NULLABLE
-#define UNREACHABLE __builtin_unreachable() /* TODO: msvc */
