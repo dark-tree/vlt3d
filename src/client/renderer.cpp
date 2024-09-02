@@ -15,22 +15,22 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	immediate_3d.setDebugName(device, "Immediate 3D");
 
 	set_0 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
-	set_0.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.assets.state->array_sampler);
+	set_0.sampler(0, system.assets.state->array_sampler);
 
 	set_1 = system.descriptor_pool.allocate(system.geometry_descriptor_layout);
-	set_1.sampler(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, atlas_sampler);
+	set_1.sampler(0, atlas_sampler);
 
 	set_2 = system.descriptor_pool.allocate(system.ssao_descriptor_layout);
-	set_2.buffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, system.ssao_uniform_buffer, sizeof(AmbientOcclusionUniform));
-	set_2.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.ssao_noise_sampler);
-	set_2.sampler(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_normal.sampler);
-	set_2.sampler(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_position.sampler);
+	set_2.buffer(0, system.ssao_uniform_buffer, sizeof(AmbientOcclusionUniform));
+	set_2.sampler(1, system.ssao_noise_sampler);
+	set_2.sampler(2, system.attachment_normal.sampler);
+	set_2.sampler(3, system.attachment_position.sampler);
 
 	set_3 = system.descriptor_pool.allocate(system.lighting_descriptor_layout);
-	set_3.sampler(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_normal.sampler);
-	set_3.sampler(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_position.sampler);
-	set_3.sampler(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, system.attachment_albedo.sampler);
-	set_3.sampler(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, system.attachment_ambience.sampler);
+	set_3.sampler(0, system.attachment_normal.sampler);
+	set_3.sampler(1, system.attachment_position.sampler);
+	set_3.sampler(2, system.attachment_albedo.sampler);
+	set_3.sampler(3, system.attachment_ambience.sampler);
 
 	timestamp_query = QueryPool(system.device, VK_QUERY_TYPE_TIMESTAMP, 2);
 }
@@ -499,11 +499,6 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	// this is NEEDED so that `frames` vector does not relocate and deconstruct stored frames during insertion
 	frames.reserve(concurrent);
 
-	// Create this thing
-	geometry_descriptor_layout = DescriptorSetLayoutBuilder::begin()
-		.descriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.done(device);
-
 	// binding layout used by world renderer
 	binding_terrain = BindingLayoutBuilder::begin()
 		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT) // xyz
@@ -526,13 +521,6 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.attribute(1, VK_FORMAT_R32G32_SFLOAT)
 		.attribute(2, VK_FORMAT_R8G8B8A8_UNORM)
 		.done();
-
-	// TODO
-	descriptor_pool = DescriptorPoolBuilder::begin()
-		.add(32, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-		.add(32, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-		.add(32, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
-		.done(device, 32);
 
 	constant_layout = PushConstantLayoutBuilder::begin()
 		.add(Kind::VERTEX | Kind::FRAGMENT, 64 + 64, &push_constant)
@@ -655,13 +643,22 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
 
-	// TODO save types in layout so we don't have to type them again when the set is allocated
 	lighting_descriptor_layout = DescriptorSetLayoutBuilder::begin()
 		.descriptor(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.done(device);
+
+	geometry_descriptor_layout = DescriptorSetLayoutBuilder::begin()
+		.descriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.done(device);
+
+	descriptor_pool = DescriptorPoolBuilder::begin()
+		.addDynamic(ssao_descriptor_layout, 1)
+		.addDynamic(lighting_descriptor_layout, 1)
+		.addDynamic(geometry_descriptor_layout, 2)
+		.done(device, concurrent);
 
 	instance.enterValidationCheckpoint("Render System Phase 1 Initialization");
 

@@ -1,7 +1,10 @@
 #pragma once
 
 #include "external.hpp"
-#include "render/view.hpp"
+
+class DescriptorSetLayout;
+class Buffer;
+class ImageSampler;
 
 class DescriptorSet {
 
@@ -9,52 +12,29 @@ class DescriptorSet {
 
 		READONLY VkDevice vk_device;
 		READONLY VkDescriptorSet vk_set;
+		READONLY const DescriptorSetLayout* layout;
 
 	public:
 
 		DescriptorSet() {}
+		DescriptorSet(VkDevice device, VkDescriptorSet set, const DescriptorSetLayout* layout);
 
-		DescriptorSet(VkDevice device, VkDescriptorSet set)
-		: vk_device(device), vk_set(set) {}
+		/**
+		 * Update one descriptor binding to point to the given buffer or buffer section
+		 *
+		 * @param binding the descriptor set binding index to update
+		 * @param sampler the buffer to update it to
+		 * @param length the length of the buffer (or part of it) in bytes
+		 * @param offset the offset in the buffer where the section starts (in bytes)
+		 */
+		void buffer(int binding, const Buffer& buffer, size_t length, int offset = 0);
 
-		void buffer(int binding, VkDescriptorType type, const Buffer& buffer, size_t length, int offset = 0) {
-
-			VkDescriptorBufferInfo info {};
-			info.buffer = buffer.vk_buffer;
-			info.offset = offset;
-			info.range = length;
-
-			VkWriteDescriptorSet write {};
-			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			write.dstSet = vk_set;
-			write.dstBinding = binding;
-			write.dstArrayElement = 0;
-			write.descriptorType = type;
-			write.descriptorCount = 1;
-			write.pBufferInfo = &info;
-
-			vkUpdateDescriptorSets(vk_device, 1, &write, 0, nullptr);
-
-		}
-
-		void sampler(int binding, VkDescriptorType type, const ImageSampler& sampler) {
-
-			VkDescriptorImageInfo info {};
-			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			info.imageView = sampler.vk_view;
-			info.sampler = sampler.vk_sampler;
-
-			VkWriteDescriptorSet write {};
-			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			write.dstSet = vk_set;
-			write.dstBinding = binding;
-			write.dstArrayElement = 0;
-			write.descriptorType = type;
-			write.descriptorCount = 1;
-			write.pImageInfo = &info;
-
-			vkUpdateDescriptorSets(vk_device, 1, &write, 0, nullptr);
-
-		}
+		/**
+		 * Update one descriptor binding to point to the given sampler
+		 *
+		 * @param binding the descriptor set binding index to update
+		 * @param sampler the image sampler to update it to
+		 */
+		void sampler(int binding, const ImageSampler& sampler);
 
 };

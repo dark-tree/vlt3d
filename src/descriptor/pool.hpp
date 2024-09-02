@@ -2,7 +2,10 @@
 #pragma once
 
 #include "external.hpp"
-#include "descriptor.hpp"
+
+class DescriptorSetLayout;
+class DescriptorSet;
+class Device;
 
 class DescriptorPool {
 
@@ -14,70 +17,54 @@ class DescriptorPool {
 	public:
 
 		DescriptorPool() = default;
-		DescriptorPool(VkDescriptorPool vk_pool, VkDevice vk_device)
-		: vk_pool(vk_pool), vk_device(vk_device) {}
+		DescriptorPool(VkDescriptorPool vk_pool, VkDevice vk_device);
 
-		void close() {
-			vkDestroyDescriptorPool(vk_device, vk_pool, nullptr);
-		}
+		/**
+		 * Free the underlying vulkan object
+		 */
+		void close();
 
-		DescriptorSet allocate(DescriptorSetLayout layout) const {
-			VkDescriptorSet set;
+		/**
+		 * Free all the layouts allocated from this pool
+		 */
+		void reset();
 
-			VkDescriptorSetAllocateInfo alloc_info {};
-			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			alloc_info.pSetLayouts = &layout.vk_layout;
-			alloc_info.descriptorSetCount = 1;
-			alloc_info.descriptorPool = vk_pool;
-
-			if (vkAllocateDescriptorSets(vk_device, &alloc_info, &set) != VK_SUCCESS) {
-				throw Exception {"Failed to allocate descriptor set!"};
-			}
-
-			return {vk_device, set};
-		}
-
-		void reset() {
-			vkResetDescriptorPool(vk_device, vk_pool, 0);
-		}
-
+		/**
+		 * Allocate a new layout from the pool
+		 */
+		DescriptorSet allocate(const DescriptorSetLayout& layout) const;
 };
 
 class DescriptorPoolBuilder {
 
 	private:
 
-		std::vector<VkDescriptorPoolSize> sizes;
+		int dynamic_sets = 0;
+		int static_sets = 0;
+
+		std::vector<VkDescriptorType> dynamics;
+		std::vector<VkDescriptorType> statics;
 
 	public:
 
-		DescriptorPoolBuilder& add(int count, VkDescriptorType type) {
-			VkDescriptorPoolSize size {};
-			size.descriptorCount = count;
-			size.type = type;
+		/**
+		 * Add a layout that will be allocated for each concurrent frame
+		 */
+		DescriptorPoolBuilder& addDynamic(const DescriptorSetLayout& layout, int count = 1);
 
-			sizes.push_back(size);
-			return *this;
-		}
+		/**
+		 * Add a layout that will be allocated only once per application
+		 */
+		DescriptorPoolBuilder& addStatic(const DescriptorSetLayout& layout, int count = 1);
 
-		DescriptorPool done(Device device, uint32_t sets) const {
-			VkDescriptorPoolCreateInfo create_info {};
-			create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			create_info.poolSizeCount = sizes.size();
-			create_info.pPoolSizes = sizes.data();
-			create_info.maxSets = sets;
+		/**
+		 * Finish pool creation for the given number of concurrent frames
+		 */
+		DescriptorPool done(Device device, uint32_t sets) const;
 
-			VkDescriptorPool pool;
-
-			if (vkCreateDescriptorPool(device.vk_device, &create_info, nullptr, &pool) != VK_SUCCESS) {
-				throw Exception {"Failed to create descriptor pool!"};
-			}
-
-			return {pool, device.vk_device};
-		}
-
-		inline static DescriptorPoolBuilder begin() {
-			return {};
-		}
+		/**
+		 * Get a new DescriptorSetLayoutBuilder
+		 */
+		static DescriptorPoolBuilder begin();
 
 };

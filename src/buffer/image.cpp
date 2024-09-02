@@ -302,7 +302,7 @@ Image ManagedImageDataSet::upload(Allocator& allocator, TaskQueue& queue, Comman
 	size_t offset = 0;
 
 	// verify the given format again the first level (all levels are the same)
-	if (getFormatInfo(format).size != level(0).channels()) {
+	if (getFormatInfo(format).size != (size_t) level(0).channels()) {
 		throw Exception {"The specified image format doesn't match pixel size!"};
 	}
 

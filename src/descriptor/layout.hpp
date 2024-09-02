@@ -1,22 +1,44 @@
 #pragma once
 
+#include "external.hpp"
+
+class Device;
+
+struct DescriptorType {
+	VkDescriptorType vk_type;
+	bool enabled;
+
+	inline DescriptorType()
+	: enabled(false) {}
+};
+
 class DescriptorSetLayout {
 
 	public:
 
 		READONLY VkDevice vk_device;
 		READONLY VkDescriptorSetLayout vk_layout;
+		READONLY std::vector<DescriptorType> types;
 
 	public:
 
 		DescriptorSetLayout() = default;
-		DescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout)
-		: vk_device(device), vk_layout(layout) {}
+		DescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout, const std::vector<DescriptorType>& types);
 
-		void close() {
-			vkDestroyDescriptorSetLayout(vk_device, vk_layout, nullptr);
-		}
+		/**
+		 * Free the underlying vulkan object
+		 */
+		void close();
 
+		/**
+		 * Returns the VkDescriptorType of the specified binding index as defined in DescriptorSetLayoutBuilder
+		 */
+		VkDescriptorType getType(uint32_t index) const;
+
+		/**
+		 * Append all descriptor types used in this layout to the given list
+		 */
+		 void appendUsedTypes(std::vector<VkDescriptorType>& vector) const;
 };
 
 class DescriptorSetLayoutBuilder {
@@ -25,41 +47,34 @@ class DescriptorSetLayoutBuilder {
 
 		READONLY VkDescriptorSetLayoutCreateFlags vk_flags;
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
+		std::vector<DescriptorType> types;
+		ankerl::unordered_dense::segmented_set<uint32_t> indices;
+
+		void addBindingTypeMapping(uint32_t index, VkDescriptorType type);
 
 	public:
 
-		DescriptorSetLayoutBuilder(VkDescriptorSetLayoutCreateFlags flags = 0)
-		: vk_flags(flags) {}
+		DescriptorSetLayoutBuilder() = default;
+		DescriptorSetLayoutBuilder(VkDescriptorSetLayoutCreateFlags flags = 0);
 
-		DescriptorSetLayoutBuilder& descriptor(uint32_t index, VkDescriptorType type, VkShaderStageFlags shader, uint32_t count = 1) {
-			VkDescriptorSetLayoutBinding binding {};
-			binding.binding = index;
-			binding.descriptorType = type;
-			binding.stageFlags = shader;
-			binding.descriptorCount = count;
+		/**
+		 * Adds a new descriptor binding
+		 *
+		 * @param index the binding index, must match the one specified in the shader and the one in the allocated descriptor set
+		 * @param type the type of the data that will be bound to this binding
+		 * @param shader the shader stages where the binding will be made available
+		 * @param count
+		 */
+		DescriptorSetLayoutBuilder& descriptor(uint32_t index, VkDescriptorType type, VkShaderStageFlags shader);
 
-			bindings.push_back(binding);
-			return *this;
-		}
+		/**
+		 * Finish and build the layout object
+		 */
+		DescriptorSetLayout done(Device device) const;
 
-		DescriptorSetLayout done(Device device) const {
-			VkDescriptorSetLayout layout;
-
-			VkDescriptorSetLayoutCreateInfo create_info {};
-			create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			create_info.flags = vk_flags;
-			create_info.bindingCount = bindings.size();
-			create_info.pBindings = bindings.data();
-
-			if (vkCreateDescriptorSetLayout(device.vk_device, &create_info, nullptr, &layout) != VK_SUCCESS) {
-				throw Exception {"Failed to create descriptor set!"};
-			}
-
-			return {device.vk_device, layout};
-		}
-
-		inline static DescriptorSetLayoutBuilder begin() {
-			return {};
-		}
+		/**
+		 * Get a new DescriptorSetLayoutBuilder
+		 */
+		static DescriptorSetLayoutBuilder begin(VkDescriptorSetLayoutCreateFlags flags = 0);
 
 };
