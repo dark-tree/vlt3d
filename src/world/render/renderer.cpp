@@ -3,12 +3,14 @@
 #include "mesher.hpp"
 #include "world/view.hpp"
 
+std::atomic_int world_vertex_count = 0;
+
 /*
  * ChunkBuffer
  */
 
 WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh)
-: pos(pos), buffer(system, mesh.size() * sizeof(VertexTerrain)) {
+: pos(pos), count(mesh.size()), buffer(system, count * sizeof(VertexTerrain)) {
 	buffer.write(mesh.data(), mesh.size());
 
 	#if !defined(NDEBUG)
@@ -56,7 +58,9 @@ void WorldRenderer::eraseBuffer(glm::ivec3 pos) {
 	auto it = buffers.find(pos);
 
 	if (it != buffers.end()) {
-		buffers.extract(it).second->dispose(system);
+		ChunkBuffer* buffer = buffers.extract(it).second;
+		world_vertex_count -= buffer->count;
+		buffer->dispose(system);
 	}
 }
 
@@ -107,6 +111,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
 	auto* chunk = new ChunkBuffer(system, pos, mesh);
+	world_vertex_count += chunk->count;
 
 	std::lock_guard lock {submit_mutex};
 	allocations.push_back(chunk->buffer.getCount());

@@ -60,10 +60,6 @@ BlockFaceView ChunkFaceBuffer::getBlockView(int x, int y, int z) {
  * GreedyMesher
  */
 
-bool GreedyMesher::QuadDelegate::canMergeWith(const QuadDelegate& other) const {
-	return (other.offset == offset) && (other.index == index) && (other.streak == streak);
-}
-
 void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array) {
 
 	buffer.clear();
@@ -91,6 +87,7 @@ void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& 
 				int top = (block.block_type % 2 == 1) ? gray_sprite : clay_sprite;
 				int side = top;
 				int bottom = top;
+				int culled = 0xFFFF;
 
 				bool west = view.getBlock(pos.x - 1, pos.y, pos.z).isAir();
 				bool east = view.getBlock(pos.x + 1, pos.y, pos.z).isAir();
@@ -104,12 +101,12 @@ void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& 
 					top = moss_sprite;
 				}
 
-				*faces.west = west * side;
-				*faces.east = east * side;
-				*faces.down = down * bottom;
-				*faces.up = up * top;
-				*faces.north = north * side;
-				*faces.south = south * side;
+				*faces.west = west ? side : culled;
+				*faces.east = east ? side : culled;
+				*faces.down = down ? bottom : culled;
+				*faces.up = up ? top : culled;
+				*faces.north = north ? side : culled;
+				*faces.south = south ? side : culled;
 			}
 		}
 	}

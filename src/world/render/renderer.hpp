@@ -10,6 +10,8 @@
 #include "client/frustum.hpp"
 #include "pool.hpp"
 
+extern std::atomic_int world_vertex_count;
+
 // move this somewhere else?
 template <typename T>
 class DoubleBuffered {
@@ -63,6 +65,7 @@ class WorldRenderer {
 
 		struct ChunkBuffer {
 			glm::ivec3 pos;
+			int count;
 			BasicBuffer buffer;
 
 			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh);
