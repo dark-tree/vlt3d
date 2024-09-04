@@ -27,8 +27,8 @@ ChunkFaceBuffer::~ChunkFaceBuffer() {
 	delete[] this->buffer;
 }
 
-void ChunkFaceBuffer::clear() {
-	memset(this->buffer, 0, size * sizeof(ChunkPlane));
+void ChunkFaceBuffer::clear(uint16_t empty) {
+	memset(this->buffer, empty, size * sizeof(ChunkPlane));
 }
 
 ChunkPlane& ChunkFaceBuffer::getX(int x, int offset) {
@@ -62,7 +62,7 @@ BlockFaceView ChunkFaceBuffer::getBlockView(int x, int y, int z) {
 
 void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array) {
 
-	buffer.clear();
+	buffer.clear(GreedyMesher::empty_tile);
 	Chunk* self = view.getOriginChunk();
 
 	int gray_sprite = array.getSpriteIndex("gray");
@@ -87,7 +87,6 @@ void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& 
 				int top = (block.block_type % 2 == 1) ? gray_sprite : clay_sprite;
 				int side = top;
 				int bottom = top;
-				int culled = 0xFFFF;
 
 				bool west = view.getBlock(pos.x - 1, pos.y, pos.z).isAir();
 				bool east = view.getBlock(pos.x + 1, pos.y, pos.z).isAir();
@@ -101,12 +100,12 @@ void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& 
 					top = moss_sprite;
 				}
 
-				*faces.west = west ? side : culled;
-				*faces.east = east ? side : culled;
-				*faces.down = down ? bottom : culled;
-				*faces.up = up ? top : culled;
-				*faces.north = north ? side : culled;
-				*faces.south = south ? side : culled;
+				*faces.west = west ? side : culled_tile;
+				*faces.east = east ? side : culled_tile;
+				*faces.down = down ? bottom : culled_tile;
+				*faces.up = up ? top : culled_tile;
+				*faces.north = north ? side : culled_tile;
+				*faces.south = south ? side : culled_tile;
 			}
 		}
 	}
