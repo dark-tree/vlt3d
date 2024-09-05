@@ -72,7 +72,9 @@ class Frame {
 
 		SceneUniform uniforms;
 		DescriptorSet set_0, set_1, set_2, set_3;
+
 		QueryPool timestamp_query;
+		QueryPool occlusion_query;
 
 	public:
 

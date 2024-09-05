@@ -49,12 +49,22 @@ class CommandRecorder {
 		}
 
 		CommandRecorder& resetQueryPool(QueryPool& pool) {
-			vkCmdResetQueryPool(vk_buffer, pool.vk_pool, 0, pool.count);
+			vkCmdResetQueryPool(vk_buffer, pool.vk_pool, 0, pool.size());
 			return *this;
 		}
 
 		CommandRecorder& queryTimestamp(QueryPool& pool, uint32_t index, VkPipelineStageFlagBits stage) {
 			vkCmdWriteTimestamp(vk_buffer, stage, pool.vk_pool, index);
+			return *this;
+		}
+
+		CommandRecorder& beginQuery(QueryPool& pool, uint32_t index) {
+			vkCmdBeginQuery(vk_buffer, pool.vk_pool, index, 0);
+			return *this;
+		}
+
+		CommandRecorder& endQuery(QueryPool& pool, uint32_t index) {
+			vkCmdEndQuery(vk_buffer, pool.vk_pool, index);
 			return *this;
 		}
 

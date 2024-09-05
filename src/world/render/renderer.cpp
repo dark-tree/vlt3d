@@ -4,13 +4,15 @@
 #include "world/view.hpp"
 
 std::atomic_int world_vertex_count = 0;
+std::atomic_int world_chunk_count = 0;
+std::atomic_int world_frustum_count = 0;
 
 /*
  * ChunkBuffer
  */
 
-WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh)
-: pos(pos), count(mesh.size()), buffer(system, count * sizeof(VertexTerrain)) {
+WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, int identifier)
+: pos(pos), count(mesh.size()), identifier(identifier), buffer(system, count * sizeof(VertexTerrain)) {
 	buffer.write(mesh.data(), mesh.size());
 
 	#if !defined(NDEBUG)
@@ -24,26 +26,23 @@ WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, co
 	#endif
 }
 
-void WorldRenderer::ChunkBuffer::draw(CommandRecorder& recorder, Frustum& frustum) {
-	if (!buffer.empty()) {
-		glm::vec3 world_pos {pos * Chunk::size};
-		world_pos -= 0.5f;
+void WorldRenderer::ChunkBuffer::draw(Frame& frame, CommandRecorder& recorder, Frustum& frustum) {
+	glm::vec3 world_pos {pos * Chunk::size};
+	world_pos -= 0.5f;
 
+	if (frame.occlusion_query.read(identifier).get(1)) {
 		if (frustum.testBox3D(world_pos, world_pos + (float) Chunk::size)) {
+
+			recorder.beginQuery(frame.occlusion_query, identifier);
 			buffer.draw(recorder);
+			recorder.endQuery(frame.occlusion_query, identifier);
+
+			world_frustum_count++;
 		}
 	}
 }
 
 void WorldRenderer::ChunkBuffer::dispose(RenderSystem& system) {
-
-	// empty buffers can just be tossed away, they don't actually hold
-	// any vulkan resources and never were actually passed to the GPU
-	if (buffer.empty()) {
-		delete this;
-		return;
-	}
-
 	system.defer([this] () {
 		this->buffer.close();
 		delete this;
@@ -60,6 +59,7 @@ void WorldRenderer::eraseBuffer(glm::ivec3 pos) {
 	if (it != buffers.end()) {
 		ChunkBuffer* buffer = buffers.extract(it).second;
 		world_vertex_count -= buffer->count;
+		world_chunk_count --;
 		buffer->dispose(system);
 	}
 }
@@ -96,22 +96,26 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 
 void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
+	world_frustum_count = 0;
+	Frame& frame = system.getFrame();
+
 	// begin rendering chunks that did not change, to not waste time during the upload from `prepare()`
 	for (auto& [pos, chunk] : buffers) {
-		chunk->draw(recorder, frustum);
+		chunk->draw(frame, recorder, frustum);
 	}
 
 	// render all new chunks and copy them into static chunk map
 	for (ChunkBuffer* chunk : awaiting.read()) {
 		buffers[chunk->pos] = chunk;
-		chunk->draw(recorder, frustum);
+		chunk->draw(frame, recorder, frustum);
 	}
 
 }
 
 void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
-	auto* chunk = new ChunkBuffer(system, pos, mesh);
+	auto* chunk = new ChunkBuffer(system, pos, mesh, chunk_identifier ++);
 	world_vertex_count += chunk->count;
+	world_chunk_count ++;
 
 	std::lock_guard lock {submit_mutex};
 	allocations.push_back(chunk->buffer.getCount());

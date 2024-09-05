@@ -11,6 +11,8 @@
 #include "pool.hpp"
 
 extern std::atomic_int world_vertex_count;
+extern std::atomic_int world_chunk_count;
+extern std::atomic_int world_frustum_count;
 
 // move this somewhere else?
 template <typename T>
@@ -58,6 +60,7 @@ class WorldRenderer {
 
 	private:
 
+		int chunk_identifier = 0;
 		RenderSystem& system;
 		World& world;
 		ChunkRenderPool mesher;
@@ -65,13 +68,13 @@ class WorldRenderer {
 
 		struct ChunkBuffer {
 			glm::ivec3 pos;
-			int count;
+			int count, identifier;
 			BasicBuffer buffer;
 
-			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh);
+			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, int id);
 
 			/// draw this buffer
-			void draw(CommandRecorder& recorder, Frustum& frustum);
+			void draw(Frame& frame, CommandRecorder& recorder, Frustum& frustum);
 
 			/// dispose of this buffer as soon as it's valid to do so
 			void dispose(RenderSystem& system);

@@ -58,7 +58,10 @@ bool ChunkRenderPool::empty() {
 void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view) {
 	mesh.clear();
 	GreedyMesher::emitChunk(mesh, buffer, view, system.assets.state->array);
-	renderer.submitChunk(view.origin(), mesh);
+
+	if (!mesh.empty()) {
+		renderer.submitChunk(view.origin(), mesh);
+	}
 }
 
 void ChunkRenderPool::run() {

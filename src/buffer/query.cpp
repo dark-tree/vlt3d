@@ -12,7 +12,7 @@ QueryPool::QueryPool(Device& device, VkQueryType type, int count, VkQueryPipelin
 	create_info.queryType = type;
 	create_info.pipelineStatistics = statistics;
 
-	this->count = count;
+	results.resize(count);
 	this->vk_device = device.vk_device;
 
 	vkCreateQueryPool(device.vk_device, &create_info, AllocatorCallbackFactory::named("QueryPool"), &vk_pool);
@@ -22,13 +22,17 @@ void QueryPool::close() {
 	vkDestroyQueryPool(vk_device, vk_pool, AllocatorCallbackFactory::named("QueryPool"));
 }
 
-Query QueryPool::read(int index) const {
-	Query query;
-	query.value = 0;
-	query.status = 1;
+void QueryPool::load() {
+	const size_t count = size();
 
 	VkQueryResultFlags flags = VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT;
-	vkGetQueryPoolResults(vk_device, vk_pool, index, 1, sizeof(Query), &query, sizeof(Query), flags);
+	vkGetQueryPoolResults(vk_device, vk_pool, 0, count, sizeof(Query) * count, results.data(), sizeof(Query), flags);
+}
 
-	return query;
+Query QueryPool::read(int index) const {
+	return results[index];
+}
+
+size_t QueryPool::size() const {
+	return results.size();
 }

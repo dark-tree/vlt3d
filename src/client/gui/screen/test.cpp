@@ -70,12 +70,14 @@ void TestScreen::draw(ImmediateRenderer& renderer, InputContext& input, Camera& 
 	int fps = profiler.getCountPerSecond();
 	double avg = profiler.getAvgFrameTime();
 	double delta = profiler.getMaxFrameTime() - avg;
-	int count = world_vertex_count;
+	int vertices = world_vertex_count;
+	int chunks = world_chunk_count;
+	int frustum = world_frustum_count;
 
 	glm::vec3 pos = camera.getPosition();
 	renderer.drawText(10, 10, "FPS: " + std::to_string(fps) + " (avg: " + format(avg, 2) + " ms, +" + format(delta, 2) + ") ");
 	renderer.drawText(10, 10 + 18 * 1, "X: " + format(pos.x, 4) + ", Y: " + format(pos.y, 4) + ", Z: " + format(pos.z, 4));
-	renderer.drawText(10, 10 + 18 * 2, "Terrain: " + std::to_string(count));
+	renderer.drawText(10, 10 + 18 * 2, "Vertices: " + std::to_string(vertices) + ", chunks: " + std::to_string(frustum) + "/" + std::to_string(chunks));
 
 	renderer.drawText(10, 10 + 18 * 3, test ? "Press [SPACE] to hide" : "Press [SPACE] to show");
 	renderer.drawText(10, 10 + 18 * 4, "Press [ESCAPE] to pause");

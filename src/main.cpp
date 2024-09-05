@@ -70,6 +70,9 @@ int main() {
 		frame.execute();
 
 		if (!frame.first()) {
+			frame.timestamp_query.load();
+			frame.occlusion_query.load();
+
 			Query start = frame.timestamp_query.read(0);
 			Query end = frame.timestamp_query.read(1);
 
@@ -88,6 +91,7 @@ int main() {
 
 		// record commands
 		CommandRecorder recorder = frame.buffer.record();
+		recorder.resetQueryPool(frame.occlusion_query);
 		recorder.resetQueryPool(frame.timestamp_query);
 		recorder.queryTimestamp(frame.timestamp_query, 0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
@@ -104,7 +108,6 @@ int main() {
 		recorder.bufferTransferBarrier();
 
 		world.update(world_generator, camera.getPosition(), 16);
-
 
 		recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent)
 			.bindPipeline(system.pipeline_3d_terrain)

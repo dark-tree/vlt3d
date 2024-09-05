@@ -44,6 +44,7 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	set_3.sampler(3, system.attachment_ambience.sampler);
 
 	timestamp_query = QueryPool(system.device, VK_QUERY_TYPE_TIMESTAMP, 2);
+	occlusion_query = QueryPool(system.device, VK_QUERY_TYPE_OCCLUSION, 32000);
 }
 
 Frame::~Frame() {
@@ -54,6 +55,7 @@ Frame::~Frame() {
 	finished_semaphore.close();
 	flight_fence.close();
 	timestamp_query.close();
+	occlusion_query.close();
 }
 
 void Frame::wait() {

@@ -10,10 +10,18 @@ struct Query {
 	READONLY uint64_t status;
 
 	/**
+	 * Returns the query value or the provided fallback default
+	 * value if the query result is not available
+	 */
+	inline uint64_t get(uint64_t fallback) const {
+		return present() ? value : fallback;
+	}
+
+	/**
 	 * Verify that this method returns true before trying to
 	 * read the value returned by the query read (.value)
 	 */
-	bool present() const {
+	inline bool present() const {
 		return status != 0;
 	}
 
@@ -27,9 +35,12 @@ static_assert(sizeof(Query) == 2 * sizeof(uint64_t));
  */
 class QueryPool {
 
+	private:
+
+		std::vector<Query> results;
+
 	public:
 
-		READONLY uint32_t count;
 		READONLY VkDevice vk_device;
 		READONLY VkQueryPool vk_pool;
 
@@ -44,8 +55,18 @@ class QueryPool {
 		void close();
 
 		/**
-		 * Return the specified query value
+		 * Copies all the queries into a local buffer
+		 */
+		void load();
+
+		/**
+		 * Return the specified query
 		 */
 		Query read(int index) const;
+
+		/**
+		 * Get the number of queries in this pool
+		 */
+		size_t size() const;
 
 };

@@ -252,9 +252,9 @@ class GreedyMesher {
 
 			for (int a = 0; a < Chunk::size; a ++) {
 
-				size_t prev = 0;                // the index of the previous quad delegate that can be merged with
-				uint16_t culled = 0;            // counts the culled tiles used for prefix/postfix and in-row greedier merging
-				int barrier = delegates.size(); // needed so we know which delegates were added
+				size_t prev = 0;                   // the index of the previous quad delegate that can be merged with
+				uint16_t culled = 0;               // counts the culled tiles used for prefix/postfix and in-row greedier merging
+				size_t barrier = delegates.size(); // needed so we know which delegates were added
 
 				// make everything point to the empty delegate by default
 				memset(front, 0, sizeof(front));
@@ -321,7 +321,7 @@ class GreedyMesher {
 				}
 
 				// imprint quads into row buffer
-				for (int i = barrier; i < delegates.size(); i ++) {
+				for (size_t i = barrier; i < delegates.size(); i ++) {
 					QuadDelegate& delegate = delegates[i];
 
 					int length = delegate.streak;

@@ -82,7 +82,7 @@ void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& 
 				}
 
 				BlockFaceView faces = buffer.getBlockView(x, y, z);
-				glm::ivec3 pos = offset + glm::ivec3{x, y, z};
+				glm::ivec3 pos = offset + glm::ivec3 {x, y, z};
 
 				int top = (block.block_type % 2 == 1) ? gray_sprite : clay_sprite;
 				int side = top;
