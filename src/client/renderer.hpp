@@ -88,8 +88,8 @@ class Frame {
 
 		/**
 		 * Wait before starting to render this frame
-		 * until the last frame with this index has been completed,
-		 * this is too keep the CPU from "running away" from the GPU
+		 * until the last frame with this index has been completed
+		 * (this is needed to keep the CPU from "running away" from the GPU).
 		 */
 		void wait();
 
@@ -108,6 +108,11 @@ class Frame {
 		 * Write data into the mapped memory of the shared uniform buffer
 		 */
 		void flushUniformBuffer();
+
+		/**
+		 * Returns a queue for tasks to be executed one frame cycle later
+		 */
+		TaskQueue& getDelegator();
 
 };
 
@@ -138,6 +143,9 @@ class RenderSystem {
 		ImageSampler ssao_noise_sampler;
 		Buffer ssao_uniform_buffer;
 
+		// Chunk Occlusion
+		Buffer chunk_occlusion_box;
+
 		Attachment attachment_color;
 		Attachment attachment_depth;
 		Attachment attachment_albedo;
@@ -149,11 +157,12 @@ class RenderSystem {
 		RenderPass ssao_pass;
 		RenderPass lighting_pass;
 
-		GraphicsPipeline pipeline_3d_terrain;
+		GraphicsPipeline pipeline_terrain;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;
 		GraphicsPipeline pipeline_ssao;
 		GraphicsPipeline pipeline_compose;
+		GraphicsPipeline pipeline_occlude;
 
 		Swapchain swapchain;
 		std::vector<Framebuffer> framebuffers;
@@ -167,12 +176,17 @@ class RenderSystem {
 		DescriptorSetLayout lighting_descriptor_layout;
 
 		BindingLayout binding_terrain;
+		BindingLayout binding_occlude;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;
 		DescriptorPool descriptor_pool;
 
+		// TODO this is a mess
 		PushConstantLayout constant_layout;
 		PushConstant push_constant;
+
+		PushConstantLayout constant_layout_occlude;
+		PushConstant push_constant_occlude;
 
 	private:
 
@@ -235,6 +249,16 @@ class RenderSystem {
 		 *
 		 */
 		void createFrames();
+
+		/**
+		 *
+		 */
+		void initScreenSpaceAmbientOcclusion();
+
+		/**
+		 *
+		 */
+		void initChunkOcclusion();
 
 	public:
 

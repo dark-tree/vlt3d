@@ -68,8 +68,8 @@ class CommandRecorder {
 			return *this;
 		}
 
-		CommandRecorder& insertDebugLabel(const char* name, glm::vec3 color) {
-			VulkanDebug::insert(vk_buffer, name, color);
+		CommandRecorder& insertDebugLabel(const char* name) {
+			VulkanDebug::insert(vk_buffer, name, {1.0f, 1.0f, 1.0f});
 			return *this;
 		}
 

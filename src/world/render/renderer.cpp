@@ -26,20 +26,12 @@ WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, co
 	#endif
 }
 
-void WorldRenderer::ChunkBuffer::draw(Frame& frame, CommandRecorder& recorder, Frustum& frustum) {
-	glm::vec3 world_pos {pos * Chunk::size};
-	world_pos -= 0.5f;
+void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder) {
+	recorder.beginQuery(pool, identifier);
+	buffer.draw(recorder);
+	recorder.endQuery(pool, identifier);
 
-	if (frame.occlusion_query.read(identifier).get(1)) {
-		if (frustum.testBox3D(world_pos, world_pos + (float) Chunk::size)) {
-
-			recorder.beginQuery(frame.occlusion_query, identifier);
-			buffer.draw(recorder);
-			recorder.endQuery(frame.occlusion_query, identifier);
-
-			world_frustum_count++;
-		}
-	}
+	world_frustum_count ++;
 }
 
 void WorldRenderer::ChunkBuffer::dispose(RenderSystem& system) {
@@ -47,6 +39,14 @@ void WorldRenderer::ChunkBuffer::dispose(RenderSystem& system) {
 		this->buffer.close();
 		delete this;
 	});
+}
+
+glm::vec3 WorldRenderer::ChunkBuffer::getOffset() const {
+	return glm::vec3 {pos * Chunk::size} - 0.5f;
+}
+
+bool WorldRenderer::ChunkBuffer::getOcclusion(QueryPool& pool) const {
+	return pool.read(this->identifier).get(0);
 }
 
 /*
@@ -98,17 +98,74 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 	world_frustum_count = 0;
 	Frame& frame = system.getFrame();
+	VkExtent2D extent = system.swapchain.vk_extent; // clean up ?
 
-	// begin rendering chunks that did not change, to not waste time during the upload from `prepare()`
-	for (auto& [pos, chunk] : buffers) {
-		chunk->draw(frame, recorder, frustum);
+	// TODO get this from the camera
+	glm::vec3 origin {0, 0, 0};
+
+	relative = buffers.values();
+	std::sort(relative.begin(), relative.end(), [origin] (const auto& lhs, const auto& rhs) {
+		return glm::distance2(glm::vec3 {lhs.first}, origin) < glm::distance2(glm::vec3 {rhs.first}, origin);
+	});
+
+	std::vector<ChunkBuffer*> discarded;
+
+	// begin Terrain Render Pass
+	recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent);
+	recorder.bindPipeline(system.pipeline_terrain);
+	recorder.bindDescriptorSet(frame.set_0);
+	recorder.insertDebugLabel("Draw Visible");
+
+	for (auto& [pos, chunk] : relative) {
+
+		glm::vec3 offset = chunk->getOffset();
+		bool visible = chunk->getOcclusion(frame.occlusion_query);
+
+		if (visible) {
+			chunk->draw(frame.occlusion_query, recorder);
+			continue;
+		}
+
+		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
+			discarded.push_back(chunk);
+		}
+
 	}
+
+	// Here we SHOULD wait for terrain upload to complete but we do
+	// that earlier (before we begin world rendering) that should preferably not be so
+
+	recorder.insertDebugLabel("Draw Awaiting");
 
 	// render all new chunks and copy them into static chunk map
 	for (ChunkBuffer* chunk : awaiting.read()) {
 		buffers[chunk->pos] = chunk;
-		chunk->draw(frame, recorder, frustum);
+		glm::vec3 offset = chunk->getOffset();
+
+		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
+			chunk->draw(frame.occlusion_query, recorder);
+		}
 	}
+
+	// now we will test the chunks deemed occluded in the previous cycle
+	recorder.nextSubpass();
+	recorder.bindPipeline(system.pipeline_occlude);
+	recorder.bindBuffer(system.chunk_occlusion_box);
+	recorder.insertDebugLabel("Draw Occluded");
+
+	// we need to rebind the same descriptor set here as the pipeline layout is different
+	recorder.bindDescriptorSet(frame.set_0);
+
+	for (ChunkBuffer* chunk : discarded) {
+		glm::vec3 offset = chunk->getOffset();
+
+		recorder.beginQuery(frame.occlusion_query, chunk->identifier);
+		recorder.writePushConstant(system.push_constant_occlude, glm::value_ptr(offset));
+		recorder.draw(36);
+		recorder.endQuery(frame.occlusion_query, chunk->identifier);
+	}
+
+	recorder.endRenderPass();
 
 }
 

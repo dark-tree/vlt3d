@@ -73,11 +73,17 @@ class WorldRenderer {
 
 			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, int id);
 
-			/// draw this buffer
-			void draw(Frame& frame, CommandRecorder& recorder, Frustum& frustum);
+			/// draw this buffer unconditionally
+			void draw(QueryPool& pool, CommandRecorder& recorder);
 
 			/// dispose of this buffer as soon as it's valid to do so
 			void dispose(RenderSystem& system);
+
+			/// get the position of the chunk in world coordinates
+			glm::vec3 getOffset() const;
+
+			/// get the occlusion test result form the previous frame
+			bool getOcclusion(QueryPool& pool) const;
 		};
 
 		/// erase vertex buffer and mark it for deletion
@@ -88,6 +94,10 @@ class WorldRenderer {
 		// makes sure nothing gets fucked when we submit
 		// chunk meshes from multiple threads
 		std::mutex submit_mutex;
+
+		// a list of all the to be rendered chunk buffers, each frame copied
+		// and sorted from closest to furthest away from the camera
+		std::vector<std::pair<glm::ivec3, ChunkBuffer*>> relative;
 
 		// this holds the meshes of chunks that did not change (at least from
 		// a rendering stand point - no new mesh is yet submitted for them)

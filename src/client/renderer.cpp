@@ -3,6 +3,8 @@
 
 #include "setup/device.hpp"
 #include "util/random.hpp"
+#include "vertices.hpp"
+#include "world/chunk.hpp"
 
 /*
  * Frame
@@ -76,6 +78,10 @@ bool Frame::first() const {
 void Frame::flushUniformBuffer() {
 	uniform_map.write(&uniforms, sizeof(uniforms));
 	uniform_map.flush();
+}
+
+TaskQueue& Frame::getDelegator() {
+	return queue;
 }
 
 /*
@@ -172,10 +178,19 @@ void RenderSystem::createRenderPass() {
 			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
 			.next();
 
+		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT)
+			.input(0, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+			.output(1, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)
+			.next();
+
 		builder.addSubpass()
 			.addOutput(albedo, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addOutput(normal, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			.addOutput(position, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		builder.addSubpass()
 			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			.next();
 
@@ -357,7 +372,7 @@ void RenderSystem::recreateSwapchain() {
 	createFramebuffers();
 
 	pipeline_2d_tint.close();
-	pipeline_3d_terrain.close();
+	pipeline_terrain.close();
 	pipeline_3d_tint.close();
 
 	createPipelines();
@@ -371,7 +386,7 @@ void RenderSystem::createPipelines() {
 
 	VkExtent2D extent = swapchain.vk_extent;
 
-	pipeline_3d_terrain = GraphicsPipelineBuilder::of(device)
+	pipeline_terrain = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
@@ -382,6 +397,19 @@ void RenderSystem::createPipelines() {
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(geometry_descriptor_layout)
 		.withDebugName("Terrain")
+		.build();
+
+	pipeline_occlude = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withCulling(true)
+		.withRenderPass(terrain_pass, 1)
+		.withShaders(assets.state->vert_occlude, assets.state->frag_occlude)
+		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, false)
+		.withBindingLayout(binding_occlude)
+		.withPushConstantLayout(constant_layout_occlude)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
+		.withDebugName("Occlude")
 		.build();
 
 	pipeline_3d_tint = GraphicsPipelineBuilder::of(device)
@@ -461,6 +489,138 @@ void RenderSystem::createFrames() {
 	}
 }
 
+void RenderSystem::initScreenSpaceAmbientOcclusion() {
+
+	Random random {42};
+	TaskQueue transient_tasks;
+	CommandBuffer transient_commands = transient_pool.allocate();
+	CommandRecorder transient_recorder = transient_commands.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	Fence fence = device.fence();
+
+	std::vector<glm::vec4> ssao_noise;
+	std::vector<glm::vec4> ssao_kernel;
+	AmbientOcclusionUniform ssao_config;
+
+	for (unsigned int i = 0; i < 16; i ++) {
+
+		glm::vec3 sample;
+		sample.x = random.uniformFloat(-1, 1);
+		sample.y = random.uniformFloat(-1, 1);
+		sample.z = 0;
+
+		ssao_noise.emplace_back(sample, 0.0f);
+	}
+
+	for (int i = 0; i < 64; ++ i) {
+
+		glm::vec3 sample;
+		sample.x = random.uniformFloat(-1, 1);
+		sample.y = random.uniformFloat(-1, 1);
+		sample.z = random.uniformFloat(0, 1);
+
+		sample = glm::normalize(sample);
+		sample *= random.uniformFloat(0, 1);
+
+		float frac = i / 64.0f;
+		float scale = std::lerp(0.1f, 1.0f, frac * frac);
+		sample *= scale;
+
+		ssao_kernel.emplace_back(sample, 0.0f);
+
+	}
+
+	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec4));
+	ssao_config.noise_scale = glm::vec2 {1000.0/4.0, 700.0/4.0}; // TODO
+
+	ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_tasks, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT, false);
+	ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
+	ssao_noise_sampler = ssao_noise_view.getSamplerBuilder().setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT).setFilter(VK_FILTER_NEAREST).build(device);
+
+	ssao_noise_image.setDebugName(device, "SSAO Noise");
+	ssao_noise_view.setDebugName(device, "SSAO Noise");
+	ssao_noise_sampler.setDebugName(device, "SSAO Noise");
+
+	BufferInfo buffer_builder {sizeof(AmbientOcclusionUniform), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
+	buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	buffer_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+	ssao_uniform_buffer = allocator.allocateBuffer(buffer_builder);
+	ssao_uniform_buffer.setDebugName(device, "SSAO Uniform");
+
+	MemoryMap ssao_map = ssao_uniform_buffer.access().map();
+	ssao_map.write(&ssao_config, sizeof(AmbientOcclusionUniform));
+	ssao_map.flush();
+	ssao_map.unmap();
+
+	transient_recorder.done();
+	transient_commands.submit().unlocks(fence).done(transfer_queue);
+	fence.wait();
+	fence.close();
+	transient_commands.close();
+	transient_tasks.execute();
+
+}
+
+void RenderSystem::initChunkOcclusion() {
+
+	CommandBuffer transient_commands = transient_pool.allocate();
+	CommandRecorder transient_recorder = transient_commands.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	Fence fence = device.fence();
+
+	float s = -0.5;
+	float e = s + Chunk::size;
+
+	VertexOcclusion a0 {e, e, e};
+	VertexOcclusion a1 {s, e, e};
+	VertexOcclusion a2 {s, s, e};
+	VertexOcclusion a3 {e, s, e};
+	VertexOcclusion a4 {e, e, s};
+	VertexOcclusion a5 {s, e, s};
+	VertexOcclusion a6 {s, s, s};
+	VertexOcclusion a7 {e, s, s};
+
+	VertexOcclusion vertices[] = {
+		a1, a2, a3, a3, a0, a1,
+		a2, a6, a7, a7, a3, a2,
+		a6, a5, a4, a4, a7, a6,
+		a5, a1, a0, a0, a4, a5,
+		a0, a3, a7, a7, a4, a0,
+		a5, a6, a2, a2, a1, a5
+	};
+
+	BufferInfo host_builder {sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
+	host_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	host_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+	host_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+
+	BufferInfo device_builder {sizeof(vertices), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT};
+	device_builder.required(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	device_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+	device_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+
+	Buffer host_buffer = allocator.allocateBuffer(host_builder);
+	Buffer device_buffer = allocator.allocateBuffer(device_builder);
+
+	MemoryMap map = host_buffer.access().map();
+	map.write(vertices, sizeof(vertices));
+	map.flush();
+	map.unmap();
+
+	transient_recorder.copyBufferToBuffer(device_buffer, host_buffer, sizeof(vertices));
+
+	transient_recorder.done();
+	transient_commands.submit().unlocks(fence).done(transfer_queue);
+	fence.wait();
+	fence.close();
+	transient_commands.close();
+	host_buffer.close();
+
+	chunk_occlusion_box = device_buffer;
+	chunk_occlusion_box.setDebugName(device, "Chunk Bounding Box");
+
+}
+
 RenderSystem::RenderSystem(Window& window, int concurrent)
 : window(window), concurrent(concurrent), index(0) {
 
@@ -492,6 +652,7 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	// enable some additional features
 	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.fillModeNonSolid);
 	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.wideLines);
+	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.pipelineStatisticsQuery);
 
 	// device and queue creation
 	device = device_builder.create();
@@ -526,6 +687,11 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.attribute(4, VK_FORMAT_R8_UINT)          // normal
 		.done();
 
+	// biding layout used by chunk bounding boxes
+	binding_occlude = BindingLayoutBuilder::begin()
+		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT) // xyz
+		.done();
+
 	// 3D binding layout
 	binding_3d = BindingLayoutBuilder::begin()
 		.attribute(0, VK_FORMAT_R32G32B32_SFLOAT)
@@ -542,6 +708,10 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 
 	constant_layout = PushConstantLayoutBuilder::begin()
 		.add(Kind::VERTEX | Kind::FRAGMENT, 64 + 64, &push_constant)
+		.done();
+
+	constant_layout_occlude = PushConstantLayoutBuilder::begin()
+		.add(Kind::VERTEX, 3 * sizeof(float), &push_constant_occlude)
 		.done();
 
 	attachment_depth = AttachmentImageBuilder::begin()
@@ -586,74 +756,8 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setDebugName("Ambience")
 		.build();
 
-	Random random {42};
-	TaskQueue transient_buffers;
-	CommandBuffer transient_commands = transient_pool.allocate();
-	CommandRecorder transient_recorder = transient_commands.record(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	Fence fence = device.fence();
-
-	std::vector<glm::vec4> ssao_noise;
-	std::vector<glm::vec4> ssao_kernel;
-	AmbientOcclusionUniform ssao_config;
-
-	for (unsigned int i = 0; i < 16; i ++) {
-
-		glm::vec3 sample;
-		sample.x = random.uniformFloat(-1, 1);
-		sample.y = random.uniformFloat(-1, 1);
-		sample.z = 0;
-
-		ssao_noise.emplace_back(sample, 0.0f);
-	}
-
-	for (int i = 0; i < 64; ++ i) {
-
-		glm::vec3 sample;
-		sample.x = random.uniformFloat(-1, 1);
-		sample.y = random.uniformFloat(-1, 1);
-		sample.z = random.uniformFloat(0, 1);
-
-		sample = glm::normalize(sample);
-		sample *= random.uniformFloat(0, 1);
-
-		float frac = i / 64.0f;
-		float scale = std::lerp(0.1f, 1.0f, frac * frac);
-		sample *= scale;
-
-		ssao_kernel.emplace_back(sample, 0.0f);
-
-	}
-
-	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec4));
-	ssao_config.noise_scale = glm::vec2 {1000.0/4.0, 700.0/4.0};
-
-	ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_buffers, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT, false);
-	ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
-	ssao_noise_sampler = ssao_noise_view.getSamplerBuilder().setMode(VK_SAMPLER_ADDRESS_MODE_REPEAT).setFilter(VK_FILTER_NEAREST).build(device);
-
-	ssao_noise_image.setDebugName(device, "SSAO Noise");
-	ssao_noise_view.setDebugName(device, "SSAO Noise");
-	ssao_noise_sampler.setDebugName(device, "SSAO Noise");
-
-	BufferInfo ssao_buffer_builder {sizeof(AmbientOcclusionUniform), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
-	ssao_buffer_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	ssao_buffer_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	ssao_buffer_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-	ssao_uniform_buffer = allocator.allocateBuffer(ssao_buffer_builder);
-	ssao_uniform_buffer.setDebugName(device, "SSAO Uniform");
-
-	MemoryMap ssao_map = ssao_uniform_buffer.access().map();
-	ssao_map.write(&ssao_config, sizeof(AmbientOcclusionUniform));
-	ssao_map.flush();
-	ssao_map.unmap();
-
-	transient_recorder.done();
-	transient_commands.submit().unlocks(fence).done(transfer_queue);
-	fence.wait();
-	fence.close();
-	transient_commands.close();
-	transient_buffers.execute();
+	initScreenSpaceAmbientOcclusion();
+	initChunkOcclusion();
 
 	ssao_descriptor_layout = DescriptorSetLayoutBuilder::begin()
 		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -729,7 +833,7 @@ void RenderSystem::reloadAssets() {
 		queue.execute();
 
 		pipeline_2d_tint.close();
-		pipeline_3d_terrain.close();
+		pipeline_terrain.close();
 		pipeline_3d_tint.close();
 		pipeline_ssao.close();
 		pipeline_compose.close();
@@ -804,7 +908,7 @@ void RenderSystem::close() {
 	closeFrames();
 
 	pipeline_2d_tint.close();
-	pipeline_3d_terrain.close();
+	pipeline_terrain.close();
 	pipeline_3d_tint.close();
 	pipeline_ssao.close();
 	pipeline_compose.close();

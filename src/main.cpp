@@ -108,15 +108,8 @@ int main() {
 		recorder.bufferTransferBarrier();
 
 		world.update(world_generator, camera.getPosition(), 16);
-
-		recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent)
-			.bindPipeline(system.pipeline_3d_terrain)
-			.bindDescriptorSet(frame.set_0);
-
 		world_renderer.draw(recorder, frustum);
 		world_renderer.eraseOutside(camera.getPosition(), 20);
-
-		recorder.endRenderPass();
 
 		Skybox skybox;
 		LightingPushBlock lighting_push_block {};

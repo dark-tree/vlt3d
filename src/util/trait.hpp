@@ -13,6 +13,12 @@ namespace trait {
 
 	}
 
+	/// Count array elements
+	template <typename T, size_t N>
+	size_t countof(T (& arr) [N]) {
+		return std::extent<T[N]>::value;
+	}
+
 	/// Concept, check if all types in parameter pack are convertible to the common type T
 	template<typename T, typename... Ts>
 	concept All = (std::convertible_to<Ts, T> && ...);

@@ -51,10 +51,12 @@ ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRec
 	this->vert_3d = compiler.compileFile("assets/shaders/vert_3d.glsl", Kind::VERTEX).create(device);
 	this->vert_terrain = compiler.compileFile("assets/shaders/vert_terrain.glsl", Kind::VERTEX).create(device);
 	this->vert_blit = compiler.compileFile("assets/shaders/vert_blit.glsl", Kind::VERTEX).create(device);
+	this->vert_occlude = compiler.compileFile("assets/shaders/vert_occlude.glsl", Kind::VERTEX).create(device);
 	this->frag_terrain = compiler.compileFile("assets/shaders/frag_terrain.glsl", Kind::FRAGMENT).create(device);
 	this->frag_tint = compiler.compileFile("assets/shaders/frag_tint.glsl", Kind::FRAGMENT).create(device);
 	this->frag_compose = compiler.compileFile("assets/shaders/frag_compose.glsl", Kind::FRAGMENT).create(device);
 	this->frag_ssao = compiler.compileFile("assets/shaders/frag_ssao.glsl", Kind::FRAGMENT).create(device);
+	this->frag_occlude = compiler.compileFile("assets/shaders/frag_occlude.glsl", Kind::FRAGMENT).create(device);
 }
 
 ResourceManager::State::~State() {
@@ -70,10 +72,12 @@ ResourceManager::State::~State() {
 	vert_3d.close(device);
 	vert_terrain.close(device);
 	vert_blit.close(device);
+	vert_occlude.close(device);
 	frag_terrain.close(device);
 	frag_tint.close(device);
 	frag_compose.close(device);
 	frag_ssao.close(device);
+	frag_occlude.close(device);
 }
 
 void ResourceManager::replace(State* state) {

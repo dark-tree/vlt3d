@@ -7,6 +7,7 @@
 class Allocator;
 class CommandRecorder;
 class RenderSystem;
+class TaskQueue;
 
 class Buffer {
 
@@ -44,13 +45,15 @@ class BasicBuffer {
 		const char* debug_name = nullptr;
 		#endif
 
-		void reallocate(RenderSystem& system, size_t capacity);
+		void reallocate(Allocator& allocator, TaskQueue& queue, size_t capacity);
 		size_t encompass(size_t target);
 
 		void updateDebugName() const;
 
 	public:
 
+		BasicBuffer() = default;
+		BasicBuffer(Allocator& allocator, TaskQueue& queue, size_t initial);
 		BasicBuffer(RenderSystem& system, size_t initial);
 
 		/**
