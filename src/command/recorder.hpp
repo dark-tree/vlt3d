@@ -68,6 +68,23 @@ class CommandRecorder {
 			return *this;
 		}
 
+		CommandRecorder& beginConditional(Buffer& buffer, uint32_t offset) {
+			VkConditionalRenderingBeginInfoEXT begin_info {};
+			begin_info.sType = VK_STRUCTURE_TYPE_CONDITIONAL_RENDERING_BEGIN_INFO_EXT;
+			begin_info.pNext = nullptr;
+			begin_info.flags = 0;
+			begin_info.buffer = buffer.vk_buffer;
+			begin_info.offset = offset;
+
+			vkCmdBeginConditionalRenderingEXT(vk_buffer, &begin_info);
+			return *this;
+		}
+
+		CommandRecorder& endConditional() {
+			vkCmdEndConditionalRenderingEXT(vk_buffer);
+			return *this;
+		}
+
 		CommandRecorder& insertDebugLabel(const char* name) {
 			VulkanDebug::insert(vk_buffer, name, {1.0f, 1.0f, 1.0f});
 			return *this;
@@ -123,6 +140,11 @@ class CommandRecorder {
 			#if !defined(NDEBUG)
 			popDebugBlock();
 			#endif
+			return *this;
+		}
+
+		CommandRecorder& copyQueryToBuffer(Buffer& buffer, QueryPool& pool, int start, int end) {
+			vkCmdCopyQueryPoolResults(vk_buffer, pool.vk_pool, start, end - start, buffer.vk_buffer, 0, sizeof(uint32_t), VK_QUERY_RESULT_WAIT_BIT);
 			return *this;
 		}
 

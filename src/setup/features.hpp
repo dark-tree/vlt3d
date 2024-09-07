@@ -11,17 +11,20 @@ class ExtendedFeatureSet {
 
 	public:
 
-		READONLY VkPhysicalDeviceFeatures2KHR vk_features {};
+		VkPhysicalDeviceFeatures2KHR vk_features {};
+		VkPhysicalDeviceConditionalRenderingFeaturesEXT vk_conditional_rendering_features {};
 
 	public:
 
 		/// Set the sType for all chained structs
 		ExtendedFeatureSet() {
 			vk_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			vk_conditional_rendering_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONDITIONAL_RENDERING_FEATURES_EXT;
 		}
 
 		/// Create the pNext chain and return a pointer to the VkPhysicalDeviceFeatures2KHR
 		VkPhysicalDeviceFeatures2KHR* getLinked() {
+			vk_features.pNext = &vk_conditional_rendering_features;
 			return &vk_features;
 		}
 

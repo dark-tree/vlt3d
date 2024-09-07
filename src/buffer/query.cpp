@@ -1,6 +1,7 @@
 #include "query.hpp"
 #include "setup/device.hpp"
 #include "setup/callback.hpp"
+#include "setup/debug.hpp"
 
 QueryPool::QueryPool(Device& device, VkQueryType type, int count, VkQueryPipelineStatisticFlags statistics) {
 	VkQueryPoolCreateInfo create_info {};
@@ -35,4 +36,8 @@ Query QueryPool::read(int index) const {
 
 size_t QueryPool::size() const {
 	return results.size();
+}
+
+void QueryPool::setDebugName(const char* name) const {
+	VulkanDebug::name(vk_device, VK_OBJECT_TYPE_QUERY_POOL, vk_pool, name);
 }

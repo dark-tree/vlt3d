@@ -69,4 +69,9 @@ class QueryPool {
 		 */
 		size_t size() const;
 
+		/**
+		 * Sets a human readable name visible in external debuggers
+		 */
+		void setDebugName(const char* name) const;
+
 };

@@ -46,7 +46,10 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	set_3.sampler(3, system.attachment_ambience.sampler);
 
 	timestamp_query = QueryPool(system.device, VK_QUERY_TYPE_TIMESTAMP, 2);
+	timestamp_query.setDebugName("Timestamp");
+
 	occlusion_query = QueryPool(system.device, VK_QUERY_TYPE_OCCLUSION, 32000);
+	occlusion_query.setDebugName("Occlusion");
 }
 
 Frame::~Frame() {
@@ -198,6 +201,56 @@ void RenderSystem::createRenderPass() {
 
 	}
 
+	{ // Conditional
+
+		RenderPassBuilder builder;
+
+		Attachment::Ref depth = builder.addAttachment(attachment_depth)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		Attachment::Ref albedo = builder.addAttachment(attachment_albedo)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		Attachment::Ref normal = builder.addAttachment(attachment_normal)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		Attachment::Ref position = builder.addAttachment(attachment_position)
+			.begin(ColorOp::LOAD, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.end(ColorOp::STORE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.next();
+
+		builder.addDependency() // G-Buffer/Color 0->Write
+			.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0)
+			.output(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.next();
+
+		builder.addDependency() // Depth 0->Write
+			.input(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0)
+			.output(0, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+			.next();
+
+		builder.addDependency(VK_DEPENDENCY_BY_REGION_BIT) // Color Output
+			.input(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+			.output(VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_MEMORY_READ_BIT)
+			.next();
+
+		builder.addSubpass()
+			.addOutput(albedo, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addOutput(normal, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addOutput(position, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			.addDepth(depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			.next();
+
+		conditional_pass = builder.build(device, "Conditional", RenderPass::YELLOW);
+
+	}
+
 	{ // SSAO pass
 
 		RenderPassBuilder builder;
@@ -316,6 +369,17 @@ void RenderSystem::createFramebuffers() {
 		terrain_framebuffer = builder.build(device);
 	}
 
+	// same thing but for consitional rendering
+	{
+		FramebufferBuilder builder {conditional_pass, extent};
+		builder.addAttachment(attachment_depth);
+		builder.addAttachment(attachment_albedo);
+		builder.addAttachment(attachment_normal);
+		builder.addAttachment(attachment_position);
+
+		conditional_framebuffer = builder.build(device);
+	}
+
 	// create the deferred framebuffer
 	{
 		FramebufferBuilder builder {ssao_pass, extent};
@@ -391,6 +455,19 @@ void RenderSystem::createPipelines() {
 		.withScissors(0, 0, extent.width, extent.height)
 		.withCulling(true)
 		.withRenderPass(terrain_pass, 0)
+		.withShaders(assets.state->vert_terrain, assets.state->frag_terrain)
+		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
+		.withBindingLayout(binding_terrain)
+		.withPushConstantLayout(constant_layout)
+		.withDescriptorSetLayout(geometry_descriptor_layout)
+		.withDebugName("Terrain")
+		.build();
+
+	pipeline_conditional = GraphicsPipelineBuilder::of(device)
+		.withViewport(0, 0, extent.width, extent.height)
+		.withScissors(0, 0, extent.width, extent.height)
+		.withCulling(true)
+		.withRenderPass(conditional_pass, 0)
 		.withShaders(assets.state->vert_terrain, assets.state->frag_terrain)
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, true)
 		.withBindingLayout(binding_terrain)
@@ -616,8 +693,18 @@ void RenderSystem::initChunkOcclusion() {
 	transient_commands.close();
 	host_buffer.close();
 
-	chunk_occlusion_box = device_buffer;
-	chunk_occlusion_box.setDebugName(device, "Chunk Bounding Box");
+	chunk_box = device_buffer;
+	chunk_box.setDebugName(device, "Chunk Box");
+
+	BufferInfo predicates_builder {8000 * sizeof(uint32_t), VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT | VK_BUFFER_USAGE_TRANSFER_DST_BIT};
+	predicates_builder.required(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	predicates_builder.hint(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+
+	chunk_predicates = allocator.allocateBuffer(predicates_builder);
+	chunk_predicates.setDebugName(device, "Chunk Predicates");
+
+	predicate_query = QueryPool(device, VK_QUERY_TYPE_OCCLUSION, 8000);
+	predicate_query.setDebugName("Predicate");
 
 }
 
@@ -648,11 +735,11 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	QueueInfo transfer_ref = device_builder.addQueue(QueueType::TRANSFER, 1);
 	QueueInfo presentation_ref = device_builder.addQueue(surface, 1);
 	device_builder.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME).orFail();
+	device_builder.addDeviceExtension(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME).orFail();
 
 	// enable some additional features
 	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.fillModeNonSolid);
-	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.wideLines);
-	FEATURE_ENABLE_OR_FAIL(device_builder, vk_features.features.pipelineStatisticsQuery);
+	FEATURE_ENABLE_OR_FAIL(device_builder, vk_conditional_rendering_features.conditionalRendering);
 
 	// device and queue creation
 	device = device_builder.create();
@@ -667,6 +754,10 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	loadDeviceFunction(device.vk_device, "vkCmdEndDebugUtilsLabelEXT");
 	loadDeviceFunction(device.vk_device, "vkCmdInsertDebugUtilsLabelEXT");
 	#endif
+
+	// Conditional Rendering
+	loadDeviceFunction(device.vk_device, "vkCmdBeginConditionalRenderingEXT");
+	loadDeviceFunction(device.vk_device, "vkCmdEndConditionalRenderingEXT");
 
 	// create command pools
 	graphics_pool = CommandPool::build(device, graphics_ref, false);

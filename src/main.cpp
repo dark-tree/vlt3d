@@ -93,6 +93,7 @@ int main() {
 		CommandRecorder recorder = frame.buffer.record();
 		recorder.resetQueryPool(frame.occlusion_query);
 		recorder.resetQueryPool(frame.timestamp_query);
+		recorder.resetQueryPool(system.predicate_query);
 		recorder.queryTimestamp(frame.timestamp_query, 0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
 		immediate.write(system, frame.immediate_3d, frame.immediate_2d);
@@ -108,7 +109,7 @@ int main() {
 		recorder.bufferTransferBarrier();
 
 		world.update(world_generator, camera.getPosition(), 16);
-		world_renderer.draw(recorder, frustum);
+		world_renderer.draw(recorder, frustum, camera);
 		world_renderer.eraseOutside(camera.getPosition(), 20);
 
 		Skybox skybox;

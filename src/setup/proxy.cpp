@@ -133,5 +133,42 @@ VKAPI_ATTR void VKAPI_CALL vkCmdInsertDebugUtilsLabelEXT( VkCommandBuffer comman
 	return proxy_vkCmdInsertDebugUtilsLabelEXT(commandBuffer, pLabelInfo);
 }
 
+// Proxy for device function vkResetQueryPoolEXT
+static PFN_vkResetQueryPoolEXT proxy_vkResetQueryPoolEXT = nullptr;
+[[maybe_unused]] static bool symbol_vkResetQueryPoolEXT = [] () {
+	device_proxies["vkResetQueryPoolEXT"] = ((PFN_vkVoidFunction*) &proxy_vkResetQueryPoolEXT);
+	return true;
+}();
+VKAPI_ATTR void VKAPI_CALL vkResetQueryPoolEXT( VkDevice device, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount) {
+	#if !defined(NDEBUG)
+	if (!proxy_vkResetQueryPoolEXT) throw Exception {"Proxy device function 'vkResetQueryPoolEXT' was called before being loaded"};
+	#endif
+	return proxy_vkResetQueryPoolEXT(device, queryPool, firstQuery, queryCount);
+}
 
+// Proxy for device function vkCmdBeginConditionalRenderingEXT
+static PFN_vkCmdBeginConditionalRenderingEXT proxy_vkCmdBeginConditionalRenderingEXT = nullptr;
+[[maybe_unused]] static bool symbol_vkCmdBeginConditionalRenderingEXT = [] () {
+	device_proxies["vkCmdBeginConditionalRenderingEXT"] = ((PFN_vkVoidFunction*) &proxy_vkCmdBeginConditionalRenderingEXT);
+	return true;
+}();
+VKAPI_ATTR void VKAPI_CALL vkCmdBeginConditionalRenderingEXT( VkCommandBuffer commandBuffer, const VkConditionalRenderingBeginInfoEXT* pConditionalRenderingBegin) {
+	#if !defined(NDEBUG)
+	if (!proxy_vkCmdBeginConditionalRenderingEXT) throw Exception {"Proxy device function 'vkCmdBeginConditionalRenderingEXT' was called before being loaded"};
+	#endif
+	return proxy_vkCmdBeginConditionalRenderingEXT(commandBuffer, pConditionalRenderingBegin);
+}
+
+// Proxy for device function vkCmdEndConditionalRenderingEXT
+static PFN_vkCmdEndConditionalRenderingEXT proxy_vkCmdEndConditionalRenderingEXT = nullptr;
+[[maybe_unused]] static bool symbol_vkCmdEndConditionalRenderingEXT = [] () {
+	device_proxies["vkCmdEndConditionalRenderingEXT"] = ((PFN_vkVoidFunction*) &proxy_vkCmdEndConditionalRenderingEXT);
+	return true;
+}();
+VKAPI_ATTR void VKAPI_CALL vkCmdEndConditionalRenderingEXT( VkCommandBuffer commandBuffer) {
+	#if !defined(NDEBUG)
+	if (!proxy_vkCmdEndConditionalRenderingEXT) throw Exception {"Proxy device function 'vkCmdEndConditionalRenderingEXT' was called before being loaded"};
+	#endif
+	return proxy_vkCmdEndConditionalRenderingEXT(commandBuffer);
+}
 

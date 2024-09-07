@@ -119,7 +119,7 @@ class WorldRenderer {
 		void prepare(CommandRecorder& recorder);
 
 		/// Render all the chunk buffers, both static and just uploaded
-		void draw(CommandRecorder& recorder, Frustum& frustum);
+		void draw(CommandRecorder& recorder, Frustum& frustum, Camera& camera);
 
 		/// Submit a buffer, mesh can be empty
 		void submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh);

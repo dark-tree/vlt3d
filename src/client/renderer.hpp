@@ -144,7 +144,9 @@ class RenderSystem {
 		Buffer ssao_uniform_buffer;
 
 		// Chunk Occlusion
-		Buffer chunk_occlusion_box;
+		Buffer chunk_box;
+		Buffer chunk_predicates;
+		QueryPool predicate_query;
 
 		Attachment attachment_color;
 		Attachment attachment_depth;
@@ -154,10 +156,12 @@ class RenderSystem {
 		Attachment attachment_ambience;
 
 		RenderPass terrain_pass;
+		RenderPass conditional_pass;
 		RenderPass ssao_pass;
 		RenderPass lighting_pass;
 
 		GraphicsPipeline pipeline_terrain;
+		GraphicsPipeline pipeline_conditional;
 		GraphicsPipeline pipeline_3d_tint;
 		GraphicsPipeline pipeline_2d_tint;
 		GraphicsPipeline pipeline_ssao;
@@ -168,6 +172,7 @@ class RenderSystem {
 		std::vector<Framebuffer> framebuffers;
 		Framebuffer ssao_framebuffer;
 		Framebuffer terrain_framebuffer;
+		Framebuffer conditional_framebuffer;
 
 		ResourceManager assets;
 

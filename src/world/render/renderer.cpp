@@ -30,8 +30,6 @@ void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder
 	recorder.beginQuery(pool, identifier);
 	buffer.draw(recorder);
 	recorder.endQuery(pool, identifier);
-
-	world_frustum_count ++;
 }
 
 void WorldRenderer::ChunkBuffer::dispose(RenderSystem& system) {
@@ -94,14 +92,12 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 
 }
 
-void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
+void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& camera) {
 
 	world_frustum_count = 0;
 	Frame& frame = system.getFrame();
 	VkExtent2D extent = system.swapchain.vk_extent; // clean up ?
-
-	// TODO get this from the camera
-	glm::vec3 origin {0, 0, 0};
+	glm::vec3 origin = camera.getPosition() / (float) Chunk::size;
 
 	relative = buffers.values();
 	std::sort(relative.begin(), relative.end(), [origin] (const auto& lhs, const auto& rhs) {
@@ -123,10 +119,17 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 		if (visible) {
 			chunk->draw(frame.occlusion_query, recorder);
+			world_frustum_count ++;
 			continue;
 		}
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
+			if (chunk->count < 100) {
+				chunk->draw(frame.occlusion_query, recorder);
+				world_frustum_count ++;
+				continue;
+			}
+
 			discarded.push_back(chunk);
 		}
 
@@ -144,25 +147,47 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum) {
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
 			chunk->draw(frame.occlusion_query, recorder);
+			world_frustum_count ++;
 		}
 	}
 
 	// now we will test the chunks deemed occluded in the previous cycle
 	recorder.nextSubpass();
 	recorder.bindPipeline(system.pipeline_occlude);
-	recorder.bindBuffer(system.chunk_occlusion_box);
-	recorder.insertDebugLabel("Draw Occluded");
+	recorder.bindBuffer(system.chunk_box);
+	recorder.insertDebugLabel("Draw Bounding");
 
 	// we need to rebind the same descriptor set here as the pipeline layout is different
 	recorder.bindDescriptorSet(frame.set_0);
 
-	for (ChunkBuffer* chunk : discarded) {
+	for (int i = 0; i < discarded.size(); i ++) {
+		ChunkBuffer* chunk = discarded[i];
 		glm::vec3 offset = chunk->getOffset();
 
-		recorder.beginQuery(frame.occlusion_query, chunk->identifier);
+		recorder.beginQuery(system.predicate_query, i);
+		//recorder.beginQuery(frame.occlusion_query, chunk->identifier);
 		recorder.writePushConstant(system.push_constant_occlude, glm::value_ptr(offset));
 		recorder.draw(36);
-		recorder.endQuery(frame.occlusion_query, chunk->identifier);
+		//recorder.endQuery(frame.occlusion_query, chunk->identifier);
+		recorder.endQuery(system.predicate_query, i);
+	}
+
+	recorder.endRenderPass();
+	recorder.copyQueryToBuffer(system.chunk_predicates, system.predicate_query, 0, discarded.size());
+	// TODO wait for copy to complete
+
+	recorder.beginRenderPass(system.conditional_pass, system.conditional_framebuffer, extent);
+	recorder.bindPipeline(system.pipeline_conditional);
+	recorder.bindDescriptorSet(frame.set_0);
+	recorder.insertDebugLabel("Draw Conditional");
+
+	for (int i = 0; i < discarded.size(); i ++) {
+		ChunkBuffer* chunk = discarded[i];
+		glm::vec3 offset = chunk->getOffset();
+
+		recorder.beginConditional(system.chunk_predicates, i * sizeof(uint32_t));
+		chunk->draw(frame.occlusion_query, recorder);
+		recorder.endConditional();
 	}
 
 	recorder.endRenderPass();
