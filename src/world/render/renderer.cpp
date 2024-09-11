@@ -59,13 +59,20 @@ bool WorldRenderer::ChunkBuffer::getOcclusion(QueryPool& pool) const {
  */
 
 void WorldRenderer::eraseBuffer(glm::ivec3 pos) {
+	replaceChunk(pos, nullptr);
+}
+
+void WorldRenderer::replaceChunk(glm::ivec3 pos, NULLABLE ChunkBuffer* chunk) {
 	auto it = buffers.find(pos);
 
 	if (it != buffers.end()) {
 		ChunkBuffer* buffer = buffers.extract(it).second;
 		world_vertex_count -= buffer->count;
-		world_chunk_count --;
 		buffer->dispose(system);
+	}
+
+	if (chunk) {
+		buffers.emplace(pos, chunk);
 	}
 }
 
@@ -93,7 +100,7 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 	});
 
 	// first upload all awaiting meshes so that the PCI has something to do
-	for (ChunkBuffer* chunk : awaiting.read()) {
+	for (auto [pos, chunk] : awaiting.read()) {
 		chunk->buffer.upload(recorder);
 	}
 
@@ -107,10 +114,19 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	glm::vec3 origin = camera.getPosition() / (float) Chunk::size;
 
 	world_occlusion_count = system.predicate_allocator.remaining();
+	world_chunk_count = buffers.size();
 
-	relative = buffers.values();
-	std::sort(relative.begin(), relative.end(), [origin] (const auto& lhs, const auto& rhs) {
-		return glm::distance2(glm::vec3 {lhs.first}, origin) < glm::distance2(glm::vec3 {rhs.first}, origin);
+	relative.clear();
+	relative.reserve(buffers.size());
+
+	// copy all chunks into `relative` for distance sorting
+	for (auto& pair : buffers.values()) {
+		relative.emplace_back(glm::distance2(glm::vec3 {pair.first}, origin), pair.second);
+	}
+
+	// sort by distance (closest to furthest)
+	std::sort(relative.begin(), relative.end(), [] (const auto& lhs, const auto& rhs) {
+		return lhs.first < rhs.first;
 	});
 
 	std::vector<ChunkBuffer*> discarded;
@@ -150,8 +166,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	recorder.insertDebugLabel("Draw Awaiting");
 
 	// render all new chunks and copy them into static chunk map
-	for (ChunkBuffer* chunk : awaiting.read()) {
-		buffers[chunk->pos] = chunk;
+	for (auto [pos, chunk] : awaiting.read()) {
+		replaceChunk(pos, chunk);
 		glm::vec3 offset = chunk->getOffset();
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
@@ -202,12 +218,25 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
 	auto* chunk = new ChunkBuffer(system, pos, mesh);
 	world_vertex_count += chunk->count;
-	world_chunk_count ++;
 
 	std::lock_guard lock {submit_mutex};
 	allocations.push_back(chunk->buffer.getCount());
-	awaiting.write().push_back(chunk);
-	erasures.emplace_back(chunk->pos);
+
+	auto& map = awaiting.write();
+	auto it = map.find(pos);
+
+	if (it != map.end()) {
+		logger::warn("Chunk submission collision at: ", pos);
+
+		// TODO cleanup
+		auto* older_chunk = (*it).second;
+		world_vertex_count -= older_chunk->count;
+		older_chunk->dispose(system);
+
+		map.erase(it);
+	}
+
+	map.emplace(pos, chunk);
 }
 
 void WorldRenderer::eraseChunk(glm::ivec3 pos) {
@@ -241,7 +270,7 @@ void WorldRenderer::close() {
 		count ++;
 	}
 
-	for (auto& chunk : awaiting.read()) {
+	for (auto [pos, chunk] : awaiting.read()) {
 		chunk->dispose(system);
 		count ++;
 	}

@@ -21,8 +21,8 @@ class DoubleBuffered {
 
 	private:
 
-		std::vector<T> front;
-		std::vector<T> back;
+		T front;
+		T back;
 
 	public:
 
@@ -31,11 +31,11 @@ class DoubleBuffered {
 			std::swap(front, back);
 		}
 
-		std::vector<T>& read() {
+		T& read() {
 			return front;
 		}
 
-		std::vector<T>& write() {
+		T& write() {
 			return back;
 		}
 
@@ -68,6 +68,8 @@ class WorldRenderer {
 
 		struct ChunkBuffer {
 			glm::ivec3 pos;
+
+			// TODO count is a duplicate of buffer.getCount()...
 			long count, identifier;
 			BasicBuffer buffer;
 
@@ -89,6 +91,9 @@ class WorldRenderer {
 		/// erase vertex buffer and mark it for deletion
 		void eraseBuffer(glm::ivec3 pos);
 
+		/// replace a chunk in the buffer map with correct chunk cleanup
+		void replaceChunk(glm::ivec3 pos, NULLABLE ChunkBuffer* chunk);
+
 	private:
 
 		// makes sure nothing gets fucked when we submit
@@ -97,7 +102,7 @@ class WorldRenderer {
 
 		// a list of all the to be rendered chunk buffers, each frame copied
 		// and sorted from closest to furthest away from the camera
-		std::vector<std::pair<glm::ivec3, ChunkBuffer*>> relative;
+		std::vector<std::pair<float, ChunkBuffer*>> relative;
 
 		// this holds the meshes of chunks that did not change (at least from
 		// a rendering stand point - no new mesh is yet submitted for them)
@@ -105,10 +110,10 @@ class WorldRenderer {
 
 		// this holds the buffers that have the new meshes written
 		// but are not yet uploaded (copied from staging to device)
-		DoubleBuffered<ChunkBuffer*> awaiting;
+		DoubleBuffered<std::unordered_map<glm::ivec3, ChunkBuffer*>> awaiting;
 
 		// this holds the list of chunks that should be erased from the `buffers` map,
-		// either because they are outside view or because new buffer was created
+		// either because that was requested manually or because they are now outside view distance
 		std::vector<glm::ivec3> erasures;
 
 	public:
