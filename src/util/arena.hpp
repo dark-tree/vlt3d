@@ -186,6 +186,7 @@ class LinearArena {
 				T value = std::numeric_limits<T>::max();
 
 				/// Find index of first set bit in the number
+				/// TODO move to bits.hpp
 				static inline int firstSetBitIndex(T value) {
 					int index = 0;
 

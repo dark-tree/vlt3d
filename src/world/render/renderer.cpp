@@ -13,8 +13,8 @@ std::atomic_int world_occlusion_count = 0;
  * ChunkBuffer
  */
 
-WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh)
-: pos(pos), count(mesh.size()), identifier(system.predicate_allocator.allocate()), buffer(system, count * sizeof(VertexTerrain)) {
+WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, uint64_t stamp)
+: stamp(stamp), pos(pos), identifier(system.predicate_allocator.allocate()), buffer(system, mesh.size() * sizeof(VertexTerrain)) {
 	buffer.write(mesh.data(), mesh.size());
 
 	if (identifier == LinearArena::failed) {
@@ -54,20 +54,24 @@ bool WorldRenderer::ChunkBuffer::getOcclusion(QueryPool& pool) const {
 	return pool.read(this->identifier).get(0);
 }
 
+long WorldRenderer::ChunkBuffer::getCount() const {
+	return buffer.getCount();
+}
+
+bool WorldRenderer::ChunkBuffer::shouldReplace(ChunkBuffer* chunk) const {
+	return stamp > chunk->stamp;
+}
+
 /*
  * WorldRenderer
  */
-
-void WorldRenderer::eraseBuffer(glm::ivec3 pos) {
-	replaceChunk(pos, nullptr);
-}
 
 void WorldRenderer::replaceChunk(glm::ivec3 pos, NULLABLE ChunkBuffer* chunk) {
 	auto it = buffers.find(pos);
 
 	if (it != buffers.end()) {
 		ChunkBuffer* buffer = buffers.extract(it).second;
-		world_vertex_count -= buffer->count;
+		world_vertex_count -= buffer->getCount();
 		buffer->dispose(system);
 	}
 
@@ -88,7 +92,7 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 		awaiting.swap();
 
 		for (glm::ivec3 pos : erasures) {
-			eraseBuffer(pos);
+			replaceChunk(pos, nullptr);
 		}
 
 		erasures.clear();
@@ -96,7 +100,7 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 
 	// iterate all chunks that were updated this frame and need to be re-meshed
 	world.consumeUpdates([&] (WorldView&& view, bool important) {
-		mesher.push(std::move(view), important);
+		mesher.push(std::move(view), important, unique_stamp ++);
 	});
 
 	// first upload all awaiting meshes so that the PCI has something to do
@@ -149,7 +153,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 		}
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
-			if (chunk->count < 100) {
+			if (chunk->getCount() < 100) {
 				chunk->draw(frame.occlusion_query, recorder);
 				world_frustum_count ++;
 				continue;
@@ -215,9 +219,9 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 
 }
 
-void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
-	auto* chunk = new ChunkBuffer(system, pos, mesh);
-	world_vertex_count += chunk->count;
+void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh, uint64_t stamp) {
+	auto* chunk = new ChunkBuffer(system, pos, mesh, stamp);
+	world_vertex_count += chunk->getCount();
 
 	std::lock_guard lock {submit_mutex};
 	allocations.push_back(chunk->buffer.getCount());
@@ -226,14 +230,18 @@ void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh
 	auto it = map.find(pos);
 
 	if (it != map.end()) {
-		logger::warn("Chunk submission collision at: ", pos);
-
-		// TODO cleanup
 		auto* older_chunk = (*it).second;
-		world_vertex_count -= older_chunk->count;
-		older_chunk->dispose(system);
 
-		map.erase(it);
+		if (chunk->shouldReplace(older_chunk)) {
+			world_vertex_count -= older_chunk->getCount();
+			older_chunk->dispose(system);
+			map.erase(it);
+			// fallthrough
+		} else {
+			world_vertex_count -= chunk->getCount();
+			chunk->dispose(system);
+			return;
+		}
 	}
 
 	map.emplace(pos, chunk);

@@ -61,35 +61,48 @@ class WorldRenderer {
 
 	private:
 
+		// a unique chunk remesh identifier, incremented by one, used to compare submissions for the same chunk
+		uint64_t unique_stamp;
 		RenderSystem& system;
 		World& world;
 		ChunkRenderPool mesher;
 		std::vector<int> allocations;
 
-		struct ChunkBuffer {
-			glm::ivec3 pos;
+		class ChunkBuffer {
 
-			// TODO count is a duplicate of buffer.getCount()...
-			long count, identifier;
-			BasicBuffer buffer;
+			private:
 
-			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh);
+				uint64_t stamp;
 
-			/// draw this buffer unconditionally
-			void draw(QueryPool& pool, CommandRecorder& recorder);
+			public:
 
-			/// dispose of this buffer as soon as it's valid to do so
-			void dispose(RenderSystem& system);
+				glm::ivec3 pos;
+				long identifier;
+				BasicBuffer buffer;
 
-			/// get the position of the chunk in world coordinates
-			glm::vec3 getOffset() const;
+			public:
 
-			/// get the occlusion test result form the previous frame
-			bool getOcclusion(QueryPool& pool) const;
+				ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, uint64_t stamp);
+
+				/// draw this buffer unconditionally
+				void draw(QueryPool& pool, CommandRecorder& recorder);
+
+				/// dispose of this buffer as soon as it's valid to do so
+				void dispose(RenderSystem& system);
+
+				/// get the position of the chunk in world coordinates
+				glm::vec3 getOffset() const;
+
+				/// get the occlusion test result form the previous frame
+				bool getOcclusion(QueryPool& pool) const;
+
+				/// Get the total number of vertices in this chunk
+				long getCount() const;
+
+				/// If two version of a chunk exist this method can be used to check which one should be used
+				bool shouldReplace(ChunkBuffer* chunk) const;
+
 		};
-
-		/// erase vertex buffer and mark it for deletion
-		void eraseBuffer(glm::ivec3 pos);
 
 		/// replace a chunk in the buffer map with correct chunk cleanup
 		void replaceChunk(glm::ivec3 pos, NULLABLE ChunkBuffer* chunk);
@@ -127,7 +140,7 @@ class WorldRenderer {
 		void draw(CommandRecorder& recorder, Frustum& frustum, Camera& camera);
 
 		/// Submit a buffer, mesh can be empty
-		void submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh);
+		void submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh, uint64_t stamp);
 
 		/// Discard the chunk at the given coordinates
 		void eraseChunk(glm::ivec3 pos);

@@ -12,8 +12,8 @@
  * ChunkRenderPool::UpdateRequest
  */
 
-ChunkRenderPool::UpdateRequest::UpdateRequest(WorldView&& view)
-: view(view), timer() {}
+ChunkRenderPool::UpdateRequest::UpdateRequest(WorldView&& view, uint64_t stamp)
+: view(view), timer(), stamp(stamp) {}
 
 glm::ivec3 ChunkRenderPool::UpdateRequest::origin() const {
 	double millis = timer.milliseconds();
@@ -29,23 +29,27 @@ WorldView&& ChunkRenderPool::UpdateRequest::unpack() {
 	return std::move(view);
 }
 
+uint64_t ChunkRenderPool::UpdateRequest::getStamp() const {
+	return stamp;
+}
+
 /*
  * ChunkRenderPool
  */
 
-std::pair<bool, WorldView> ChunkRenderPool::pop() {
+std::pair<bool, ChunkRenderPool::UpdateRequest> ChunkRenderPool::pop() {
 	if (!high_queue.empty()) {
 		UpdateRequest request = high_queue.front();
 		high_queue.pop();
 		set.erase(request.origin());
-		return {true, std::move(request.unpack())};
+		return {true, std::move(request)};
 	}
 
 	if (!low_queue.empty()) {
 		UpdateRequest request = low_queue.front();
 		low_queue.pop();
 		set.erase(request.origin());
-		return {true, std::move(request.unpack())};
+		return {true, std::move(request)};
 	}
 
 	return {false, {}};
@@ -55,19 +59,19 @@ bool ChunkRenderPool::empty() {
 	return set.empty();
 }
 
-void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view) {
+void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, uint64_t stamp) {
 	mesh.clear();
 	GreedyMesher::emitChunk(mesh, buffer, view, system.assets.state->array);
 
 	if (!mesh.empty()) {
-		renderer.submitChunk(view.origin(), mesh);
+		renderer.submitChunk(view.origin(), mesh, stamp);
 	}
 }
 
 void ChunkRenderPool::run() {
 
 	bool got = false;
-	WorldView view;
+	UpdateRequest request;
 	std::vector<VertexTerrain> mesh;
 	mesh.reserve(4096);
 	ChunkFaceBuffer buffer;
@@ -83,15 +87,17 @@ void ChunkRenderPool::run() {
 				return;
 			}
 
-			std::tie(got, view) = pop();
+			std::tie(got, request) = pop();
 		}
 
 		if (!got) {
 			continue;
 		}
 
+		WorldView view = request.unpack();
+
 		if (!view.getOriginChunk()->empty()) {
-			emitChunk(mesh, buffer, view);
+			emitChunk(mesh, buffer, view, request.getStamp());
 		}
 	}
 }
@@ -103,7 +109,7 @@ ChunkRenderPool::ChunkRenderPool(WorldRenderer& renderer, RenderSystem& system, 
 	}
 }
 
-void ChunkRenderPool::push(WorldView&& view, bool important) {
+void ChunkRenderPool::push(WorldView&& view, bool important, uint64_t stamp) {
 	{
 		std::lock_guard lock {mutex};
 		glm::ivec3 chunk = view.origin();
@@ -113,7 +119,7 @@ void ChunkRenderPool::push(WorldView&& view, bool important) {
 			return;
 		}
 
-		(important ? high_queue : low_queue).emplace(std::move(view));
+		(important ? high_queue : low_queue).emplace(std::move(view), stamp);
 		set.insert(chunk);
 	}
 
