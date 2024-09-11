@@ -121,7 +121,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 
 	// copy all chunks into `relative` for distance sorting
 	for (auto& pair : buffers.values()) {
-		relative.emplace_back(glm::distance2(glm::vec3 {pair.first}, origin), pair.second);
+		relative.emplace_back(glm::distance2(glm::vec3 {pair.first} + 0.5f, origin), pair.second);
 	}
 
 	// sort by distance (closest to furthest)

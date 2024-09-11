@@ -479,7 +479,6 @@ void RenderSystem::createPipelines() {
 	pipeline_occlude = GraphicsPipelineBuilder::of(device)
 		.withViewport(0, 0, extent.width, extent.height)
 		.withScissors(0, 0, extent.width, extent.height)
-		.withCulling(true)
 		.withRenderPass(terrain_pass, 1)
 		.withShaders(assets.state->vert_occlude, assets.state->frag_occlude)
 		.withDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL, true, false)
