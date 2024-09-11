@@ -6,6 +6,8 @@
 #include "buffer/array.hpp"
 #include "util/arena.hpp"
 #include "util/ring.hpp"
+#include "util/util.hpp"
+
 BEGIN(VSTL_MODE_LENIENT)
 
 HANDLER { CATCH_PTR (Exception& exception) {
@@ -421,6 +423,124 @@ TEST(sprite_array) {
 	blue.close();
 
 };
+
+TEST(util_arena_linear_brick) {
+
+	LinearArena::Brick<uint8_t> brick;
+
+	std::vector<int> offsets;
+
+	CHECK(brick.hasAllocated(), false);
+
+	int a = brick.allocate();
+	CHECK(brick.top(), a);
+
+	int b = brick.allocate();
+	CHECK(brick.top(), std::max(a, b));
+
+	brick.free(a);
+	brick.free(b);
+
+	for (int i = 0; i < 8; i ++) {
+		CHECK(brick.hasFree(), true);
+		int value = brick.allocate();
+
+		ASSERT(value >= 0);
+
+		if (util::contains(offsets, value)) {
+			FAIL("LinearArena::Brick allocation error");
+		}
+
+		offsets.push_back(value);
+	}
+
+	CHECK(brick.hasFree(), false);
+	CHECK(brick.hasAllocated(), true);
+
+	brick.free(3);
+	CHECK(brick.allocate(), 3);
+	CHECK(brick.hasFree(), false);
+	CHECK(brick.hasAllocated(), true);
+
+}
+
+TEST(util_arena_linear_block) {
+
+	LinearArena::Block<uint8_t, 4> block;
+	std::vector<int> offsets;
+
+	CHECK(block.remaining(), 4 * 8);
+
+	for (int j = 0; j < 4; j ++) {
+		for (int i = 0; i < 8; i++) {
+			int offset = block.allocate();
+			offsets.push_back(offset);
+			CHECK(offset & 0b1111'1000, j << 3);
+		}
+	}
+
+	CHECK(block.remaining(), 0);
+	CHECK(block.allocate(), -1);
+
+	for (int offset : offsets) {
+		block.free(offset);
+	}
+
+	CHECK(block.remaining(), 4 * 8);
+
+	int a = block.allocate();
+	CHECK(block.top(), a);
+	block.free(a);
+
+	int b = block.allocate();
+	CHECK(block.top(), b);
+	block.free(b);
+
+	CHECK(a, b);
+
+}
+
+TEST(util_arena_linear_full) {
+
+	LinearArena arena;
+	arena.expand();
+
+	{
+		const int a = arena.allocate();
+		CHECK(arena.top(), a);
+
+		const int b = arena.allocate();
+		CHECK(arena.top(), std::max(a, b));
+
+		arena.free(std::max(a, b));
+		CHECK(arena.top(), std::min(a, b));
+
+		arena.free(std::min(a, b));
+	}
+
+	std::vector<long> ids;
+
+	for (int i = 0; i < 3000; i ++) {
+		long id = arena.allocate();
+
+		ASSERT(id >= 0);
+
+		if (util::contains(ids, id)) {
+			FAIL("LinearArena allocation error");
+		}
+
+		ids.push_back(id);
+	}
+
+	for (int i = 0; i < 3000; i ++) {
+		arena.free(ids[i]);
+	}
+
+	for (int i = 0; i < 3000; i ++) {
+		CHECK(ids[i], arena.allocate());
+	}
+
+}
 
 TEST(util_arena) {
 

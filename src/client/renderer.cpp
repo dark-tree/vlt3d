@@ -48,7 +48,7 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	timestamp_query = QueryPool(system.device, VK_QUERY_TYPE_TIMESTAMP, 2);
 	timestamp_query.setDebugName("Timestamp");
 
-	occlusion_query = QueryPool(system.device, VK_QUERY_TYPE_OCCLUSION, 32000);
+	occlusion_query = QueryPool(system.device, VK_QUERY_TYPE_OCCLUSION, system.predicate_allocator.capacity());
 	occlusion_query.setDebugName("Occlusion");
 }
 
@@ -710,6 +710,9 @@ void RenderSystem::initChunkOcclusion() {
 
 RenderSystem::RenderSystem(Window& window, int concurrent)
 : window(window), concurrent(concurrent), index(0) {
+
+	predicate_allocator.expand();
+	predicate_allocator.expand();
 
 	// Phase 1
 	// this step is only ever executed once

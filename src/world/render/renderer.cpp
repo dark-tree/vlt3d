@@ -3,17 +3,23 @@
 #include "mesher.hpp"
 #include "world/view.hpp"
 
+// TODO TODO TODO TODO
 std::atomic_int world_vertex_count = 0;
 std::atomic_int world_chunk_count = 0;
 std::atomic_int world_frustum_count = 0;
+std::atomic_int world_occlusion_count = 0;
 
 /*
  * ChunkBuffer
  */
 
-WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, int identifier)
-: pos(pos), count(mesh.size()), identifier(identifier), buffer(system, count * sizeof(VertexTerrain)) {
+WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh)
+: pos(pos), count(mesh.size()), identifier(system.predicate_allocator.allocate()), buffer(system, count * sizeof(VertexTerrain)) {
 	buffer.write(mesh.data(), mesh.size());
+
+	if (identifier == LinearArena::failed) {
+		throw Exception {"Out of unique chunk occlusion identifiers! Tell magistermaks to fix it!"};
+	}
 
 	#if !defined(NDEBUG)
 	std::stringstream ss {};
@@ -33,7 +39,8 @@ void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder
 }
 
 void WorldRenderer::ChunkBuffer::dispose(RenderSystem& system) {
-	system.defer([this] () {
+	system.defer([this, &system] () {
+		system.predicate_allocator.free(identifier);
 		this->buffer.close();
 		delete this;
 	});
@@ -99,6 +106,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	VkExtent2D extent = system.swapchain.vk_extent; // clean up ?
 	glm::vec3 origin = camera.getPosition() / (float) Chunk::size;
 
+	world_occlusion_count = system.predicate_allocator.remaining();
+
 	relative = buffers.values();
 	std::sort(relative.begin(), relative.end(), [origin] (const auto& lhs, const auto& rhs) {
 		return glm::distance2(glm::vec3 {lhs.first}, origin) < glm::distance2(glm::vec3 {rhs.first}, origin);
@@ -160,15 +169,13 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	// we need to rebind the same descriptor set here as the pipeline layout is different
 	recorder.bindDescriptorSet(frame.set_0);
 
-	for (int i = 0; i < discarded.size(); i ++) {
+	for (int i = 0; i < (int) discarded.size(); i ++) {
 		ChunkBuffer* chunk = discarded[i];
 		glm::vec3 offset = chunk->getOffset();
 
 		recorder.beginQuery(system.predicate_query, i);
-		//recorder.beginQuery(frame.occlusion_query, chunk->identifier);
 		recorder.writePushConstant(system.push_constant_occlude, glm::value_ptr(offset));
 		recorder.draw(36);
-		//recorder.endQuery(frame.occlusion_query, chunk->identifier);
 		recorder.endQuery(system.predicate_query, i);
 	}
 
@@ -181,10 +188,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	recorder.bindDescriptorSet(frame.set_0);
 	recorder.insertDebugLabel("Draw Conditional");
 
-	for (int i = 0; i < discarded.size(); i ++) {
+	for (int i = 0; i < (int) discarded.size(); i ++) {
 		ChunkBuffer* chunk = discarded[i];
-		glm::vec3 offset = chunk->getOffset();
-
 		recorder.beginConditional(system.chunk_predicates, i * sizeof(uint32_t));
 		chunk->draw(frame.occlusion_query, recorder);
 		recorder.endConditional();
@@ -195,7 +200,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 }
 
 void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh) {
-	auto* chunk = new ChunkBuffer(system, pos, mesh, chunk_identifier ++);
+	auto* chunk = new ChunkBuffer(system, pos, mesh);
 	world_vertex_count += chunk->count;
 	world_chunk_count ++;
 

@@ -10,6 +10,7 @@
 #include "shader/compiler.hpp"
 #include "util/threads.hpp"
 #include "resources.hpp"
+#include "util/arena.hpp"
 
 struct SceneUniform {
 	glm::mat4 mvp;
@@ -147,6 +148,7 @@ class RenderSystem {
 		Buffer chunk_box;
 		Buffer chunk_predicates;
 		QueryPool predicate_query;
+		LinearArena predicate_allocator;
 
 		Attachment attachment_color;
 		Attachment attachment_depth;

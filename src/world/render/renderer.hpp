@@ -13,6 +13,7 @@
 extern std::atomic_int world_vertex_count;
 extern std::atomic_int world_chunk_count;
 extern std::atomic_int world_frustum_count;
+extern std::atomic_int world_occlusion_count;
 
 // move this somewhere else?
 template <typename T>
@@ -60,7 +61,6 @@ class WorldRenderer {
 
 	private:
 
-		int chunk_identifier = 0;
 		RenderSystem& system;
 		World& world;
 		ChunkRenderPool mesher;
@@ -68,10 +68,10 @@ class WorldRenderer {
 
 		struct ChunkBuffer {
 			glm::ivec3 pos;
-			int count, identifier;
+			long count, identifier;
 			BasicBuffer buffer;
 
-			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, int id);
+			ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh);
 
 			/// draw this buffer unconditionally
 			void draw(QueryPool& pool, CommandRecorder& recorder);
