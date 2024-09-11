@@ -185,18 +185,6 @@ class LinearArena {
 
 				T value = std::numeric_limits<T>::max();
 
-				/// Find index of first set bit in the number
-				/// TODO move to bits.hpp
-				static inline int firstSetBitIndex(T value) {
-					int index = 0;
-
-					while (value >>= 1) {
-						index ++;
-					}
-
-					return index;
-				}
-
 			public:
 
 				Brick() = default;
@@ -205,7 +193,7 @@ class LinearArena {
 
 				/// Unset the ith bit
 				int allocate() {
-					int bit = firstSetBitIndex(value);
+					int bit = Bits::msbIndex(value);
 					value &= ~(1 << bit);
 					return bit;
 				}
@@ -227,7 +215,7 @@ class LinearArena {
 
 				/// Get the highest currently allocated value
 				long top() const {
-					return firstSetBitIndex(static_cast<T>(~value));
+					return Bits::msbIndex(static_cast<T>(~value));
 				}
 
 		};

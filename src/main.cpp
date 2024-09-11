@@ -106,7 +106,7 @@ int main() {
 		// it sounds like it would be better to do it after the static buffer have been drawn
 		// just before we actually need the transfers to finish but then it would be inside a render pass
 		// so we would need some internal subpass dependency stuff that i know nothing about
-		recorder.bufferTransferBarrier();
+		recorder.bufferTransferBarrier(VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 
 		world.update(world_generator, camera.getPosition(), 16);
 		world_renderer.draw(recorder, frustum, camera);

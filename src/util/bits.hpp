@@ -67,12 +67,13 @@ class Bits {
 				: bitfield(bitfield) {}
 
 				Iterator<T> begin() const {
-					return {bitfield, Bits::msb<T>(bitfield)}; // start with the highest bit
+					return {bitfield, Bits::msbMask<T>(bitfield)}; // start with the highest bit
 				}
 
 				Iterator<T> end() const {
 					return {bitfield, 0}; // end with the "lowest bit"
 				}
+
 		};
 
 	public:
@@ -96,8 +97,8 @@ class Bits {
 		 * set to zeros, so for 0b0010'0011 will return 0b0010`0000
 		 */
 		template <std::unsigned_integral T>
-		static inline constexpr T msb(T x) {
-			static_assert(Bits::width<T>() <= 32, "Bits::msb() works for at most 32 bit types");
+		static inline constexpr T msbMask(T x) {
+			static_assert(Bits::width<T>() <= 32, "Bits::msbMask() works for at most 32 bit types");
 
 			x |= (x >> 1);
 			x |= (x >> 2);
@@ -112,6 +113,21 @@ class Bits {
 			}
 
 			return x ^ (x >> 1);
+		}
+
+		/**
+		* Returns the index of the MSB counting from 0, from the right to the left
+		* so for 0b0010'0011 will return 5, passing zero as input will return 0
+		*/
+		template <std::unsigned_integral T>
+		static inline int msbIndex(T value) {
+			int index = 0;
+
+			while (value >>= 1) {
+				index ++;
+			}
+
+			return index;
 		}
 
 };

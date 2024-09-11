@@ -12,7 +12,7 @@
 
 extern std::atomic_int world_vertex_count;
 extern std::atomic_int world_chunk_count;
-extern std::atomic_int world_frustum_count;
+extern std::atomic_int world_visible_count;
 extern std::atomic_int world_occlusion_count;
 
 // move this somewhere else?

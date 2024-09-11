@@ -6,7 +6,7 @@
 // TODO TODO TODO TODO
 std::atomic_int world_vertex_count = 0;
 std::atomic_int world_chunk_count = 0;
-std::atomic_int world_frustum_count = 0;
+std::atomic_int world_visible_count = 0;
 std::atomic_int world_occlusion_count = 0;
 
 /*
@@ -112,7 +112,6 @@ void WorldRenderer::prepare(CommandRecorder& recorder) {
 
 void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& camera) {
 
-	world_frustum_count = 0;
 	Frame& frame = system.getFrame();
 	VkExtent2D extent = system.swapchain.vk_extent; // clean up ?
 	glm::vec3 origin = camera.getPosition() / (float) Chunk::size;
@@ -121,19 +120,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	world_chunk_count = buffers.size();
 
 	relative.clear();
-	relative.reserve(buffers.size());
-
-	// copy all chunks into `relative` for distance sorting
-	for (auto& pair : buffers.values()) {
-		relative.emplace_back(glm::distance2(glm::vec3 {pair.first} + 0.5f, origin), pair.second);
-	}
-
-	// sort by distance (closest to furthest)
-	std::sort(relative.begin(), relative.end(), [] (const auto& lhs, const auto& rhs) {
-		return lhs.first < rhs.first;
-	});
-
-	std::vector<ChunkBuffer*> discarded;
+	std::vector<ChunkBuffer*> conditional;
 
 	// begin Terrain Render Pass
 	recorder.beginRenderPass(system.terrain_pass, system.terrain_framebuffer, extent);
@@ -141,27 +128,40 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	recorder.bindDescriptorSet(frame.set_0);
 	recorder.insertDebugLabel("Draw Visible");
 
-	for (auto& [pos, chunk] : relative) {
+	// divide the chunks into 'visible', 'discarded', and 'conditional'
+	for (auto& [pos, chunk] : buffers.values()) {
 
 		glm::vec3 offset = chunk->getOffset();
 		bool visible = chunk->getOcclusion(frame.occlusion_query);
+		float distance = glm::distance2(glm::vec3 {pos} + 0.5f, origin);
 
 		if (visible) {
-			chunk->draw(frame.occlusion_query, recorder);
-			world_frustum_count ++;
+			relative.emplace_back(distance, chunk);
 			continue;
 		}
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
 			if (chunk->getCount() < 100) {
-				chunk->draw(frame.occlusion_query, recorder);
-				world_frustum_count ++;
+				relative.emplace_back(distance, chunk);
 				continue;
 			}
 
-			discarded.push_back(chunk);
+			conditional.push_back(chunk);
 		}
 
+		// if we got here the chunk is discarded
+
+	}
+
+	world_visible_count = relative.size() + awaiting.read().size();
+
+	// sort by distance (closest to furthest)
+	std::sort(relative.begin(), relative.end(), [] (const auto& lhs, const auto& rhs) {
+		return lhs.first < rhs.first;
+	});
+
+	for (auto& [pos, chunk] : relative) {
+		chunk->draw(frame.occlusion_query, recorder);
 	}
 
 	// Here we SHOULD wait for terrain upload to complete but we do
@@ -176,7 +176,6 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
 			chunk->draw(frame.occlusion_query, recorder);
-			world_frustum_count ++;
 		}
 	}
 
@@ -189,8 +188,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	// we need to rebind the same descriptor set here as the pipeline layout is different
 	recorder.bindDescriptorSet(frame.set_0);
 
-	for (int i = 0; i < (int) discarded.size(); i ++) {
-		ChunkBuffer* chunk = discarded[i];
+	for (int i = 0; i < (int) conditional.size(); i ++) {
+		ChunkBuffer* chunk = conditional[i];
 		glm::vec3 offset = chunk->getOffset();
 
 		recorder.beginQuery(system.predicate_query, i);
@@ -200,16 +199,16 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	}
 
 	recorder.endRenderPass();
-	recorder.copyQueryToBuffer(system.chunk_predicates, system.predicate_query, 0, discarded.size());
-	// TODO wait for copy to complete
+	recorder.copyQueryToBuffer(system.chunk_predicates, system.predicate_query, 0, conditional.size());
+	recorder.bufferTransferBarrier(VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT);
 
 	recorder.beginRenderPass(system.conditional_pass, system.conditional_framebuffer, extent);
 	recorder.bindPipeline(system.pipeline_conditional);
 	recorder.bindDescriptorSet(frame.set_0);
 	recorder.insertDebugLabel("Draw Conditional");
 
-	for (int i = 0; i < (int) discarded.size(); i ++) {
-		ChunkBuffer* chunk = discarded[i];
+	for (int i = 0; i < (int) conditional.size(); i ++) {
+		ChunkBuffer* chunk = conditional[i];
 		recorder.beginConditional(system.chunk_predicates, i * sizeof(uint32_t));
 		chunk->draw(frame.occlusion_query, recorder);
 		recorder.endConditional();

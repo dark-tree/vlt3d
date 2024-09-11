@@ -34,26 +34,36 @@ TEST(util_bits_width) {
 
 };
 
-TEST(util_bits_msb) {
+TEST(util_bits_msb_mask) {
 
-	CHECK(Bits::msb<uint8_t>(0b0110'0011), 0b0100'0000);
-	CHECK(Bits::msb<uint8_t>(0b0001'0011), 0b0001'0000);
-	CHECK(Bits::msb<uint8_t>(0b0000'0010), 0b0000'0010);
-	CHECK(Bits::msb<uint8_t>(0b0000'0001), 0b0000'0001); // special case, lowest bit
-	CHECK(Bits::msb<uint8_t>(0b1000'0000), 0b1000'0000); // special case, highest bit
-	CHECK(Bits::msb<uint8_t>(0b0000'0000), 0b0000'0000); // special case, 0
+	CHECK(Bits::msbMask<uint8_t>(0b0110'0011), 0b0100'0000);
+	CHECK(Bits::msbMask<uint8_t>(0b0001'0011), 0b0001'0000);
+	CHECK(Bits::msbMask<uint8_t>(0b0000'0010), 0b0000'0010);
+	CHECK(Bits::msbMask<uint8_t>(0b0000'0001), 0b0000'0001); // special case, lowest bit
+	CHECK(Bits::msbMask<uint8_t>(0b1000'0000), 0b1000'0000); // special case, highest bit
+	CHECK(Bits::msbMask<uint8_t>(0b0000'0000), 0b0000'0000); // special case, 0
 
 	// 2 BYTES
-	CHECK(Bits::msb<uint16_t>(0b0000'0010'0010'0100), 0b0000'0010'0000'0000);
-	CHECK(Bits::msb<uint16_t>(0b0000'0000'0000'0001), 0b0000'0000'0000'0001);
-	CHECK(Bits::msb<uint16_t>(0b1000'0000'0000'0000), 0b1000'0000'0000'0000);
-	CHECK(Bits::msb<uint16_t>(0b0000'0000'0000'0000), 0b0000'0000'0000'0000);
+	CHECK(Bits::msbMask<uint16_t>(0b0000'0010'0010'0100), 0b0000'0010'0000'0000);
+	CHECK(Bits::msbMask<uint16_t>(0b0000'0000'0000'0001), 0b0000'0000'0000'0001);
+	CHECK(Bits::msbMask<uint16_t>(0b1000'0000'0000'0000), 0b1000'0000'0000'0000);
+	CHECK(Bits::msbMask<uint16_t>(0b0000'0000'0000'0000), 0b0000'0000'0000'0000);
 
 	// 4 BYTES
-	CHECK(Bits::msb<uint32_t>(0x0000'0180), 0x0000'0100);
-	CHECK(Bits::msb<uint32_t>(0x01F0'0030), 0x0100'0000);
-	CHECK(Bits::msb<uint32_t>(0xFFFF'FFFF), 0x8000'0000);
-	CHECK(Bits::msb<uint32_t>(0x0000'0000), 0x0000'0000);
+	CHECK(Bits::msbMask<uint32_t>(0x0000'0180), 0x0000'0100);
+	CHECK(Bits::msbMask<uint32_t>(0x01F0'0030), 0x0100'0000);
+	CHECK(Bits::msbMask<uint32_t>(0xFFFF'FFFF), 0x8000'0000);
+	CHECK(Bits::msbMask<uint32_t>(0x0000'0000), 0x0000'0000);
+
+};
+
+TEST(util_bits_msb_index) {
+
+	CHECK(Bits::msbIndex<uint8_t>(0b0110'0011), 6);
+	CHECK(Bits::msbIndex<uint8_t>(0b0001'0011), 4);
+	CHECK(Bits::msbIndex<uint8_t>(0b0000'0010), 1);
+	CHECK(Bits::msbIndex<uint8_t>(0b0000'0001), 0); // special case, lowest bit
+	CHECK(Bits::msbIndex<uint8_t>(0b1000'0000), 7); // special case, highest bit
 
 };
 

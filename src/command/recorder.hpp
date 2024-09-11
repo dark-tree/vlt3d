@@ -145,21 +145,6 @@ class CommandRecorder {
 
 		CommandRecorder& copyQueryToBuffer(Buffer& buffer, QueryPool& pool, int start, int end) {
 			vkCmdCopyQueryPoolResults(vk_buffer, pool.vk_pool, start, end - start, buffer.vk_buffer, 0, sizeof(uint32_t), VK_QUERY_RESULT_WAIT_BIT);
-
-			// TODO cleanup
-			VkMemoryBarrier barrier {};
-			barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-			barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-			VkPipelineStageFlags src = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			VkPipelineStageFlags dst = VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
-
-			// allow reading from already written to sections (the whole thing doesn't need to finish)
-			VkDependencyFlags flags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			vkCmdPipelineBarrier(vk_buffer, src, dst, flags, 1, &barrier, 0, nullptr, 0, nullptr);
-
 			return *this;
 		}
 
@@ -235,7 +220,7 @@ class CommandRecorder {
 			return *this;
 		}
 
-		CommandRecorder& bufferTransferBarrier() {
+		CommandRecorder& bufferTransferBarrier(VkPipelineStageFlags dst) {
 
 			VkMemoryBarrier barrier {};
 			barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
@@ -243,7 +228,6 @@ class CommandRecorder {
 			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
 			VkPipelineStageFlags src = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			VkPipelineStageFlags dst = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
 			// allow reading from already written to sections (the whole thing doesn't need to finish)
 			VkDependencyFlags flags = VK_DEPENDENCY_BY_REGION_BIT;
