@@ -60,7 +60,7 @@ BlockFaceView ChunkFaceBuffer::getBlockView(int x, int y, int z) {
  * GreedyMesher
  */
 
-void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array) {
+void GreedyMesher::emitChunk(MeshEmitterSet& emitters, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array) {
 
 	buffer.clear(GreedyMesher::empty_tile);
 	Chunk* self = view.getOriginChunk();
@@ -112,12 +112,12 @@ void GreedyMesher::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& 
 
 	// this can be done on 3 threads if we need more speed
 	for (int slice = 0; slice < Chunk::size; slice ++) {
-		emitPlane<Normal::WEST>(mesh, offset, slice, buffer.getX(slice, 0));
-		emitPlane<Normal::EAST>(mesh, offset, slice, buffer.getX(slice, 1));
-		emitPlane<Normal::DOWN>(mesh, offset, slice, buffer.getY(slice, 0));
-		emitPlane<Normal::UP>(mesh, offset, slice, buffer.getY(slice, 1));
-		emitPlane<Normal::NORTH>(mesh, offset, slice, buffer.getZ(slice, 0));
-		emitPlane<Normal::SOUTH>(mesh, offset, slice, buffer.getZ(slice, 1));
+		emitPlane<Normal::WEST>(emitters.getWest(), offset, slice, buffer.getX(slice, 0));
+		emitPlane<Normal::EAST>(emitters.getEast(), offset, slice, buffer.getX(slice, 1));
+		emitPlane<Normal::DOWN>(emitters.getDown(), offset, slice, buffer.getY(slice, 0));
+		emitPlane<Normal::UP>(emitters.getUp(), offset, slice, buffer.getY(slice, 1));
+		emitPlane<Normal::NORTH>(emitters.getNorth(), offset, slice, buffer.getZ(slice, 0));
+		emitPlane<Normal::SOUTH>(emitters.getSouth(), offset, slice, buffer.getZ(slice, 1));
 	}
 
 }

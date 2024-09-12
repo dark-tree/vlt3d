@@ -13,9 +13,9 @@ std::atomic_int world_occlusion_count = 0;
  * ChunkBuffer
  */
 
-WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, uint64_t stamp)
-: stamp(stamp), pos(pos), identifier(system.predicate_allocator.allocate()), buffer(system, mesh.size() * sizeof(VertexTerrain)) {
-	buffer.write(mesh.data(), mesh.size());
+WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp)
+: stamp(stamp), pos(pos), identifier(system.predicate_allocator.allocate()), buffer(system, emitters.bytes()) {
+	emitters.writeToBuffer(buffer);
 
 	if (identifier == LinearArena::failed) {
 		throw Exception {"Out of unique chunk occlusion identifiers! Tell magistermaks to fix it!"};
@@ -218,8 +218,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 
 }
 
-void WorldRenderer::submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh, uint64_t stamp) {
-	auto* chunk = new ChunkBuffer(system, pos, mesh, stamp);
+void WorldRenderer::submitChunk(glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp) {
+	auto* chunk = new ChunkBuffer(system, pos, emitters, stamp);
 	world_vertex_count += chunk->getCount();
 
 	std::lock_guard lock {submit_mutex};

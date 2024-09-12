@@ -9,6 +9,8 @@ class CommandRecorder;
 class RenderSystem;
 class TaskQueue;
 
+// TODO God how i hate those classes
+
 class Buffer {
 
 	public:
@@ -33,7 +35,7 @@ class Buffer {
  */
 class BasicBuffer {
 
-	private:
+	public:
 
 		Buffer buffer;
 		Buffer staged;
@@ -85,6 +87,10 @@ class BasicBuffer {
 		void checkedWrite(RenderSystem& system, T* data, size_t count) {
 			reserve(system, count * sizeof(T));
 			write(data, count);
+		}
+
+		MemoryMap::View getMemoryView() {
+			return map.getView();
 		}
 
 		void upload(CommandRecorder& recorder);

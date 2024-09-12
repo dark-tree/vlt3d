@@ -10,6 +10,7 @@ class Chunk;
 class RenderSystem;
 class WorldRenderer;
 class ChunkFaceBuffer;
+class MeshEmitterSet;
 
 class ChunkRenderPool {
 
@@ -52,7 +53,7 @@ class ChunkRenderPool {
 		bool empty();
 
 		/// emit the mesh of the given chunk into the given vector
-		void emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, uint64_t stamp);
+		void emitChunk(MeshEmitterSet& mesh, ChunkFaceBuffer& buffer, WorldView& view, uint64_t stamp);
 
 		/// the worker threads' main function
 		void run();

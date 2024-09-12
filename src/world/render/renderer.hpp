@@ -82,7 +82,7 @@ class WorldRenderer {
 
 			public:
 
-				ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const std::vector<VertexTerrain>& mesh, uint64_t stamp);
+				ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp);
 
 				/// draw this buffer unconditionally
 				void draw(QueryPool& pool, CommandRecorder& recorder);
@@ -140,7 +140,7 @@ class WorldRenderer {
 		void draw(CommandRecorder& recorder, Frustum& frustum, Camera& camera);
 
 		/// Submit a buffer, mesh can be empty
-		void submitChunk(glm::ivec3 pos, std::vector<VertexTerrain>& mesh, uint64_t stamp);
+		void submitChunk(glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp);
 
 		/// Discard the chunk at the given coordinates
 		void eraseChunk(glm::ivec3 pos);

@@ -59,7 +59,7 @@ bool ChunkRenderPool::empty() {
 	return set.empty();
 }
 
-void ChunkRenderPool::emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, uint64_t stamp) {
+void ChunkRenderPool::emitChunk(MeshEmitterSet& mesh, ChunkFaceBuffer& buffer, WorldView& view, uint64_t stamp) {
 	mesh.clear();
 	GreedyMesher::emitChunk(mesh, buffer, view, system.assets.state->array);
 
@@ -72,8 +72,7 @@ void ChunkRenderPool::run() {
 
 	bool got = false;
 	UpdateRequest request;
-	std::vector<VertexTerrain> mesh;
-	mesh.reserve(4096);
+	MeshEmitterSet emitters {1024};
 	ChunkFaceBuffer buffer;
 
 	while (true) {
@@ -97,7 +96,7 @@ void ChunkRenderPool::run() {
 		WorldView view = request.unpack();
 
 		if (!view.getOriginChunk()->empty()) {
-			emitChunk(mesh, buffer, view, request.getStamp());
+			emitChunk(emitters, buffer, view, request.getStamp());
 		}
 	}
 }

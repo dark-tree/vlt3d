@@ -26,6 +26,7 @@
 #include <random>
 #include <regex>
 #include <fstream>
+#include <ranges>
 
 // STB
 #define STB_VORBIS_HEADER_ONLY

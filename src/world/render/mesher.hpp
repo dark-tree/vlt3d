@@ -4,6 +4,7 @@
 #include "client/vertices.hpp"
 #include "world/chunk.hpp"
 #include "buffer/sprites.hpp"
+#include "emitter.hpp"
 
 class SpriteArray;
 class WorldView;
@@ -152,7 +153,7 @@ class GreedyMesher {
 		 * Internal method used by `emitPlane`, writes as single quad (two triangles) into the given mesh buffer
 		 */
 		template <Normal normal>
-		static void emitQuad(std::vector<VertexTerrain>& mesh, float cx, float cy, float cz, float slice, float alpha, float beta, float width, float height, uint16_t index, BakedSprite sprite) {
+		static void emitQuad(MeshEmitter& mesh, float cx, float cy, float cz, float slice, float alpha, float beta, float width, float height, uint16_t index, BakedSprite sprite) {
 
 			const float aps = -(alpha - 0.5f);
 			const float bps = -(beta - 0.5f);
@@ -165,73 +166,85 @@ class GreedyMesher {
 			if constexpr (normal == Normal::EAST) {
 				cx += slice;
 
-				mesh.emplace_back(cx + 0.5, cy - aps, cz - bps, shw.u1, shw.v2, index, 255, 0, 0, Normal::EAST);
-				mesh.emplace_back(cx + 0.5, cy + apo, cz + bpo, shw.u2, shw.v1, index, 0, 255, 0, Normal::EAST);
-				mesh.emplace_back(cx + 0.5, cy - aps, cz + bpo, shw.u2, shw.v2, index, 0, 0, 255, Normal::EAST);
+				mesh.nextTriangle();
+				mesh.pushVertex(cx + 0.5, cy - aps, cz - bps, shw.u1, shw.v2, index, 255, 0, 0, Normal::EAST);
+				mesh.pushVertex(cx + 0.5, cy + apo, cz + bpo, shw.u2, shw.v1, index, 0, 255, 0, Normal::EAST);
+				mesh.pushVertex(cx + 0.5, cy - aps, cz + bpo, shw.u2, shw.v2, index, 0, 0, 255, Normal::EAST);
 
-				mesh.emplace_back(cx + 0.5, cy - aps, cz - bps, shw.u1, shw.v2, index, 255, 0, 0, Normal::EAST);
-				mesh.emplace_back(cx + 0.5, cy + apo, cz - bps, shw.u1, shw.v1, index, 0, 255, 0, Normal::EAST);
-				mesh.emplace_back(cx + 0.5, cy + apo, cz + bpo, shw.u2, shw.v1, index, 0, 0, 255, Normal::EAST);
+				mesh.nextTriangle();
+				mesh.pushIndex(0);
+				mesh.pushVertex(cx + 0.5, cy + apo, cz - bps, shw.u1, shw.v1, index, 0, 0, 255, Normal::EAST);
+				mesh.pushIndex(1);
 			}
 
 			if constexpr (normal == Normal::WEST) {
 				cx += slice;
 
-				mesh.emplace_back(cx - 0.5, cy - aps, cz - bps, shw.u1, shw.v2, index, 255, 0, 0, Normal::WEST);
-				mesh.emplace_back(cx - 0.5, cy - aps, cz + bpo, shw.u2, shw.v2, index, 0, 255, 0, Normal::WEST);
-				mesh.emplace_back(cx - 0.5, cy + apo, cz + bpo, shw.u2, shw.v1, index, 0, 0, 255, Normal::WEST);
+				mesh.nextTriangle();
+				mesh.pushVertex(cx - 0.5, cy - aps, cz - bps, shw.u1, shw.v2, index, 255, 0, 0, Normal::WEST);
+				mesh.pushVertex(cx - 0.5, cy - aps, cz + bpo, shw.u2, shw.v2, index, 0, 255, 0, Normal::WEST);
+				mesh.pushVertex(cx - 0.5, cy + apo, cz + bpo, shw.u2, shw.v1, index, 0, 0, 255, Normal::WEST);
 
-				mesh.emplace_back(cx - 0.5, cy - aps, cz - bps, shw.u1, shw.v2, index, 255, 0, 0, Normal::WEST);
-				mesh.emplace_back(cx - 0.5, cy + apo, cz + bpo, shw.u2, shw.v1, index, 0, 255, 0, Normal::WEST);
-				mesh.emplace_back(cx - 0.5, cy + apo, cz - bps, shw.u1, shw.v1, index, 0, 0, 255, Normal::WEST);
-			}
-
-			if constexpr (normal == Normal::UP) {
-				cy += slice;
-
-				mesh.emplace_back(cx - aps, cy + 0.5, cz - bps, swh.u1, swh.v1, index, 255, 0, 0, Normal::UP);
-				mesh.emplace_back(cx - aps, cy + 0.5, cz + bpo, swh.u1, swh.v2, index, 0, 255, 0, Normal::UP);
-				mesh.emplace_back(cx + apo, cy + 0.5, cz + bpo, swh.u2, swh.v2, index, 0, 0, 255, Normal::UP);
-
-				mesh.emplace_back(cx - aps, cy + 0.5, cz - bps, swh.u1, swh.v1, index, 255, 0, 0, Normal::UP);
-				mesh.emplace_back(cx + apo, cy + 0.5, cz + bpo, swh.u2, swh.v2, index, 0, 255, 0, Normal::UP);
-				mesh.emplace_back(cx + apo, cy + 0.5, cz - bps, swh.u2, swh.v1, index, 0, 0, 255, Normal::UP);
+				mesh.nextTriangle();
+				mesh.pushIndex(0);
+				mesh.pushIndex(2);
+				mesh.pushVertex(cx - 0.5, cy + apo, cz - bps, shw.u1, shw.v1, index, 0, 255, 0, Normal::WEST);
 			}
 
 			if constexpr (normal == Normal::DOWN) {
 				cy += slice;
 
-				mesh.emplace_back(cx - aps, cy - 0.5, cz - bps, swh.u1, swh.v1, index, 255, 0, 0, Normal::DOWN);
-				mesh.emplace_back(cx + apo, cy - 0.5, cz + bpo, swh.u2, swh.v2, index, 0, 255, 0, Normal::DOWN);
-				mesh.emplace_back(cx - aps, cy - 0.5, cz + bpo, swh.u1, swh.v2, index, 0, 0, 255, Normal::DOWN);
+				mesh.nextTriangle();
+				mesh.pushVertex(cx - aps, cy - 0.5, cz - bps, swh.u1, swh.v1, index, 255, 0, 0, Normal::DOWN);
+				mesh.pushVertex(cx + apo, cy - 0.5, cz + bpo, swh.u2, swh.v2, index, 0, 255, 0, Normal::DOWN);
+				mesh.pushVertex(cx - aps, cy - 0.5, cz + bpo, swh.u1, swh.v2, index, 0, 0, 255, Normal::DOWN);
 
-				mesh.emplace_back(cx - aps, cy - 0.5, cz - bps, swh.u1, swh.v1, index, 255, 0, 0, Normal::DOWN);
-				mesh.emplace_back(cx + apo, cy - 0.5, cz - bps, swh.u2, swh.v1, index, 0, 255, 0, Normal::DOWN);
-				mesh.emplace_back(cx + apo, cy - 0.5, cz + bpo, swh.u2, swh.v2, index, 0, 0, 255, Normal::DOWN);
+				mesh.nextTriangle();
+				mesh.pushIndex(0);
+				mesh.pushVertex(cx + apo, cy - 0.5, cz - bps, swh.u2, swh.v1, index, 0, 0, 255, Normal::DOWN);
+				mesh.pushIndex(1);
 			}
 
-			if constexpr (normal == Normal::SOUTH) {
-				cz += slice;
+			if constexpr (normal == Normal::UP) {
+				cy += slice;
 
-				mesh.emplace_back(cx - aps, cy - bps, cz + 0.5, swh.u1, swh.v2, index, 255, 0, 0, normal);
-				mesh.emplace_back(cx + apo, cy + bpo, cz + 0.5, swh.u2, swh.v1, index, 0, 255, 0, normal);
-				mesh.emplace_back(cx - aps, cy + bpo, cz + 0.5, swh.u1, swh.v1, index, 0, 0, 255, normal);
+				mesh.nextTriangle();
+				mesh.pushVertex(cx - aps, cy + 0.5, cz - bps, swh.u1, swh.v1, index, 255, 0, 0, Normal::UP);
+				mesh.pushVertex(cx - aps, cy + 0.5, cz + bpo, swh.u1, swh.v2, index, 0, 255, 0, Normal::UP);
+				mesh.pushVertex(cx + apo, cy + 0.5, cz + bpo, swh.u2, swh.v2, index, 0, 0, 255, Normal::UP);
 
-				mesh.emplace_back(cx - aps, cy - bps, cz + 0.5, swh.u1, swh.v2, index, 255, 0, 0, normal);
-				mesh.emplace_back(cx + apo, cy - bps, cz + 0.5, swh.u2, swh.v2, index, 0, 255, 0, normal);
-				mesh.emplace_back(cx + apo, cy + bpo, cz + 0.5, swh.u2, swh.v1, index, 0, 0, 255, normal);
+				mesh.nextTriangle();
+				mesh.pushIndex(0);
+				mesh.pushIndex(2);
+				mesh.pushVertex(cx + apo, cy + 0.5, cz - bps, swh.u2, swh.v1, index, 0, 255, 0, Normal::UP);
 			}
 
 			if constexpr (normal == Normal::NORTH) {
 				cz += slice;
 
-				mesh.emplace_back(cx - aps, cy - bps, cz - 0.5, swh.u1, swh.v2, index, 255, 0, 0, Normal::NORTH);
-				mesh.emplace_back(cx - aps, cy + bpo, cz - 0.5, swh.u1, swh.v1, index, 0, 255, 0, Normal::NORTH);
-				mesh.emplace_back(cx + apo, cy + bpo, cz - 0.5, swh.u2, swh.v1, index, 0, 0, 255, Normal::NORTH);
+				mesh.nextTriangle();
+				mesh.pushVertex(cx - aps, cy - bps, cz - 0.5, swh.u1, swh.v2, index, 255, 0, 0, Normal::NORTH);
+				mesh.pushVertex(cx - aps, cy + bpo, cz - 0.5, swh.u1, swh.v1, index, 0, 255, 0, Normal::NORTH);
+				mesh.pushVertex(cx + apo, cy + bpo, cz - 0.5, swh.u2, swh.v1, index, 0, 0, 255, Normal::NORTH);
 
-				mesh.emplace_back(cx - aps, cy - bps, cz - 0.5, swh.u1, swh.v2, index, 255, 0, 0, Normal::NORTH);
-				mesh.emplace_back(cx + apo, cy + bpo, cz - 0.5, swh.u2, swh.v1, index, 0, 255, 0, Normal::NORTH);
-				mesh.emplace_back(cx + apo, cy - bps, cz - 0.5, swh.u2, swh.v2, index, 0, 0, 255, Normal::NORTH);
+				mesh.nextTriangle();
+				mesh.pushIndex(0);
+				mesh.pushIndex(2);
+				mesh.pushVertex(cx + apo, cy - bps, cz - 0.5, swh.u2, swh.v2, index, 0, 255, 0, Normal::NORTH);
+			}
+
+			if constexpr (normal == Normal::SOUTH) {
+				cz += slice;
+
+				mesh.nextTriangle();
+				mesh.pushVertex(cx - aps, cy - bps, cz + 0.5, swh.u1, swh.v2, index, 255, 0, 0, normal);
+				mesh.pushVertex(cx + apo, cy + bpo, cz + 0.5, swh.u2, swh.v1, index, 0, 255, 0, normal);
+				mesh.pushVertex(cx - aps, cy + bpo, cz + 0.5, swh.u1, swh.v1, index, 0, 0, 255, normal);
+
+				mesh.nextTriangle();
+				mesh.pushIndex(0);
+				mesh.pushVertex(cx + apo, cy - bps, cz + 0.5, swh.u2, swh.v2, index, 0, 0, 255, normal);
+				mesh.pushIndex(1);
 			}
 
 		}
@@ -240,7 +253,7 @@ class GreedyMesher {
 		 * Internal method used by `emitChunk` greedily meshes a single 2D face buffer slice
 		 */
 		template <Normal normal>
-		static void emitPlane(std::vector<VertexTerrain>& mesh, glm::ivec3 chunk, int slice, ChunkPlane& plane) {
+		static void emitPlane(MeshEmitter& emitter, glm::ivec3 chunk, int slice, ChunkPlane& plane) {
 			const BakedSprite identity = BakedSprite::identity();
 
 			// there is always one empty delegate (with id 0) used to maker air quads
@@ -349,7 +362,7 @@ class GreedyMesher {
 						QuadDelegate& next = delegates[next_id];
 
 						if (next.sprite != quad.sprite) {
-							emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a - quad.extend, i, quad.extend, quad.streak, quad.sprite, identity);
+							emitQuad<normal>(emitter, chunk.x, chunk.y, chunk.z, slice, a - quad.extend, i, quad.extend, quad.streak, quad.sprite, identity);
 							return;
 						}
 
@@ -399,7 +412,7 @@ class GreedyMesher {
 							}
 						}
 
-						emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, a - quad.extend, quad.offset, quad.extend, quad.streak, quad.sprite, identity);
+						emitQuad<normal>(emitter, chunk.x, chunk.y, chunk.z, slice, a - quad.extend, quad.offset, quad.extend, quad.streak, quad.sprite, identity);
 					});
 
 				}
@@ -409,7 +422,7 @@ class GreedyMesher {
 
 			// emit the trailing row
 			forEachQuad(delegates, back, [&] (int i, QuadDelegate& quad) {
-				emitQuad<normal>(mesh, chunk.x, chunk.y, chunk.z, slice, Chunk::size - quad.extend, i, quad.extend, quad.streak, quad.sprite, identity);
+				emitQuad<normal>(emitter, chunk.x, chunk.y, chunk.z, slice, Chunk::size - quad.extend, i, quad.extend, quad.streak, quad.sprite, identity);
 			});
 		}
 
@@ -425,7 +438,7 @@ class GreedyMesher {
 		 * @param view access to surrounding chunks
 		 * @param array the block sprite storage
 		 */
-		static void emitChunk(std::vector<VertexTerrain>& mesh, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array);
+		static void emitChunk(MeshEmitterSet& emitters, ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array);
 
 };
 
