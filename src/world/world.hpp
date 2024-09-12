@@ -3,10 +3,10 @@
 #include "external.hpp"
 #include "chunk.hpp"
 #include "util/logger.hpp"
-#include "util/direction.hpp"
-#include "util/bits.hpp"
+#include "util/type/direction.hpp"
+#include "util/math/bits.hpp"
 #include "raycast.hpp"
-#include "util/ring.hpp"
+#include "util/collection/ring.hpp"
 #include "view.hpp"
 
 struct AccessError : std::exception {

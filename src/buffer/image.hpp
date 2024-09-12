@@ -2,7 +2,7 @@
 
 #include "external.hpp"
 #include "memory.hpp"
-#include "util/threads.hpp"
+#include "util/thread/queue.hpp"
 #include "setup/callback.hpp"
 
 class Image;

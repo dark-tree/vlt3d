@@ -2,7 +2,7 @@
 #include "renderer.hpp"
 
 #include "setup/device.hpp"
-#include "util/random.hpp"
+#include "util/math/random.hpp"
 #include "vertices.hpp"
 #include "world/chunk.hpp"
 

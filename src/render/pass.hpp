@@ -5,10 +5,10 @@
 
 #include "external.hpp"
 #include "attachment.hpp"
-#include "util/pyramid.hpp"
+#include "util/collection/pyramid.hpp"
 #include "setup/device.hpp"
 #include "setup/debug.hpp"
-#include "util/color.hpp"
+#include "util/type/color.hpp"
 
 class RenderPassBuilder;
 

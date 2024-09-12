@@ -1,7 +1,7 @@
 #pragma once
 
 #include "external.hpp"
-#include "util/ring.hpp"
+#include "util/collection/ring.hpp"
 
 class Profiler {
 

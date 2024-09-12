@@ -2,7 +2,7 @@
 
 #include "external.hpp"
 #include "util/exception.hpp"
-#include "util/bits.hpp"
+#include "util/math/bits.hpp"
 
 class AllocationBlock {
 
@@ -344,10 +344,12 @@ class LinearArena {
 			return -1;
 		}
 
+		/// Get the total amount of elements this allocator can allocate at the same time
 		long capacity() const {
 			return blocks.size() * StorageBlock::capacity;
 		}
 
+		/// Get the number of remaining allocations
 		long remaining() const {
 			std::lock_guard lock {mutex};
 			long free = 0;

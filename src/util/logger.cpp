@@ -1,7 +1,11 @@
 
 #include "logger.hpp"
 
-std::string logger::getTimestamp() {
+/*
+ * Logger
+ */
+
+std::string Logger::getTimestamp() {
 	auto now = std::chrono::system_clock::now();
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
@@ -14,6 +18,32 @@ std::string logger::getTimestamp() {
 	return oss.str();
 }
 
-std::string logger::getText(const std::string& type, std::stringstream& buffer) {
+std::string Logger::getText(const std::string& type, std::stringstream& buffer) {
 	return getTimestamp() + " " + type + ": " + buffer.str() + "\n";
+}
+
+void Logger::setLevelMask(uint8_t value) {
+	mask = value;
+}
+
+/*
+ * logger
+ */
+
+Logger logger::global;
+
+/*
+ * LoggerLock
+ */
+
+LoggerLock::LoggerLock(Logger& logger, uint8_t mask)
+: logger(logger), old(logger.mask) {
+	logger.setLevelMask(mask);
+}
+
+LoggerLock::LoggerLock(uint8_t mask)
+: LoggerLock(logger::global, mask) {}
+
+LoggerLock::~LoggerLock() {
+	logger.setLevelMask(old);
 }

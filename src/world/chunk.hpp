@@ -1,7 +1,7 @@
 #pragma once
 
 #include "external.hpp"
-#include "util/direction.hpp"
+#include "util/type/direction.hpp"
 #include "block.hpp"
 
 class Chunk {

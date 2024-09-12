@@ -25,31 +25,31 @@ class Bits {
 				using pointer = T*;
 				using reference = T&;
 
-				Iterator(T bitfield, T current)
+				constexpr Iterator(T bitfield, T current)
 				: bitfield(bitfield), current(current) {}
 
-				T operator*() const {
+				constexpr T operator*() const {
 					return current;
 				}
 
-				Iterator& operator++() {
+				constexpr Iterator& operator++() {
 					do {
 						current >>= 1;
 					} while (current != 0 && (bitfield & current) == 0);
 					return *this;
 				}
 
-				Iterator operator++(int) {
+				constexpr Iterator operator++(int) {
 					Iterator tmp = *this;
 					++(*this);
 					return tmp;
 				}
 
-				bool operator==(const Iterator& other) const {
+				constexpr bool operator==(const Iterator& other) const {
 					return current == other.current;
 				}
 
-				bool operator!=(const Iterator& other) const {
+				constexpr bool operator!=(const Iterator& other) const {
 					return current != other.current;
 				}
 		};
@@ -63,14 +63,14 @@ class Bits {
 
 			public:
 
-				Range(T bitfield)
+				constexpr Range(T bitfield)
 				: bitfield(bitfield) {}
 
-				Iterator<T> begin() const {
+				constexpr Iterator<T> begin() const {
 					return {bitfield, Bits::msbMask<T>(bitfield)}; // start with the highest bit
 				}
 
-				Iterator<T> end() const {
+				constexpr Iterator<T> end() const {
 					return {bitfield, 0}; // end with the "lowest bit"
 				}
 
@@ -79,7 +79,7 @@ class Bits {
 	public:
 
 		template <std::unsigned_integral T>
-		static Range<T> decompose(T bitfield) {
+		static constexpr Range<T> decompose(T bitfield) {
 			return {bitfield};
 		}
 
@@ -120,7 +120,7 @@ class Bits {
 		* so for 0b0010'0011 will return 5, passing zero as input will return 0
 		*/
 		template <std::unsigned_integral T>
-		static inline int msbIndex(T value) {
+		static inline constexpr int msbIndex(T value) {
 			int index = 0;
 
 			while (value >>= 1) {

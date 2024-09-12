@@ -1,6 +1,6 @@
 
 #include "view.hpp"
-#include "util/bits.hpp"
+#include "util/math/bits.hpp"
 #include "world/chunk.hpp"
 #include "world/world.hpp"
 

@@ -1,7 +1,7 @@
 
 #include "pool.hpp"
 #include "util/logger.hpp"
-#include "util/direction.hpp"
+#include "util/type/direction.hpp"
 #include "client/renderer.hpp"
 #include "world/world.hpp"
 #include "renderer.hpp"

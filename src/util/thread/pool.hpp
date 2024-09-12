@@ -2,65 +2,11 @@
 
 #include <utility>
 
-#include "logger.hpp"
-#include "timer.hpp"
 #include "external.hpp"
-#include "exception.hpp"
+#include "util/logger.hpp"
+#include "util/exception.hpp"
 
-using Task = std::function<void()>;
-
-/**
- * A wrapper around a std::function that allows
- * TaskPool to attach additional information to tasks
- */
-class ManagedTask {
-
-	private:
-
-		Task task;
-		Timer timer;
-
-	public:
-
-		ManagedTask() = default;
-		ManagedTask(const Task& task);
-
-		inline void call() const;
-
-};
-
-/**
- * This class can be used to execute callbacks on
- * specific threads or in specific places
- */
-class TaskQueue {
-
-	private:
-
-		std::mutex queue_mutex;
-		std::queue<Task> tasks;
-
-	public:
-
-		TaskQueue() = default;
-		TaskQueue(const TaskQueue& other);
-		TaskQueue(TaskQueue&& other) noexcept;
-
-		void enqueue(const Task& task);
-
-		template <typename Func, typename Arg, typename... Args>
-		void enqueue(Func func, Arg arg, Args... args) {
-			enqueue(std::bind(func, arg, args...));
-		}
-
-	public:
-
-		/**
-		 * Execute all pending task in this queue
-		 */
-		int execute();
-
-};
+#include "task.hpp"
 
 /**
  * A basic thread pool implementation with
@@ -146,42 +92,6 @@ class TaskPool {
 			});
 
 			return future;
-		}
-
-};
-
-class MailboxTaskDelegator {
-
-	private:
-
-		std::mutex mutex;
-		TaskPool& pool;
-
-	public:
-
-		MailboxTaskDelegator(TaskPool& pool)
-		: pool(pool) {}
-
-		/**
-		 * Enqueue task to the parent pool in such a way that
-		 * only one task will be allowed to execute at a time
-		 * if enqueue is called before the previous task is done
-		 * it will block until the task completes
-		 */
-		void enqueue(const Task& task) {
-			mutex.lock();
-
-			pool.chained(task, [this] () {
-				mutex.unlock();
-			});
-		}
-
-		/**
-		 * Wait for the previously added task to complete,
-		 * can be safely called even if no task has yet been enqueue
-		 */
-		void wait() {
-			std::lock_guard {mutex};
 		}
 
 };

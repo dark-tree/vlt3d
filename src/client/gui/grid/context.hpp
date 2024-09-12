@@ -3,7 +3,7 @@
 #include "external.hpp"
 
 #include "client/gui/stack.hpp"
-#include "util/box.hpp"
+#include "util/type/box.hpp"
 #include "window/input.hpp"
 #include "window/event.hpp"
 #include "client/gui/component/component.hpp"

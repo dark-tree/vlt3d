@@ -7,7 +7,7 @@
 #include "vertices.hpp"
 #include "alignment.hpp"
 #include "camera.hpp"
-#include "util/color.hpp"
+#include "util/type/color.hpp"
 #include "resources.hpp"
 
 class ImmediateRenderer {

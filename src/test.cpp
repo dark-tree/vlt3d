@@ -1,12 +1,13 @@
 
 #include <vstl.hpp>
-#include "util/bits.hpp"
-#include "util/pyramid.hpp"
+#include "util/math/bits.hpp"
+#include "util/collection/pyramid.hpp"
 #include "util/exception.hpp"
 #include "buffer/array.hpp"
 #include "util/arena.hpp"
-#include "util/ring.hpp"
+#include "util/collection/ring.hpp"
 #include "util/util.hpp"
+#include "util/thread/delegator.hpp"
 
 BEGIN(VSTL_MODE_LENIENT)
 
@@ -123,6 +124,8 @@ TEST(util_threads_queue) {
 };
 
 TEST(util_threads_mailbox) {
+
+	LoggerLock lock {Logger::FATAL | Logger::ERROR | Logger::WARN};
 
 	int counter = 0;
 	auto main = std::this_thread::get_id();
@@ -399,6 +402,8 @@ TEST(util_pyramid) {
 };
 
 TEST(sprite_array) {
+
+	LoggerLock lock {Logger::FATAL | Logger::ERROR};
 
 	ImageData red = ImageData::allocate(8, 8);
 	red.clear({255, 30, 30, 255});

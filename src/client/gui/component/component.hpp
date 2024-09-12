@@ -1,8 +1,8 @@
 #pragma once
 
 #include "external.hpp"
-#include "util/box.hpp"
-#include "util/color.hpp"
+#include "util/type/box.hpp"
+#include "util/type/color.hpp"
 #include "client/alignment.hpp"
 #include "client/gui/grid/inset.hpp"
 #include "client/gui/grid/chain.hpp"

@@ -8,7 +8,7 @@
 #include "descriptor/pool.hpp"
 #include "setup/swapchain.hpp"
 #include "shader/compiler.hpp"
-#include "util/threads.hpp"
+#include "util/thread/delegator.hpp"
 #include "resources.hpp"
 #include "util/arena.hpp"
 

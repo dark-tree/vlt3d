@@ -1,6 +1,6 @@
 
 #include "play.hpp"
-#include "util/random.hpp"
+#include "util/math/random.hpp"
 #include "world/skybox.hpp"
 
 PlayScreen::PlayScreen(World& world, Camera& camera)

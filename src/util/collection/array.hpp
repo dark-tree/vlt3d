@@ -1,8 +1,7 @@
 #pragma once
 
-#include "logger.hpp"
+#include "util/logger.hpp"
 #include "external.hpp"
-#include "inline.hpp"
 
 template <typename T> requires std::is_trivially_copyable_v<T>
 class ArrayBuffer {

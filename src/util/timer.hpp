@@ -3,16 +3,9 @@
 #include "external.hpp"
 
 /**
- * Start a timer on class construction
+ * Starts a timer on class construction
  * each call to the milliseconds() or nanoseconds()
  * will return the current elapsed time from that initial point
- *
- * Example usage:
- *
- * if (Timer timer; timer) {
- *     // some operation
- *     logger::info("Operation took: ", timer.milliseconds(), "ms");
- * }
  */
 class Timer {
 
@@ -28,25 +21,39 @@ class Timer {
 
 	public:
 
-		Timer()
-		: start(Clock::now()) {}
+		Timer();
 
-		double milliseconds() const {
-			return elapsed<std::milli>().count();
-		}
+		/**
+		 * Returns the elapsed time in milliseconds
+		 */
+		double milliseconds() const;
 
-		double nanoseconds() const {
-			return elapsed<std::nano>().count();
-		}
+		/**
+		 * Returns the elapsed time in nanoseconds
+		 */
+		double nanoseconds() const;
 
-		operator bool() const {
-			return true;
-		}
+		/**
+		 * Always covert to true, needed to facilitate usage in ifs,
+		 * use like this:
+		 * @code
+		 *
+		 * if (Timer timer; timer) {
+		 *     // some operation
+		 *     logger::info("Operation took: ", timer.milliseconds(), "ms");
+		 * }
+		 */
+		operator bool() const;
 
-		static inline Timer of(const std::function<void()>& thing) {
-			Timer timer;
-			thing();
-			return timer;
-		}
+		/**
+		 * Time the given lambda, returns a still running timer,
+		 * use like this:
+		 * @code
+		 *
+		 * logger::info("Operation took: ", Timer::of([&] () {
+		 *     // some operation
+		 * }).milliseconds(), "ms");
+		 */
+		static Timer of(const std::function<void()>& thing);
 
 };

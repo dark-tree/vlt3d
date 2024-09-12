@@ -2,7 +2,7 @@
 
 #include "external.hpp"
 #include "client/immediate.hpp"
-#include "util/random.hpp"
+#include "util/math/random.hpp"
 
 struct Sun {
 	glm::vec3 pos;

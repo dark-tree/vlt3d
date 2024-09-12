@@ -1,7 +1,7 @@
 
 #include "world.hpp"
 #include "generator.hpp"
-#include "util/threads.hpp"
+#include "util/thread/pool.hpp"
 #include "util/util.hpp"
 
 /*

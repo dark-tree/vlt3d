@@ -1,7 +1,7 @@
 
 #include "resources.hpp"
 #include "command/pool.hpp"
-#include "util/threads.hpp"
+#include "util/thread/pool.hpp"
 #include "shader/compiler.hpp"
 #include "client/renderer.hpp"
 #include "buffer/array.hpp"

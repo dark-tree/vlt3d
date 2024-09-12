@@ -3,7 +3,7 @@
 #include "client/vertices.hpp"
 #include "buffer/allocator.hpp"
 #include "buffer/atlas.hpp"
-#include "util/approx.hpp"
+#include "util/math/approx.hpp"
 
 ImmediateRenderer::ImmediateRenderer(const ResourceManager& assets)
 : mode(BillboardMode::TWO_AXIS), assets(assets) {
