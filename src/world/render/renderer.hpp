@@ -86,7 +86,7 @@ class WorldRenderer {
 				ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp);
 
 				/// draw this buffer unconditionally
-				void draw(QueryPool& pool, CommandRecorder& recorder, glm::vec3 camera_pos);
+				void draw(QueryPool& pool, CommandRecorder& recorder, glm::vec3 camera_pos, bool cull);
 
 				/// dispose of this buffer as soon as it's valid to do so
 				void dispose(RenderSystem& system);

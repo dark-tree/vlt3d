@@ -9,7 +9,7 @@ class MeshEmitter {
 	private:
 
 		size_t front, back;
-		std::vector<VertexTerrain> mesh;
+		std::vector<VertexTerrain> vertices;
 
 	public:
 

@@ -12,32 +12,32 @@ MeshEmitter::MeshEmitter() {
 
 void MeshEmitter::nextTriangle() {
 	back = front;
-	front = mesh.size();
-	mesh.reserve(3);
+	front = vertices.size();
+	vertices.reserve(3);
 }
 
 void MeshEmitter::pushVertex(double x, double y, double z, float u, float v, int index, uint8_t r, uint8_t g, uint8_t b, Normal normal) {
-	mesh.emplace_back(x, y, z, u, v, index, r, g, b, normal);
+	vertices.emplace_back(x, y, z, u, v, index, r, g, b, normal);
 }
 
 void MeshEmitter::pushIndex(size_t index) {
-	mesh.push_back(mesh[back + index]);
+	vertices.push_back(vertices[back + index]);
 }
 
 void MeshEmitter::clear() {
-	mesh.clear();
+	vertices.clear();
 	front = 0;
 	back = 0;
 }
 
 const std::vector<VertexTerrain>& MeshEmitter::getVertexData() const {
-	return mesh;
+	return vertices;
 }
 
 void MeshEmitter::reserve(size_t elements) {
-	mesh.reserve(elements);
+	vertices.reserve(elements);
 }
 
 size_t MeshEmitter::size() const {
-	return mesh.size();
+	return vertices.size();
 }

@@ -135,10 +135,10 @@ int main() {
 		recorder.nextSubpass()
 			.bindPipeline(system.pipeline_3d_tint)
 			.bindDescriptorSet(frame.set_1)
-			.bindBuffer(frame.immediate_3d.getBuffer())
+			.bindVertexBuffer(frame.immediate_3d.getBuffer())
 			.draw(frame.immediate_3d.getCount())
 			.bindPipeline(system.pipeline_2d_tint)
-			.bindBuffer(frame.immediate_2d.getBuffer())
+			.bindVertexBuffer(frame.immediate_2d.getBuffer())
 			.draw(frame.immediate_2d.getCount())
 			.endRenderPass();
 

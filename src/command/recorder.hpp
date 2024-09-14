@@ -122,14 +122,24 @@ class CommandRecorder {
 			return *this;
 		}
 		
-		CommandRecorder& bindBuffer(const Buffer& buffer, VkDeviceSize offset = 0) {
+		CommandRecorder& bindVertexBuffer(const Buffer& buffer, VkDeviceSize offset = 0) {
 			VkDeviceSize offsets[] = {offset};
 			vkCmdBindVertexBuffers(vk_buffer, 0, 1, &buffer.vk_buffer, offsets);
 			return *this;
 		}
 
+		CommandRecorder& bindIndexBuffer(const Buffer& buffer, VkDeviceSize offset = 0) {
+			vkCmdBindIndexBuffer(vk_buffer, buffer.vk_buffer, offset, VK_INDEX_TYPE_UINT32);
+			return *this;
+		}
+
 		CommandRecorder& draw(uint32_t vertices, uint32_t instances = 1, uint32_t vertexIndexOffset = 0, uint32_t instanceIndexOffset = 0) {
 			vkCmdDraw(vk_buffer, vertices, instances, vertexIndexOffset, instanceIndexOffset);
+			return *this;
+		}
+
+		CommandRecorder& drawIndexed(uint32_t indexes, uint32_t instances = 1, uint32_t firstIndex = 0, int32_t vertexOffset = 0, uint32_t instanceIndexOffset = 0) {
+			vkCmdDrawIndexed(vk_buffer, indexes, instances, firstIndex, vertexOffset, instanceIndexOffset);
 			return *this;
 		}
 

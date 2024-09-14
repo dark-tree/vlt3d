@@ -98,7 +98,7 @@ void BasicBuffer::upload(CommandRecorder& recorder) {
 
 void BasicBuffer::draw(CommandRecorder& recorder) {
 	if (count > 0) {
-		recorder.bindBuffer(buffer).draw(count);
+		recorder.bindVertexBuffer(buffer).draw(count);
 	}
 }
 
