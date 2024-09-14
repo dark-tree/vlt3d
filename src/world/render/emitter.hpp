@@ -35,13 +35,17 @@ class MeshEmitter {
 		/// Resizes the buffer to fit at least `count` elements
 		void reserve(size_t count);
 
+		/// Get mesh size (vertex count)
+		size_t size() const;
+
 };
 
 class MeshEmitterSet {
 
 	private:
 
-		std::array<MeshEmitter, 7> emitters;
+		static constexpr size_t components = 7;
+		mutable std::array<MeshEmitter, components> emitters;
 
 	public:
 
@@ -101,16 +105,19 @@ class MeshEmitterSet {
 
 	public:
 
-		void writeToBuffer(BasicBuffer& buffer) const {
+		void writeToBuffer(BasicBuffer& buffer, std::array<uint32_t, components>& region_begin, std::array<uint32_t, components>& region_count) const {
 
 			MemoryMap::View memory = buffer.getMemoryView();
 			size_t vertices = 0;
 
-			for (const MeshEmitter& emitter : emitters) {
-				const auto& mesh = emitter.getVertexData();
+			for (int i = 0; i < components; i ++) {
+				const auto& mesh = emitters[i].getVertexData();
 				const size_t count = mesh.size();
 
 				memory.write(mesh.data(), count * sizeof(VertexTerrain));
+
+				region_begin[i] = vertices;
+				region_count[i] = count;
 				vertices += count;
 			}
 

@@ -37,3 +37,7 @@ const std::vector<VertexTerrain>& MeshEmitter::getVertexData() const {
 void MeshEmitter::reserve(size_t elements) {
 	mesh.reserve(elements);
 }
+
+size_t MeshEmitter::size() const {
+	return mesh.size();
+}

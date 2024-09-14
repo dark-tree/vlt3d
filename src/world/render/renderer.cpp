@@ -15,7 +15,7 @@ std::atomic_int world_occlusion_count = 0;
 
 WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp)
 : stamp(stamp), pos(pos), identifier(system.predicate_allocator.allocate()), buffer(system, emitters.bytes()) {
-	emitters.writeToBuffer(buffer);
+	emitters.writeToBuffer(buffer, region_begin, region_count);
 
 	if (identifier == LinearArena::failed) {
 		throw Exception {"Out of unique chunk occlusion identifiers! Tell magistermaks to fix it!"};
@@ -32,9 +32,38 @@ WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, co
 	#endif
 }
 
-void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder) {
+void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder, glm::vec3 cam) {
+
+	bool mask[7];
+
+	glm::vec3 pos = getOffset();
+	glm::vec3 end = pos + 32.0f;
+
+	mask[0] = cam.x < end.x; // west
+	mask[1] = cam.x > pos.x; // east
+	mask[2] = cam.y < end.y; // down
+	mask[3] = cam.y > pos.y; // up
+	mask[4] = cam.z < end.z; // north
+	mask[5] = cam.z > pos.z; // south
+	mask[6] = true; // unaligned
+
 	recorder.beginQuery(pool, identifier);
-	buffer.draw(recorder);
+	for (int i = 0; i < 7; i ++) {
+		if (mask[i]) {
+			const uint32_t start = region_begin[i];
+			const uint32_t count = region_count[i];
+
+			if (count) {
+				recorder.bindBuffer(buffer.getBuffer(), start * sizeof(VertexTerrain));
+				recorder.draw(count);
+			}
+		}
+	}
+
+	// it looks like doing ~3x the drawcalls is still faster
+	// if we reduce the amount of geometry in total.
+	// buffer.draw(recorder);
+
 	recorder.endQuery(pool, identifier);
 }
 
@@ -114,7 +143,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 
 	Frame& frame = system.getFrame();
 	VkExtent2D extent = system.swapchain.vk_extent; // clean up ?
-	glm::vec3 origin = camera.getPosition() / (float) Chunk::size;
+	glm::vec3 camera_pos = camera.getPosition();
+	glm::vec3 origin = camera_pos / (float) Chunk::size;
 
 	world_occlusion_count = system.predicate_allocator.remaining();
 	world_chunk_count = buffers.size();
@@ -161,7 +191,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	});
 
 	for (auto& [pos, chunk] : relative) {
-		chunk->draw(frame.occlusion_query, recorder);
+		chunk->draw(frame.occlusion_query, recorder, camera_pos);
 	}
 
 	// Here we SHOULD wait for terrain upload to complete but we do
@@ -175,7 +205,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 		glm::vec3 offset = chunk->getOffset();
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
-			chunk->draw(frame.occlusion_query, recorder);
+			chunk->draw(frame.occlusion_query, recorder, camera_pos);
 		}
 	}
 
@@ -210,7 +240,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	for (int i = 0; i < (int) conditional.size(); i ++) {
 		ChunkBuffer* chunk = conditional[i];
 		recorder.beginConditional(system.chunk_predicates, i * sizeof(uint32_t));
-		chunk->draw(frame.occlusion_query, recorder);
+		chunk->draw(frame.occlusion_query, recorder, camera_pos);
 		recorder.endConditional();
 	}
 
