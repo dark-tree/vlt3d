@@ -27,7 +27,9 @@ void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t flags) {
 }
 
 void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius, float vertical) {
-	glm::ivec3 pos = {origin.x / Chunk::size, origin.y / Chunk::size, origin.z / Chunk::size};
+
+	int py = origin.y / Chunk::size;
+	glm::ivec2 pos = {origin.x / Chunk::size, origin.z / Chunk::size};
 	float magnitude = radius * radius;
 
 	double time = Timer::of([&] () {
@@ -35,12 +37,13 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius, f
 		std::lock_guard chunks_lock {chunks_mutex};
 
 		// chunk unloading
-		for (auto it = chunks.begin(); it != chunks.end();) {
-			if (glm::distance2(glm::vec3(it->first), glm::vec3(pos)) >= magnitude) {
-				it = chunks.erase(it);
+		for (auto it = columns.begin(); it != columns.end();) {
+			if (it->second.empty() || glm::distance2(glm::vec2(it->first), glm::vec2(pos)) >= magnitude) {
+				it = columns.erase(it);
 				continue;
 			}
 
+			it->second.update(vertical, py);
 			std::advance(it, 1);
 		}
 
@@ -58,10 +61,13 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius, f
 			planeRingIterator(ring, [&] (int cx, int cz) {
 				for (int cy = -vertical; cy <= vertical; cy++) {
 
-					glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
-					if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
-						if (!chunks.contains(key)) {
+					// glm::ivec2 uses .y but we store .z in it
+					glm::ivec3 key = {pos.x + cx, py + cy, pos.y + cz};
 
+					if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
+						auto it = columns.find(glm::ivec2 {key.x, key.z});
+
+						if (it == columns.end() || (!it->second.contains(key.y))) {
 							if (requested.size() > 8) {
 								return;
 							}
@@ -77,7 +83,7 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius, f
 
 								{
 									std::lock_guard lock {chunks_mutex};
-									chunks[key].reset(chunk);
+									columns[glm::ivec2 {key.x, key.z}].emplace(chunk);
 								}
 
 								pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
@@ -111,14 +117,14 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius, f
 }
 
 std::weak_ptr<Chunk> World::getUnsafeChunk(int cx, int cy, int cz) {
-	const glm::ivec3 key {cx, cy, cz};
-	auto it = chunks.find(key);
+	const glm::ivec2 key {cx, cz};
+	auto it = columns.find(key);
 
-	if (it == chunks.end()) {
+	if (it == columns.end()) {
 		return {};
 	}
 
-	return it->second;
+	return it->second.get(cy);
 }
 
 std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {

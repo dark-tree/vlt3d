@@ -44,7 +44,7 @@ class MeshEmitterSet {
 
 	private:
 
-		static constexpr size_t components = 8;
+		static constexpr int components = 8;
 		mutable std::array<MeshEmitter, components> emitters;
 
 	public:

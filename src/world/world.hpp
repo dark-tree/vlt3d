@@ -7,6 +7,7 @@
 #include "raycast.hpp"
 #include "util/collection/ring.hpp"
 #include "view.hpp"
+#include "column.hpp"
 
 struct AccessError : std::exception {
 
@@ -58,7 +59,7 @@ class World {
 		RingBuffer<double, 256> times;
 
 		std::mutex chunks_mutex;
-		ankerl::unordered_dense::map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
+		ankerl::unordered_dense::map<glm::ivec2, ChunkColumn> columns;
 
 		std::mutex updates_mutex;
 		ankerl::unordered_dense::map<glm::ivec3, uint8_t> updates;
@@ -66,6 +67,11 @@ class World {
 		/// Simple utility to iterate a plane with ever expanding concentric square rings
 		template <typename Func>
 		void planeRingIterator(int ring, Func func) {
+			if (ring == 0) {
+				func(0, 0);
+				return;
+			}
+
 			for (int i = -ring; i <= ring; i ++) {
 				func(i, -ring);
 				func(i, +ring);
