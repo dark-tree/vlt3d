@@ -25,7 +25,7 @@ WorldView::WorldView(World& world, const std::shared_ptr<Chunk>& center, Directi
 	this->center_chunk = center->pos;
 	chunks[indexOf(center_chunk.x, center_chunk.y, center_chunk.z)] = center;
 
-	for (Direction direction : Bits::decompose<Direction::field_type>(directions)) {
+	for (Direction direction : Direction::decompose(directions)) {
 		glm::ivec3 key = center_chunk + Direction::offset(direction);
 		std::shared_ptr<Chunk> lock = world.getUnsafeChunk(key.x, key.y, key.z).lock();
 
@@ -53,7 +53,9 @@ Block WorldView::getBlock(int x, int y, int z) {
 	int cy = y >> Chunk::bits;
 	int cz = z >> Chunk::bits;
 
-	return getChunk(cx, cy, cz)->getBlock(x & Chunk::mask, y & Chunk::mask, z & Chunk::mask);
+	int mask = (Chunk::mask & 0b1111'1111);
+
+	return getChunk(cx, cy, cz)->getBlock(x & mask, y & mask, z & mask);
 }
 
 Chunk* WorldView::getChunk(int cx, int cy, int cz) {

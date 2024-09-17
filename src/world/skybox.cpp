@@ -159,7 +159,7 @@ glm::vec3 Skybox::getSunPos(float observer_latitude) const {
 void Skybox::draw(ImmediateRenderer& immediate, Camera& camera) const {
 
 	glm::vec3 observer = camera.getPosition();
-	float radius = 500;
+	float radius = 800;
 
 	// 1. Draw Star Field
 

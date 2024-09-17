@@ -88,7 +88,7 @@ class Bits {
 		 * allows only singed or unsigned integral types
 		 */
 		template <std::integral T>
-		static inline constexpr T width() {
+		static constexpr T width() {
 			return std::numeric_limits<T>::digits + std::numeric_limits<T>::is_signed;
 		}
 
@@ -97,7 +97,7 @@ class Bits {
 		 * set to zeros, so for 0b0010'0011 will return 0b0010`0000
 		 */
 		template <std::unsigned_integral T>
-		static inline constexpr T msbMask(T x) {
+		static constexpr T msbMask(T x) {
 			static_assert(Bits::width<T>() <= 32, "Bits::msbMask() works for at most 32 bit types");
 
 			x |= (x >> 1);
@@ -120,7 +120,7 @@ class Bits {
 		* so for 0b0010'0011 will return 5, passing zero as input will return 0
 		*/
 		template <std::unsigned_integral T>
-		static inline constexpr int msbIndex(T value) {
+		static constexpr int msbIndex(T value) {
 			int index = 0;
 
 			while (value >>= 1) {

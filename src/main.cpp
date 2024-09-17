@@ -56,7 +56,7 @@ int main() {
 		glm::mat4 model = glm::identity<glm::mat4>();
 		glm::mat4 view = camera.getView();
 		glm::mat4 light = glm::inverse(view);
-		glm::mat4 projection = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 1000.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 4000.0f);
 
 		glm::mat4 mvp = projection * view * model;
 		Frustum frustum = camera.getFrustum(projection);
@@ -108,9 +108,9 @@ int main() {
 		// so we would need some internal subpass dependency stuff that i know nothing about
 		recorder.bufferTransferBarrier(VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 
-		world.update(world_generator, camera.getPosition(), 16);
+		world.update(world_generator, camera.getPosition(), 20, 10);
 		world_renderer.draw(recorder, frustum, camera);
-		world_renderer.eraseOutside(camera.getPosition(), 20);
+		world_renderer.eraseOutside(camera.getPosition(), 24);
 
 		Skybox skybox;
 		LightingPushBlock lighting_push_block {};

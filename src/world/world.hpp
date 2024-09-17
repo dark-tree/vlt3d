@@ -4,7 +4,6 @@
 #include "chunk.hpp"
 #include "util/logger.hpp"
 #include "util/type/direction.hpp"
-#include "util/math/bits.hpp"
 #include "raycast.hpp"
 #include "util/collection/ring.hpp"
 #include "view.hpp"
@@ -36,7 +35,7 @@ class World {
 			static constexpr uint8_t INITIAL_LOAD = UNIMPORTANT | Direction::ALL;
 
 			static_assert((IMPORTANT & Direction::ALL) == 0, "The ChunkUpdate and Direction flags need to be able to be combined");
-			static_assert(sizeof(uint8_t) >= sizeof(Direction::field_type), "The ChunkUpdate and Direction flags need to be able to be combined");
+			static_assert(sizeof(uint8_t) >= sizeof(Direction::mask_type), "The ChunkUpdate and Direction flags need to be able to be combined");
 
 			struct Hasher {
 				std::size_t operator()(const ChunkUpdate& update) const {
@@ -99,7 +98,7 @@ class World {
 
 				// propagate updates
 				for (auto& [pos, flags] : updates) {
-					for (uint8_t direction : Bits::decompose<Direction::field_type>(flags & Direction::ALL)) {
+					for (Direction direction : Direction::decompose(flags & Direction::ALL)) {
 						set.emplace(Direction::offset(direction) + pos, flags & ChunkUpdate::IMPORTANT);
 					}
 
@@ -131,7 +130,7 @@ class World {
 
 		/// Update the world
 		/// manages chunk loading and unloading
-		void update(WorldGenerator& generator, glm::ivec3 origin, float radius);
+		void update(WorldGenerator& generator, glm::ivec3 origin, float radius, float vertical);
 
 		/// Creates a new WorldView around the specified chunk
 		/// this functions is unsafe - expects the caller to lock chunks_mutex

@@ -44,7 +44,7 @@ class MeshEmitterSet {
 
 	private:
 
-		static constexpr size_t components = 7;
+		static constexpr size_t components = 8;
 		mutable std::array<MeshEmitter, components> emitters;
 
 	public:
@@ -75,32 +75,11 @@ class MeshEmitterSet {
 
 	public:
 
-		MeshEmitter& getWest() {
-			return emitters[0];
-		}
+		static constexpr int DETAIL = 6;
+		static constexpr int LOD_2 = 7;
 
-		MeshEmitter& getEast() {
-			return emitters[1];
-		}
-
-		MeshEmitter& getDown() {
-			return emitters[2];
-		}
-
-		MeshEmitter& getUp() {
-			return emitters[3];
-		}
-
-		MeshEmitter& getNorth() {
-			return emitters[4];
-		}
-
-		MeshEmitter& getSouth() {
-			return emitters[5];
-		}
-
-		MeshEmitter& getGeneric() {
-			return emitters[6];
+		MeshEmitter& get(int index) {
+			return emitters[index];
 		}
 
 	public:

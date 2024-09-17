@@ -1,8 +1,8 @@
 
 #include "chunk.hpp"
 
-Direction::field_type Chunk::getNeighboursMask(int x, int y, int z) {
-	Direction::field_type directions = Direction::NONE;
+Direction Chunk::getNeighboursMask(int x, int y, int z) {
+	Direction::mask_type directions = Direction::NONE;
 
 	if (x == 0) directions |= Direction::WEST;
 	else if (x == mask) directions |= Direction::EAST;

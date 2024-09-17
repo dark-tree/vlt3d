@@ -26,7 +26,7 @@ void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t flags) {
 	updates[chunk] |= flags;
 }
 
-void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
+void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius, float vertical) {
 	glm::ivec3 pos = {origin.x / Chunk::size, origin.y / Chunk::size, origin.z / Chunk::size};
 	float magnitude = radius * radius;
 
@@ -55,8 +55,8 @@ void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
 		while (ring < rings) {
 			std::lock_guard request_lock {request_mutex};
 
-			planeRingIterator(ring, [&, rings] (int cx, int cz) {
-				for (int cy = -rings; cy <= rings; cy++) {
+			planeRingIterator(ring, [&] (int cx, int cz) {
+				for (int cy = -vertical; cy <= vertical; cy++) {
 
 					glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
 					if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
@@ -149,7 +149,7 @@ void World::setBlock(int x, int y, int z, Block block) {
 		int mz = z & Chunk::mask;
 
 		// setting non-air blocks doesn't require updating neighbours (for now)
-		pushChunkUpdate({cx, cy, cz}, ChunkUpdate::IMPORTANT | (block.isAir() ? Chunk::getNeighboursMask(mx, my, mz) : Direction::NONE));
+		pushChunkUpdate({cx, cy, cz}, ChunkUpdate::IMPORTANT | (block.isAir() ? Chunk::getNeighboursMask(mx, my, mz).mask : Direction::NONE));
 
 		return chunk->setBlock(mx, my, mz, block);
 	}

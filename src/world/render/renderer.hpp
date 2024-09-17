@@ -73,7 +73,9 @@ class WorldRenderer {
 			private:
 
 				uint64_t stamp;
-				std::array<uint32_t, 7> region_begin, region_count;
+				std::array<uint32_t, 8> region_begin, region_count;
+
+				void drawRegion(CommandRecorder& recorder, int index);
 
 			public:
 
@@ -86,7 +88,7 @@ class WorldRenderer {
 				ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp);
 
 				/// draw this buffer unconditionally
-				void draw(QueryPool& pool, CommandRecorder& recorder, glm::vec3 camera_pos, bool cull);
+				void draw(QueryPool& pool, CommandRecorder& recorder, glm::vec3 camera_pos, bool cull, float distance);
 
 				/// dispose of this buffer as soon as it's valid to do so
 				void dispose(RenderSystem& system);

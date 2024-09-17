@@ -104,7 +104,7 @@ class GreedyMesher {
 		 * Maximum amount of culled tiles between two connected quads
 		 * within a row in greedier_rows mode
 		 */
-		static constexpr int greedier_culling_limit = 8;
+		static constexpr int greedier_culling_limit = 32;
 
 	private:
 
@@ -425,6 +425,14 @@ class GreedyMesher {
 				emitQuad<normal>(emitter, chunk.x, chunk.y, chunk.z, slice, Chunk::size - quad.extend, i, quad.extend, quad.streak, quad.sprite, identity);
 			});
 		}
+
+	private:
+
+		/**
+		 * Imprints the sprite faces into the passed ChunkFaceBuffer
+		 * at the given detail level for later used during meshing.
+		 */
+		static void emitLevel(ChunkFaceBuffer& buffer, WorldView& view, const SpriteArray& array, int level);
 
 	public:
 

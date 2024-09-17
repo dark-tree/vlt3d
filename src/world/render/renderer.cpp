@@ -32,12 +32,31 @@ WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, co
 	#endif
 }
 
-void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder, glm::vec3 cam, bool cull) {
+void WorldRenderer::ChunkBuffer::drawRegion(CommandRecorder& recorder, int index) {
+	const uint32_t start = region_begin[index];
+	const uint32_t count = region_count[index];
+
+	if (count) {
+		recorder.bindVertexBuffer(buffer.getBuffer(), start * sizeof(VertexTerrain));
+		recorder.draw(count);
+	}
+}
+
+void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder, glm::vec3 cam, bool cull, float distance) {
 
 	recorder.beginQuery(pool, identifier);
 
+	if (buffer.getCount() < 200) {
+		cull = false;
+	}
+
+	if (distance > 32 * 3) {
+		drawRegion(recorder, MeshEmitterSet::LOD_2);
+		goto end;
+	}
+
 	if (cull) {
-		bool mask[7];
+		bool mask[8];
 
 		glm::vec3 pos = getOffset();
 		glm::vec3 end = pos + 32.0f;
@@ -50,24 +69,18 @@ void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder
 		mask[5] = cam.z > pos.z; // south
 		mask[6] = true; // unaligned
 
-		recorder.beginQuery(pool, identifier);
 		for (int i = 0; i < 7; i ++) {
-			if (mask[i]) {
-				const uint32_t start = region_begin[i];
-				const uint32_t count = region_count[i];
-
-				if (count) {
-					recorder.bindVertexBuffer(buffer.getBuffer(), start * sizeof(VertexTerrain));
-					recorder.draw(count);
-				}
-			}
+			if (mask[i]) drawRegion(recorder, i);
 		}
 	} else {
 		// it looks like doing ~3x the drawcalls is still faster
 		// if we reduce the amount of geometry in total.
-		buffer.draw(recorder);
+
+		recorder.bindVertexBuffer(buffer.getBuffer());
+		recorder.draw(buffer.getCount() - region_count[MeshEmitterSet::LOD_2]);
 	}
 
+	end:
 	recorder.endQuery(pool, identifier);
 }
 
@@ -194,8 +207,8 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 		return lhs.first < rhs.first;
 	});
 
-	for (auto& [pos, chunk] : relative) {
-		chunk->draw(frame.occlusion_query, recorder, camera_pos, true);
+	for (auto& [distance, chunk] : relative) {
+		chunk->draw(frame.occlusion_query, recorder, camera_pos, true, distance);
 	}
 
 	// Here we SHOULD wait for terrain upload to complete but we do
@@ -209,7 +222,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 		glm::vec3 offset = chunk->getOffset();
 
 		if (frustum.testBox3D(offset, offset + (float) Chunk::size)) {
-			chunk->draw(frame.occlusion_query, recorder, camera_pos, false);
+			chunk->draw(frame.occlusion_query, recorder, camera_pos, false, 0);
 		}
 	}
 
@@ -244,7 +257,7 @@ void WorldRenderer::draw(CommandRecorder& recorder, Frustum& frustum, Camera& ca
 	for (int i = 0; i < (int) conditional.size(); i ++) {
 		ChunkBuffer* chunk = conditional[i];
 		recorder.beginConditional(system.chunk_predicates, i * sizeof(uint32_t));
-		chunk->draw(frame.occlusion_query, recorder, camera_pos, false);
+		chunk->draw(frame.occlusion_query, recorder, camera_pos, false, 0);
 		recorder.endConditional();
 	}
 
