@@ -21,6 +21,10 @@ class GridContext : public GridNavigator {
 		// (0, 0) is the top left corner while (1, 1) is the bottom right one
 		float ax, ay;
 
+		// grid offsets in gui pixels, represents the offset from
+		// attachment point to the top-left grid corner
+		int ox, oy;
+
 		// attachment point translated into gui pixels
 		// shown as a green circle while in debug mode
 		float sax, say;
