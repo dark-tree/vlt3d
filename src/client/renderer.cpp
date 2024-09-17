@@ -605,8 +605,9 @@ void RenderSystem::initScreenSpaceAmbientOcclusion() {
 
 	}
 
+	VkExtent2D extent = swapchain.vk_extent;
 	memcpy(ssao_config.samples, ssao_kernel.data(), 64 * sizeof(glm::vec4));
-	ssao_config.noise_scale = glm::vec2 {1000.0/4.0, 700.0/4.0}; // TODO
+	ssao_config.noise_scale = glm::vec2 {extent.width/4.0, extent.height/4.0}; // TODO rerun on resize
 
 	ssao_noise_image = ImageData::view(ssao_noise.data(), 4, 4, sizeof(glm::vec4)).upload(allocator, transient_tasks, transient_recorder, VK_FORMAT_R32G32B32A32_SFLOAT, false);
 	ssao_noise_view = ssao_noise_image.getViewBuilder().build(device, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -849,9 +850,6 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 		.setDebugName("Ambience")
 		.build();
 
-	initScreenSpaceAmbientOcclusion();
-	initChunkOcclusion();
-
 	ssao_descriptor_layout = DescriptorSetLayoutBuilder::begin()
 		.descriptor(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.descriptor(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -885,6 +883,9 @@ RenderSystem::RenderSystem(Window& window, int concurrent)
 	createSwapchain();
 	createRenderPass();
 	createFramebuffers();
+
+	initScreenSpaceAmbientOcclusion();
+	initChunkOcclusion();
 
 	instance.enterValidationCheckpoint("Render System Phase 2 Initialization");
 

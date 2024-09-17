@@ -16,6 +16,7 @@ std::atomic_int world_occlusion_count = 0;
 WorldRenderer::ChunkBuffer::ChunkBuffer(RenderSystem& system, glm::ivec3 pos, const MeshEmitterSet& emitters, uint64_t stamp)
 : stamp(stamp), pos(pos), identifier(system.predicate_allocator.allocate()), buffer(system, emitters.bytes()) {
 	emitters.writeToBuffer(buffer, region_begin, region_count);
+	total_vertices_no_lod = buffer.getCount() - region_count[MeshEmitterSet::LOD_2];
 
 	if (identifier == LinearArena::failed) {
 		throw Exception {"Out of unique chunk occlusion identifiers! Tell magistermaks to fix it!"};
@@ -77,7 +78,7 @@ void WorldRenderer::ChunkBuffer::draw(QueryPool& pool, CommandRecorder& recorder
 		// if we reduce the amount of geometry in total.
 
 		recorder.bindVertexBuffer(buffer.getBuffer());
-		recorder.draw(buffer.getCount() - region_count[MeshEmitterSet::LOD_2]);
+		recorder.draw(total_vertices_no_lod);
 	}
 
 	end:
@@ -101,7 +102,7 @@ bool WorldRenderer::ChunkBuffer::getOcclusion(QueryPool& pool) const {
 }
 
 long WorldRenderer::ChunkBuffer::getCount() const {
-	return buffer.getCount();
+	return total_vertices_no_lod;
 }
 
 bool WorldRenderer::ChunkBuffer::shouldReplace(ChunkBuffer* chunk) const {

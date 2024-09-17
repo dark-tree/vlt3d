@@ -82,6 +82,7 @@ class WorldRenderer {
 				glm::ivec3 pos;
 				long identifier;
 				BasicBuffer buffer;
+				int total_vertices_no_lod;
 
 			public:
 
