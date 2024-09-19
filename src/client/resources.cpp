@@ -25,7 +25,7 @@ ResourceManager::State::State(RenderSystem& system, TaskQueue& queue, CommandRec
 
 	this->array = SpriteArray::createFromDirectory(8, 8, "assets/blocks", fallback);
 	this->atlas = AtlasBuilder::createSimpleAtlas("assets/sprites", fallback);
-	this->font = Font::loadFromFile(atlas, "assets/font.tt");
+	this->font = Font::loadFromFile(atlas, "assets/font.json");
 
 	atlas.getImage().save("atlas.png");
 	array.getImage().save("array.png");

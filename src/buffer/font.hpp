@@ -55,7 +55,7 @@ class Font {
 
 			public:
 
-				Overrides(const TextTreeList* overrides);
+				Overrides(const nlohmann::json& overrides);
 
 				/**
 				 * Check if the given codepoint has a manual override

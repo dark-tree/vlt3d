@@ -16,14 +16,14 @@ void PauseScreen::buildModel(GuiComposed::Builder& builder) {
 			logger::info("Quit clicked!");
 			std::quick_exit(0);
 		}))
-		.then(Chain::AFTER, GuiText::of().text("Quit to desktop").inset(0, 0, 0, 0.5).box(1, 1).align(VerticalAlignment::CENTER).tint(50, 50, 50));
+		.then(Chain::AFTER, GuiText::of().text("Quit to desktop").inset(0, 0, 0, 0.5).align(VerticalAlignment::CENTER).tint(50, 50, 50));
 
 	auto cancel = GuiComposed::of()
 		.add(0, 0, GuiButton::of().box(3, 1).inset(0.05).text("Cancel").sprite("button").then([&] (auto& stack) {
 			logger::info("Cancel clicked!");
 			remove();
 		}))
-		.then(Chain::AFTER, GuiText::of().text("Return to the game").inset(0, 0, 0, 0.5).box(1, 1).align(VerticalAlignment::CENTER).tint(50, 50, 50));
+		.then(Chain::AFTER, GuiText::of().text("Return to the game").inset(0, 0, 0, 0.5).align(VerticalAlignment::CENTER).tint(50, 50, 50));
 
 	builder.then(Chain::BELOW, quit);
 	builder.then(Chain::BELOW, cancel);
