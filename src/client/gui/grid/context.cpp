@@ -69,6 +69,14 @@ void GridContext::draw(ImmediateRenderer& renderer, InputContext& input) {
 	renderer.setTint(255, 255, 255);
 	renderer.drawPatch(box.begin(), width, height, size, renderer.getNinePatch("gui", 8));
 
+	float decal = size * 2;
+	float decal_x = box.begin().x + box.width() / 2 - size;
+	float decal_y = box.begin().y - decal;
+
+	// draw decals along gui edges
+	renderer.drawSprite(decal_x, decal_y, decal, decal, renderer.getSprite("gui-top-decal"));
+	renderer.drawSprite(decal_x, box.end().y, decal, decal, renderer.getSprite("gui-bottom-decal"));
+
 	if (isDebugMode(input)) {
 		renderer.setLineSize(1);
 		renderer.setTint(80/6, 110/6, 245/6);

@@ -6,7 +6,7 @@
 		{ "base": 0, "sprite": "font-latin" }
 	],
 
-	"overrides":[
+	"overrides": [
 		{ "codepoint": 32, "start": 0, "width": 4, "draw": false }
 	]
 }
