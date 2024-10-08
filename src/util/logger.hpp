@@ -2,6 +2,9 @@
 
 #include "external.hpp"
 
+// Windows Api (wingdi.h) strikes again!
+#undef ERROR
+
 template <typename T>
 std::ostream& operator<< (std::ostream& out, const glm::vec<2, T>& vec) {
 	return out << vec[0] << " " << vec[1];

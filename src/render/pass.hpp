@@ -180,8 +180,8 @@ class SubpassBuilder {
 
 		std::vector<VkAttachmentReference> inputs;
 		std::vector<VkAttachmentReference> colors;
-		std::vector<VkAttachmentReference> depths;
 		std::vector<VkAttachmentReference> resolves;
+		VkAttachmentReference depth;
 
 		VkAttachmentReference getReference(uint32_t attachment, VkImageLayout layout) {
 
@@ -209,12 +209,10 @@ class SubpassBuilder {
 
 			uint32_t input_count = inputs.size();
 			uint32_t color_count = colors.size();
-			uint32_t depth_count = depths.size();
 			uint32_t resolve_count = resolves.size();
 
-			if (depth_count != 0 && resolve_count != 0) {
-				if (depth_count != color_count) throw Exception {"Invalid number of depth attachments! Must be 0 or equal to the number of color attachments!"};
-				if (resolve_count != color_count) throw Exception {"Invalid number of resolve attachments! Must be 0 or equal to the number of color attachments!"};
+			if (resolve_count != 0 && resolve_count != color_count) {
+				throw Exception {"Invalid number of resolve attachments! Must be 0 or equal to the number of color attachments!"};
 			}
 
 			// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSubpassDescription.html
@@ -224,7 +222,7 @@ class SubpassBuilder {
 			description.pColorAttachments = colors.data();
 
 			description.pResolveAttachments = resolves.data();
-			description.pDepthStencilAttachment = depths.data();
+			description.pDepthStencilAttachment = &depth;
 
 			description.preserveAttachmentCount = (uint32_t) preserve.size();
 			description.pPreserveAttachments = preserve.data();
@@ -266,7 +264,7 @@ class SubpassBuilder {
 		/// attachment for depth and stencil data
 		SubpassBuilder& addDepth(Attachment::Ref attachment, VkImageLayout target_layout) {
 			references.insert(attachment.index);
-			depths.push_back(getReference(attachment.index, target_layout));
+			depth = getReference(attachment.index, target_layout);
 			return *this;
 		}
 

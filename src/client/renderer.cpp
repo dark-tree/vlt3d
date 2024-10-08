@@ -962,7 +962,12 @@ void RenderSystem::presentScreenFramebuffer(const Framebuffer& framebuffer) {
 }
 
 Frame& RenderSystem::getFrame() {
-	return frames[index];
+	// On some std::vector implementations (Windows) the element is only treated as inserted after it's constructor
+	// is done (container size is incremented after the element is constructed), this makes referencing it by index
+	// from that constructor throw in debug mode. This hack works around that and references it directly, note that
+	// this is safe as 'frames' will never be re-allocated as that is something we ensure separately using 'reserve()'
+	// before we insert anything so we can, in fact, be sure that the element is being constructed "in-place".
+	return frames.data()[index];
 }
 
 void RenderSystem::nextFrame() {
@@ -970,12 +975,7 @@ void RenderSystem::nextFrame() {
 }
 
 void RenderSystem::defer(const Task& task) {
-	// On some std::vector implementations (Windows) the elements is only treated as inserted after it's constructor
-	// is done (container size is incremented after the element is constructed), this makes referencing it by index
-	// from that constructor throw in debug mode. This hack works around that and references it directly, note that
-	// this is safe as 'frames' will never be re-allocated as that is something we ensure separately using 'reserve()'
-	// before we insert anything so we can, in fact, be sure that the element is being constructed "in-place".
-	frames.data()[index].queue.enqueue(task);
+	getFrame().queue.enqueue(task);
 }
 
 void RenderSystem::wait() {

@@ -248,22 +248,24 @@ class RenderSystem {
 		void createPipelines();
 
 		/**
-		 *
+		 * Cleanup all the frame object used by the
+		 * RenderSystem. This needs to be called before frame recreation
 		 */
 		void closeFrames();
 
 		/**
-		 *
+		 * Creates frame-exclusive render state, according to the value of
+		 * the 'concurrent' field
 		 */
 		void createFrames();
 
 		/**
-		 *
+		 * Initializes all state that pertains to SSAO
 		 */
 		void initScreenSpaceAmbientOcclusion();
 
 		/**
-		 *
+		 * Initializes all state that pertains to Chunk Occulsion testing
 		 */
 		void initChunkOcclusion();
 

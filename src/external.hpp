@@ -3,7 +3,9 @@
 #include "macro.hpp"
 
 // C libs
+#define _USE_MATH_DEFINES
 #include <cstring>
+#include <cmath>
 
 // C++ libs
 #include <iostream>
