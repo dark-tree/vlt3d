@@ -17,7 +17,7 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 	immediate_3d.setDebugName(device, "Immediate 3D");
 
 	BufferInfo uniform_builder {sizeof(uniforms), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT};
-	uniform_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	uniform_builder.required(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	uniform_builder.preferred(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	uniform_builder.flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 

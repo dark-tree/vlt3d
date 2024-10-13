@@ -61,12 +61,12 @@ int main() {
 		glm::mat4 mvp = projection * view * model;
 		Frustum frustum = camera.getFrustum(projection);
 
+		frame.wait();
+
 		frame.uniforms.mvp = mvp;
 		frame.uniforms.view = view;
 		frame.uniforms.normal = transpose(inverse(frame.uniforms.view));
 		frame.flushUniformBuffer();
-
-		frame.wait();
 		frame.execute();
 
 		if (!frame.first()) {
