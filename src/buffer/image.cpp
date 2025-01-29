@@ -372,5 +372,8 @@ void Image::close() {
 }
 
 void Image::setDebugName(const Device& device, const char* name) const {
+	if (images.contains(vk_image)) {
+		images[vk_image] = name;
+	}
 	VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_IMAGE, vk_image, name);
 }

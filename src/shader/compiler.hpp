@@ -64,7 +64,7 @@ class Compiler {
 				: kind(kind), name(name) {}
 
 				template<typename T>
-				void copyMessags(const shaderc::CompilationResult<T>& result) {
+				void copyMessages(const shaderc::CompilationResult<T>& result) {
 					errors += result.GetErrorMessage();
 				}
 
@@ -112,7 +112,7 @@ class Compiler {
 
 			// preprocessor
 			const auto presult = compiler.PreprocessGlsl(source, kind.shaderc, unit.c_str(), options);
-			builder.copyMessags(presult);
+			builder.copyMessages(presult);
 
 			if (presult.GetCompilationStatus() != shaderc_compilation_status_success) {
 				return builder.build(false);
@@ -123,7 +123,7 @@ class Compiler {
 
 			// compiler
 			const auto cresult = compiler.CompileGlslToSpv(preprocessed, kind.shaderc, unit.c_str(), options);
-			builder.copyMessags(cresult);
+			builder.copyMessages(cresult);
 
 			if (cresult.GetCompilationStatus() != shaderc_compilation_status_success) {
 				return builder.build(false);

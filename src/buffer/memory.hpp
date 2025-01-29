@@ -2,6 +2,9 @@
 
 #include "external.hpp"
 
+extern std::unordered_map<VkBuffer, std::string> buffers;
+extern std::unordered_map<VkImage, std::string> images;
+
 class MemoryMap {
 
 	private:
@@ -100,10 +103,12 @@ class MemoryAccess {
 		}
 
 		void closeBuffer(VkBuffer buffer) {
+			buffers.erase(buffer);
 			vmaDestroyBuffer(vma_allocator, buffer, vma_allocation);
 		}
 
 		void closeImage(VkImage image) {
+			images.erase(image);
 			vmaDestroyImage(vma_allocator, image, vma_allocation);
 		}
 

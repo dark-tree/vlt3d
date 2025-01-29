@@ -174,10 +174,10 @@ class DeviceInfo {
 			uint32_t count = 0, index = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(vk_device, &count, nullptr);
 
-			std::vector<VkQueueFamilyProperties> entires {count};
-			vkGetPhysicalDeviceQueueFamilyProperties(vk_device, &count, entires.data());
+			std::vector<VkQueueFamilyProperties> entries {count};
+			vkGetPhysicalDeviceQueueFamilyProperties(vk_device, &count, entries.data());
 
-			for (VkQueueFamilyProperties& family : entires) {
+			for (VkQueueFamilyProperties& family : entries) {
 				families.emplace_back(family, index ++);
 			}
 		}

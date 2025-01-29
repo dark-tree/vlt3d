@@ -241,6 +241,7 @@ class SubpassBuilder {
 		SubpassBuilder(T& builder, VkPipelineBindPoint bind_point, uint32_t attachment_count, Pyramid<uint32_t>& preserve, const char* name)
 		: builder(builder), attachment_count(attachment_count), preserve(preserve) {
 			description.pipelineBindPoint = bind_point;
+			depth.attachment = VK_ATTACHMENT_UNUSED;
 
 			#if !defined(NDEBUG)
 			this->debug_name = name;

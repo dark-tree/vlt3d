@@ -20,6 +20,9 @@ void Buffer::close() {
 }
 
 void Buffer::setDebugName(const Device& device, const char* name) const {
+	if (buffers.contains(vk_buffer)) {
+		buffers[vk_buffer] = name;
+	}
 	VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_BUFFER, vk_buffer, name);
 }
 

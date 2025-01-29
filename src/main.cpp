@@ -53,12 +53,11 @@ int main() {
 		
 		Frame& frame = system.getFrame();
 
-		glm::mat4 model = glm::identity<glm::mat4>();
 		glm::mat4 view = camera.getView();
 		glm::mat4 light = glm::inverse(view);
 		glm::mat4 projection = glm::perspective(glm::radians(65.0f), swapchain.vk_extent.width / (float) swapchain.vk_extent.height, 0.1f, 4000.0f);
 
-		glm::mat4 mvp = projection * view * model;
+		glm::mat4 mvp = projection * view;
 		Frustum frustum = camera.getFrustum(projection);
 
 		frame.wait();

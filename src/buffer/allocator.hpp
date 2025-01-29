@@ -5,6 +5,9 @@
 #include "buffer/image.hpp"
 #include "setup/instance.hpp"
 
+extern std::unordered_map<VkBuffer, std::string> buffers;
+extern std::unordered_map<VkImage, std::string> images;
+
 template <typename S>
 class AllocationInfo {
 

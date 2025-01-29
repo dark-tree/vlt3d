@@ -1,6 +1,9 @@
 
 #include "allocator.hpp"
 
+std::unordered_map<VkBuffer, std::string> buffers {};
+std::unordered_map<VkImage, std::string> images {};
+
 /*
  * BufferInfo
  */
@@ -126,9 +129,11 @@ Buffer Allocator::allocateBuffer(const BufferInfo& info) {
 	const VmaAllocationCreateInfo allocation_info = info.getAllocationInfo();
 	const VkBufferCreateInfo buffer_info = info.getBufferInfo();
 
-	if(vmaCreateBuffer(vma_allocator, &buffer_info, &allocation_info, &buffer, &allocation, nullptr) != VK_SUCCESS) {
-		throw Exception {"Failed to allocated buffer!"};
+	if (vmaCreateBuffer(vma_allocator, &buffer_info, &allocation_info, &buffer, &allocation, nullptr) != VK_SUCCESS) {
+		throw Exception {"Failed to allocate buffer!"};
 	}
+
+	buffers[buffer] = "Unnamed Buffer";
 
 	return {buffer, {vma_allocator, allocation}};
 }
@@ -141,8 +146,10 @@ Image Allocator::allocateImage(const ImageInfo& info) {
 	const VkImageCreateInfo image_info = info.getImageInfo();
 
 	if (vmaCreateImage(vma_allocator, &image_info, &allocation_info, &image, &allocation, nullptr) != VK_SUCCESS) {
-		throw Exception {"Failed to allocated image!"};
+		throw Exception {"Failed to allocate image!"};
 	}
+
+	images[image] = "Unnamed Image";
 
 	return {image, image_info.format, {vma_allocator, allocation}};
 }

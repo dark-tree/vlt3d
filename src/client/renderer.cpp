@@ -53,6 +53,8 @@ Frame::Frame(RenderSystem& system, const CommandPool& pool, const Device& device
 }
 
 Frame::~Frame() {
+	uniform_map.unmap();
+	uniform_buffer.close();
 	buffer.close();
 	immediate_2d.close();
 	immediate_3d.close();
@@ -473,7 +475,7 @@ void RenderSystem::createPipelines() {
 		.withBindingLayout(binding_terrain)
 		.withPushConstantLayout(constant_layout)
 		.withDescriptorSetLayout(geometry_descriptor_layout)
-		.withDebugName("Terrain")
+		.withDebugName("Conditional")
 		.build();
 
 	pipeline_occlude = GraphicsPipelineBuilder::of(device)
@@ -985,6 +987,8 @@ void RenderSystem::wait() {
 void RenderSystem::close() {
 	wait();
 
+	predicate_query.close();
+
 	swapchain.close();
 	attachment_depth.close(device);
 	attachment_normal.close(device);
@@ -994,6 +998,7 @@ void RenderSystem::close() {
 
 	terrain_framebuffer.close();
 	ssao_framebuffer.close();
+	conditional_framebuffer.close();
 
 	for (Framebuffer& framebuffer : framebuffers) {
 		framebuffer.close();
@@ -1006,14 +1011,20 @@ void RenderSystem::close() {
 	pipeline_3d_tint.close();
 	pipeline_ssao.close();
 	pipeline_compose.close();
+	pipeline_conditional.close();
+	pipeline_occlude.close();
 
 	terrain_pass.close();
 	lighting_pass.close();
+	conditional_pass.close();
 	ssao_pass.close();
 
 	geometry_descriptor_layout.close();
 	ssao_descriptor_layout.close();
 	lighting_descriptor_layout.close();
+
+	chunk_box.close();
+	chunk_predicates.close();
 
 	ssao_noise_sampler.close(device);
 	ssao_noise_view.close(device);
