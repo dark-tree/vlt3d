@@ -1,5 +1,7 @@
 ## VLT3D
 
+![Screenshot (Debug Mode)](assets/screenshot-001.png)
+
 ### Setup
  - First make sure you have all development packages for vulkan installed, it can be done with those commands:
    - On Ubuntu: `sudo apt install vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools`
