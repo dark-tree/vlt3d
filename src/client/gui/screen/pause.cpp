@@ -2,17 +2,31 @@
 #include "pause.hpp"
 
 PauseScreen::PauseScreen()
-: GridScreen({10, 10, 32}) {}
+: GridScreen({12, 10, 32}) {
+	AllocatorCallbackFactory::print();
+}
 
 void PauseScreen::buildModel(GuiComposed::Builder& builder) {
-	builder.add(1, 0, GuiImage::of().box(3, 3).inset(0.05).sprite("vkblob"));
-	builder.then(Chain::AFTER, GuiText::of().text("Hello World!").box(6, 2).center().tint(50, 50, 50).italics());
-	builder.then(Chain::BELOW, GuiButton::of().box(3, 1).inset(0.05).text("Okay").sprite("button").then([&] (auto& stack) { logger::info("Okay pressed!"); exit(0); }));
-	builder.then(Chain::AFTER, GuiButton::of().box(3, 1).inset(0.05).text("Cancel").sprite("button").then([&] (auto& stack) { logger::info("Cancel pressed!"); remove(); }));
-	builder.add(5, 5);
-	builder.then(Chain::BELOW, GuiImage::of().box(3, 3).inset(0.05).sprite("vkblob"));
-	builder.add(7, 5, GuiLine::of().tint(50, 7, 7).to(3, 4).weight(2));
-	builder.add(1, 7, GuiCheck::of().label("Click me!").inset(0.05).then([] (bool state) { logger::info("Checkbox is now: ", state); }));
+	builder.add(0, 0, GuiText::of().text("Main Menu").inset(0.2, 0, 0, 0).box(12, 1).center().tint(80, 80, 80));
+	builder.then(Chain::BELOW, GuiLine::of().weight(1).to(12, 0).tint(50, 50, 50));
+	builder.then(Chain::BELOW, GuiSpacer::of().box(12, 1));
+
+	auto quit = GuiComposed::of()
+		.add(0, 0, GuiButton::of().box(3, 1).inset(0.05).text("Quit").sprite("button").then([&] (auto& stack) {
+			logger::info("Quit clicked!");
+			std::quick_exit(0);
+		}))
+		.then(Chain::AFTER, GuiText::of().text("Quit to desktop").inset(0, 0, 0, 0.5).align(VerticalAlignment::CENTER).tint(50, 50, 50));
+
+	auto cancel = GuiComposed::of()
+		.add(0, 0, GuiButton::of().box(3, 1).inset(0.05).text("Cancel").sprite("button").then([&] (auto& stack) {
+			logger::info("Cancel clicked!");
+			remove();
+		}))
+		.then(Chain::AFTER, GuiText::of().text("Return to the game").inset(0, 0, 0, 0.5).align(VerticalAlignment::CENTER).tint(50, 50, 50));
+
+	builder.then(Chain::BELOW, quit);
+	builder.then(Chain::BELOW, cancel);
 }
 
 InputResult PauseScreen::onEvent(ScreenStack& stack, InputContext& input, const InputEvent& event) {

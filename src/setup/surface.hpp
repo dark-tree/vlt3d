@@ -2,7 +2,9 @@
 
 #include "external.hpp"
 #include "window/window.hpp"
+#include "window/platform.hpp"
 #include "util/logger.hpp"
+#include "callback.hpp"
 
 class WindowSurface {
 
@@ -17,7 +19,7 @@ class WindowSurface {
 				Entry {GLFW_PLATFORM_WIN32, platform::createSurfaceWin32},
 			#endif
 
-			#ifdef API_XLIB
+			#ifdef API_X11
 				Entry {GLFW_PLATFORM_X11, platform::createSurfaceXlib},
 			#endif
 
@@ -43,6 +45,7 @@ class WindowSurface {
 				if (platform == entry.first) {
 					entry.second(window.glfw_window, vk_instance, &vk_surface);
 					created = true;
+					break;
 				}
 			}
 
@@ -53,6 +56,6 @@ class WindowSurface {
 		}
 
 		void close() {
-			vkDestroySurfaceKHR(vk_instance, vk_surface, nullptr);
+			vkDestroySurfaceKHR(vk_instance, vk_surface, AllocatorCallbackFactory::named("SurfaceKHR"));
 		}
 };

@@ -3,9 +3,11 @@
 #include "external.hpp"
 #include "chunk.hpp"
 #include "util/logger.hpp"
-#include "util/direction.hpp"
-#include "util/bits.hpp"
+#include "util/type/direction.hpp"
 #include "raycast.hpp"
+#include "util/collection/ring.hpp"
+#include "view.hpp"
+#include "column.hpp"
 
 struct AccessError : std::exception {
 
@@ -34,7 +36,7 @@ class World {
 			static constexpr uint8_t INITIAL_LOAD = UNIMPORTANT | Direction::ALL;
 
 			static_assert((IMPORTANT & Direction::ALL) == 0, "The ChunkUpdate and Direction flags need to be able to be combined");
-			static_assert(sizeof(uint8_t) >= sizeof(Direction::field_type), "The ChunkUpdate and Direction flags need to be able to be combined");
+			static_assert(sizeof(uint8_t) >= sizeof(Direction::mask_type), "The ChunkUpdate and Direction flags need to be able to be combined");
 
 			struct Hasher {
 				std::size_t operator()(const ChunkUpdate& update) const {
@@ -54,42 +56,77 @@ class World {
 
 		};
 
-		std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>> chunks;
-		std::unordered_map<glm::ivec3, uint8_t> updates;
+		RingBuffer<double, 256> times;
 
-		/// Checks if the chunk `chunk` can be submitted for rendering
-		bool isChunkRenderReady(glm::ivec3 chunk) const;
+		std::mutex chunks_mutex;
+		ankerl::unordered_dense::map<glm::ivec2, ChunkColumn> columns;
+
+		std::mutex updates_mutex;
+		ankerl::unordered_dense::map<glm::ivec3, uint8_t> updates;
+
+		/// Simple utility to iterate a plane with ever expanding concentric square rings
+		template <typename Func>
+		void planeRingIterator(int ring, Func func) {
+			if (ring == 0) {
+				func(0, 0);
+				return;
+			}
+
+			for (int i = -ring; i <= ring; i ++) {
+				func(i, -ring);
+				func(i, +ring);
+				func(-ring, i);
+				func(+ring, i);
+			}
+		}
+
+		/// Simple utility to iterate a line with ever expanding concentric square rings
+		template <typename Func>
+		void lineRingIterator(int radius, Func func) {
+			func(0);
+
+			for (int i = 1; i <= radius; i ++) {
+				func(-i);
+				func(+i);
+			}
+		}
 
 	public:
 
 		/// Used by the WorldRenderer, iterates and clears the chunk update set
 		template <typename Func>
 		void consumeUpdates(Func func) {
-
 			std::unordered_set<ChunkUpdate, ChunkUpdate::Hasher> set;
 			set.reserve(updates.size() * 2);
 
-			// propagate updates
-			for (auto& [pos, flags] : updates) {
-				for (uint8_t direction : Bits::decompose<Direction::field_type>(flags & Direction::ALL)) {
-					glm::ivec3 neighbour = Direction::offset(direction) + pos;
+			{
+				std::lock_guard lock {updates_mutex};
 
-					if (isChunkRenderReady(neighbour)) {
-						set.emplace(neighbour, flags & ChunkUpdate::IMPORTANT);
+				// propagate updates
+				for (auto& [pos, flags] : updates) {
+					for (Direction direction : Direction::decompose(flags & Direction::ALL)) {
+						set.emplace(Direction::offset(direction) + pos, flags & ChunkUpdate::IMPORTANT);
 					}
-				}
 
-				if (isChunkRenderReady(pos)) {
 					set.emplace(pos, flags & ChunkUpdate::IMPORTANT);
 				}
+
+				updates.clear();
 			}
 
-			updates.clear();
+			if (!set.empty()) {
+				logger::debug("Requesting remeshing of ", set.size(), " chunks");
+			}
 
 			// call once for each updated chunk
+			std::lock_guard lock {chunks_mutex};
+
 			for (auto update : set) {
-				logger::debug("Updating chunk ", update.pos, " important: ", update.important);
-				func(update.pos, update.important);
+				WorldView view = getUnsafeView(update.pos, Direction::ALL);
+
+				if (!view.failed()) {
+					func(std::move(view), update.important);
+				}
 			}
 		}
 
@@ -99,7 +136,14 @@ class World {
 
 		/// Update the world
 		/// manages chunk loading and unloading
-		void update(WorldGenerator& generator, glm::ivec3 origin, float radius);
+		void update(WorldGenerator& generator, glm::ivec3 origin, float radius, float vertical);
+
+		/// Creates a new WorldView around the specified chunk
+		/// this functions is unsafe - expects the caller to lock chunks_mutex
+		WorldView getUnsafeView(glm::ivec3 chunk, Direction directions);
+
+		/// Creates a new WorldView, right now this expects external the chunks_mutex to be locked by the caller
+		std::weak_ptr<Chunk> getUnsafeChunk(int cx, int cy, int cz);
 
 		/// Returns the chunk at the specified chunk coordinates
 		/// if the chunk is not loaded returns an empty weak_ptr

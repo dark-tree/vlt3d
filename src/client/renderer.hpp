@@ -8,22 +8,48 @@
 #include "descriptor/pool.hpp"
 #include "setup/swapchain.hpp"
 #include "shader/compiler.hpp"
-#include "util/threads.hpp"
+#include "util/thread/delegator.hpp"
 #include "resources.hpp"
+#include "util/arena.hpp"
 
-struct Uniforms {
+struct SceneUniform {
 	glm::mat4 mvp;
+	glm::mat4 view;
+	glm::mat4 normal;
+};
+
+struct AmbientOcclusionUniform {
+	glm::vec4 samples[64];
+	glm::vec2 noise_scale;
 };
 
 class Frame {
 
 	private:
 
+		enum Sequence : uint8_t {
+			INITIAL,
+			FIRST,
+			SUBSEQUENT
+		};
+
 		friend class RenderSystem;
 
 		/// this needs to be before any BasicBuffer so that the internal mutex is ready
 		/// before the BasicBuffer constructor runs as it uses `system.defer()`
 		TaskQueue queue;
+
+		/// used to identify if this frame is being rendered for the first time or not
+		/// with INITIAL and FIRST corresponding to being used for the first time
+		Sequence sequence;
+
+		/// Small buffer used to store uniform variables
+		/// after writing data to `uniforms` call uploadUniformBuffer()
+		Buffer uniform_buffer;
+
+		/// The memory map backing the uniform_buffer
+		/// Uniform buffer doesn't use staging so this is just some host memory map
+		MemoryMap uniform_map;
 
 	public:
 
@@ -45,12 +71,15 @@ class Frame {
 		/// and waited on using `wait()` before starting the rendering of a frame, it is used to keep CPU and GPU in sync
 		Fence flight_fence;
 
-		Uniforms uniforms;
-		DescriptorSet set;
+		SceneUniform uniforms;
+		DescriptorSet set_0, set_1, set_2, set_3;
+
+		QueryPool timestamp_query;
+		QueryPool occlusion_query;
 
 	public:
 
-		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, DescriptorSet descriptor, const ImageSampler& sampler);
+		Frame(RenderSystem& system, const CommandPool& pool, const Device& device, const ImageSampler& atlas_sampler);
 
 		/**
 		 * This class is fully managed by the RenderSystem so it uses
@@ -60,8 +89,8 @@ class Frame {
 
 		/**
 		 * Wait before starting to render this frame
-		 * until the last frame with this index has been completed,
-		 * this is too keep the CPU from "running away" from the GPU
+		 * until the last frame with this index has been completed
+		 * (this is needed to keep the CPU from "running away" from the GPU).
 		 */
 		void wait();
 
@@ -71,11 +100,29 @@ class Frame {
 		 */
 		void execute();
 
+		/**
+		 * Check if this frame is being used for the first time
+		 */
+		bool first() const;
+
+		/**
+		 * Write data into the mapped memory of the shared uniform buffer
+		 */
+		void flushUniformBuffer();
+
+		/**
+		 * Returns a queue for tasks to be executed one frame cycle later
+		 */
+		TaskQueue& getDelegator();
+
 };
 
 class RenderSystem {
 
 	public:
+
+		TaskPool pool {3};
+		MailboxTaskDelegator presenter {pool};
 
 		Window& window;
 		WindowSurface surface;
@@ -91,24 +138,62 @@ class RenderSystem {
 		CommandPool graphics_pool;
 		CommandPool transient_pool;
 
+		// SSAO
+		Image ssao_noise_image;
+		ImageView ssao_noise_view;
+		ImageSampler ssao_noise_sampler;
+		Buffer ssao_uniform_buffer;
+
+		// Chunk Occlusion
+		Buffer chunk_box;
+		Buffer chunk_predicates;
+		QueryPool predicate_query;
+		LinearArena predicate_allocator;
+
+		Attachment attachment_color;
+		Attachment attachment_depth;
+		Attachment attachment_albedo;
+		Attachment attachment_normal;
+		Attachment attachment_position;
+		Attachment attachment_ambience;
+
+		RenderPass terrain_pass;
+		RenderPass conditional_pass;
+		RenderPass ssao_pass;
+		RenderPass lighting_pass;
+
+		GraphicsPipeline pipeline_terrain;
+		GraphicsPipeline pipeline_conditional;
+		GraphicsPipeline pipeline_3d_tint;
+		GraphicsPipeline pipeline_2d_tint;
+		GraphicsPipeline pipeline_ssao;
+		GraphicsPipeline pipeline_compose;
+		GraphicsPipeline pipeline_occlude;
+
 		Swapchain swapchain;
-		RenderPass render_pass;
-		Image depth_image;
-		ImageView depth_view;
 		std::vector<Framebuffer> framebuffers;
+		Framebuffer ssao_framebuffer;
+		Framebuffer terrain_framebuffer;
+		Framebuffer conditional_framebuffer;
 
 		ResourceManager assets;
 
-		DescriptorSetLayout descriptor_layout;
+		DescriptorSetLayout geometry_descriptor_layout;
+		DescriptorSetLayout ssao_descriptor_layout;
+		DescriptorSetLayout lighting_descriptor_layout;
+
+		BindingLayout binding_terrain;
+		BindingLayout binding_occlude;
 		BindingLayout binding_3d;
 		BindingLayout binding_2d;
-		GraphicsPipeline pipeline_3d_mix;
-		GraphicsPipeline pipeline_3d_tint;
-		GraphicsPipeline pipeline_2d_tint;
 		DescriptorPool descriptor_pool;
 
+		// TODO this is a mess
 		PushConstantLayout constant_layout;
-		PushConstant vertex_constant;
+		PushConstant push_constant;
+
+		PushConstantLayout constant_layout_occlude;
+		PushConstant push_constant_occlude;
 
 	private:
 
@@ -142,13 +227,13 @@ class RenderSystem {
 		 * Creates the vulkan render pass, this MAY need to be called when the
 		 * swapchain is recreated, depending on the format picked by `createSwapchain()`
 		 */
-		void createRenderPass(Swapchain& surface);
+		void createRenderPass();
 
 		/**
 		 * Populates the framebuffer array, needs to be called after the swapchain is recreated
-		 * this function depends on render pass as the created framebuffers need to be compatible with it
+		 * this function depends on render passes as the created framebuffers need to be compatible with them
 		 */
-		void createFramebuffers(RenderPass& pass);
+		void createFramebuffers();
 
 		/**
 		 * Called from `acquireFramebuffer()` and `presentFramebuffer()` when the current swapchain is
@@ -162,6 +247,28 @@ class RenderSystem {
 		 */
 		void createPipelines();
 
+		/**
+		 * Cleanup all the frame object used by the
+		 * RenderSystem. This needs to be called before frame recreation
+		 */
+		void closeFrames();
+
+		/**
+		 * Creates frame-exclusive render state, according to the value of
+		 * the 'concurrent' field
+		 */
+		void createFrames();
+
+		/**
+		 * Initializes all state that pertains to SSAO
+		 */
+		void initScreenSpaceAmbientOcclusion();
+
+		/**
+		 * Initializes all state that pertains to Chunk Occulsion testing
+		 */
+		void initChunkOcclusion();
+
 	public:
 
 		/// Only one instance of render system should ever be created
@@ -171,10 +278,10 @@ class RenderSystem {
 		void reloadAssets();
 
 		/// Get the screen's framebuffer reference
-		Framebuffer& acquireFramebuffer();
+		Framebuffer& acquireScreenFramebuffer();
 
 		/// Queue the given framebuffer for rendering on the screen
-		void presentFramebuffer(Framebuffer& framebuffer);
+		void presentScreenFramebuffer(const Framebuffer& framebuffer);
 
 		/// Get a reference to the current frame state
 		Frame& getFrame();
@@ -187,5 +294,8 @@ class RenderSystem {
 
 		/// Wait for all pending operations on all queues are finished
 		void wait();
+
+		/// Free are resources managed by this render system
+		void close();
 
 };

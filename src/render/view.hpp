@@ -2,6 +2,14 @@
 
 #include "external.hpp"
 #include "setup/device.hpp"
+#include "setup/callback.hpp"
+#include "setup/debug.hpp"
+
+/**
+ * TODO Scrap the whole ImageSampler/ImageView/Image thing
+ *      and replace it with a singular Texture class with a single
+ *      TextureBuilder that combines all the current builders into one
+ */
 
 class ImageSampler {
 
@@ -17,7 +25,11 @@ class ImageSampler {
 		: vk_sampler(sampler), vk_view(view) {}
 
 		void close(Device& device) {
-			vkDestroySampler(device.vk_device, vk_sampler, nullptr);
+			vkDestroySampler(device.vk_device, vk_sampler, AllocatorCallbackFactory::named("Sampler"));
+		}
+
+		void setDebugName(const Device& device, const char* name) const {
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_SAMPLER, vk_sampler, name);
 		}
 
 };
@@ -70,15 +82,18 @@ class ImageSamplerBuilder {
 			create_info.compareEnable = VK_FALSE;
 			create_info.compareOp = VK_COMPARE_OP_ALWAYS;
 
+			// TODO remove mipmaping blob
 			create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			create_info.mipLodBias = 0.0f;
+			create_info.mipLodBias = -1.0f;
+			create_info.minFilter = VK_FILTER_NEAREST;
+			create_info.magFilter = VK_FILTER_NEAREST;
 			create_info.minLod = 0.0f;
-			create_info.maxLod = 0.0f;
+			create_info.maxLod = 4.0f;
 
 			VkSampler sampler;
 
-			if (vkCreateSampler(device.vk_device, &create_info, nullptr, &sampler) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateSampler: Failed to create image sampler!");
+			if (vkCreateSampler(device.vk_device, &create_info, AllocatorCallbackFactory::named("Sampler"), &sampler) != VK_SUCCESS) {
+				throw Exception {"Failed to create image sampler!"};
 			}
 
 			return {sampler, vk_view};
@@ -92,21 +107,23 @@ class ImageView {
 	public:
 
 		READONLY VkImageView vk_view;
-		READONLY VkImage vk_image;
 
 	public:
 
-		ImageView() {}
-
-		ImageView(VkImageView vk_view, VkImage vk_image)
-		: vk_view(vk_view), vk_image(vk_image) {}
+		ImageView() = default;
+		ImageView(VkImageView vk_view)
+		: vk_view(vk_view) {}
 
 		ImageSamplerBuilder getSamplerBuilder() {
 			return {vk_view};
 		}
 
 		void close(Device& device) {
-			vkDestroyImageView(device.vk_device, vk_view, nullptr);
+			vkDestroyImageView(device.vk_device, vk_view, AllocatorCallbackFactory::named("View"));
+		}
+
+		void setDebugName(const Device& device, const char* name) const {
+			VulkanDebug::name(device.vk_device, VK_OBJECT_TYPE_IMAGE_VIEW, vk_view, name);
 		}
 
 };
@@ -126,18 +143,20 @@ class ImageViewBuilder {
 		ImageViewBuilder(VkImage image, VkFormat format)
 		: image(image), format(format) {}
 
-		void setType(VkImageViewType type) {
+		ImageViewBuilder& setType(VkImageViewType type) {
 			this->type = type;
+			return *this;
 		}
 
-		void setSwizzle(VkComponentSwizzle r, VkComponentSwizzle g, VkComponentSwizzle b, VkComponentSwizzle a) {
+		ImageViewBuilder& setSwizzle(VkComponentSwizzle r, VkComponentSwizzle g, VkComponentSwizzle b, VkComponentSwizzle a) {
 			this->components.r = r;
 			this->components.g = g;
 			this->components.b = b;
 			this->components.a = a;
+			return *this;
 		}
 
-		ImageView build(Device& device, VkImageAspectFlags aspect) {
+		ImageView build(Device& device, VkImageAspectFlags aspect, int layers = 1, int levels = 1) {
 
 			VkImageViewCreateInfo create_info {};
 			create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -149,17 +168,17 @@ class ImageViewBuilder {
 
 			create_info.subresourceRange.aspectMask = aspect;
 			create_info.subresourceRange.baseMipLevel = 0;
-			create_info.subresourceRange.levelCount = 1;
+			create_info.subresourceRange.levelCount = levels;
 			create_info.subresourceRange.baseArrayLayer = 0;
-			create_info.subresourceRange.layerCount = 1;
+			create_info.subresourceRange.layerCount = layers;
 
 			VkImageView view;
 
-			if (vkCreateImageView(device.vk_device, &create_info, nullptr, &view) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateImageView: Failed to create image view!");
+			if (vkCreateImageView(device.vk_device, &create_info, AllocatorCallbackFactory::named("View"), &view) != VK_SUCCESS) {
+				throw Exception ("Failed to create image view!");
 			}
 
-			return ImageView {view, image};
+			return ImageView {view};
 
 		}
 

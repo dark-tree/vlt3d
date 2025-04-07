@@ -1,5 +1,7 @@
 
 #include "play.hpp"
+#include "util/math/random.hpp"
+#include "world/skybox.hpp"
 
 PlayScreen::PlayScreen(World& world, Camera& camera)
 : world(world), camera(camera) {}
@@ -50,5 +52,8 @@ void PlayScreen::draw(ImmediateRenderer& immediate, InputContext& input, Camera&
 
 	immediate.setTint(255, 255, 255, 100);
 	immediate.drawCircle(immediate.getWidth() / 2, immediate.getHeight() / 2, 2);
+
+	Skybox skybox;
+	skybox.draw(immediate, camera);
 
 }

@@ -3,6 +3,7 @@
 #include "client/vertices.hpp"
 #include "buffer/allocator.hpp"
 #include "buffer/atlas.hpp"
+#include "util/math/approx.hpp"
 
 ImmediateRenderer::ImmediateRenderer(const ResourceManager& assets)
 : mode(BillboardMode::TWO_AXIS), assets(assets) {
@@ -305,11 +306,11 @@ void ImmediateRenderer::drawBillboardVertex(glm::quat rotation, glm::vec3 offset
 glm::quat ImmediateRenderer::getBillboardRotation(glm::vec3 center) const {
 	glm::vec3 facing = glm::normalize(target - center);
 
-	const float yaw = atan2(facing.x, facing.z);
+	const float yaw = approx::atan2(facing.x, facing.z);
 	glm::quat ry = glm::angleAxis(yaw, glm::vec3(0, 1, 0));
 
 	if (mode == BillboardMode::TWO_AXIS) {
-		const float pitch = atan2(-facing.y, glm::length(glm::vec2(facing.x, facing.z)));
+		const float pitch = approx::atan2(-facing.y, glm::length(glm::vec2(facing.x, facing.z)));
 		glm::quat rx = glm::angleAxis(pitch, ry * glm::vec3(1, 0, 0));
 
 		return rx * ry;

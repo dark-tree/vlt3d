@@ -1,7 +1,7 @@
 #pragma once
 
 #include "external.hpp"
-#include "util/direction.hpp"
+#include "util/type/direction.hpp"
 #include "block.hpp"
 
 class Chunk {
@@ -14,7 +14,7 @@ class Chunk {
 
 		static_assert(std::popcount((size_t) size) == 1, "Chunk::size needs to be a power of 2");
 
-		static Direction::field_type getNeighboursMask(int x, int y, int z);
+		static Direction getNeighboursMask(int x, int y, int z);
 
 	private:
 

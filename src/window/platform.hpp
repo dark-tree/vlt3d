@@ -1,3 +1,7 @@
+#pragma once
+
+#include "system.hpp"
+#include "external.hpp"
 
 namespace platform {
 
@@ -11,7 +15,7 @@ namespace platform {
 	void createSurfaceWin32(GLFWwindow* window, VkInstance instance, VkSurfaceKHR* surface);
 #endif
 
-#ifdef API_XLIB
+#ifdef API_X11
 	void createSurfaceXlib(GLFWwindow* window, VkInstance instance, VkSurfaceKHR* surface);
 #endif
 

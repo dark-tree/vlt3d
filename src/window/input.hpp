@@ -2,7 +2,7 @@
 
 #include "external.hpp"
 #include "event.hpp"
-#include "util/box.hpp"
+#include "util/type/box.hpp"
 
 class Window;
 

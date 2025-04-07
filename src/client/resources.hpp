@@ -5,10 +5,12 @@
 #include "buffer/font.hpp"
 #include "render/view.hpp"
 #include "shader/module.hpp"
+#include "buffer/array.hpp"
 
 class CommandBuffer;
 class Device;
 class Allocator;
+class RenderSystem;
 
 class ResourceManager {
 
@@ -16,16 +18,32 @@ class ResourceManager {
 
 		struct State {
 
+			Device& device;
+			SpriteArray array;
 			Atlas atlas;
 			Font font;
-			ImageSampler sampler;
+
+			Image atlas_image;
+			ImageView atlas_view;
+			ImageSampler atlas_sampler;
+
+			Image array_image;
+			ImageView array_view;
+			ImageSampler array_sampler;
 
 			ShaderModule vert_2d;
 			ShaderModule vert_3d;
-			ShaderModule frag_mix;
+			ShaderModule vert_terrain;
+			ShaderModule vert_blit;
+			ShaderModule vert_occlude;
+			ShaderModule frag_terrain;
 			ShaderModule frag_tint;
+			ShaderModule frag_compose;
+			ShaderModule frag_ssao;
+			ShaderModule frag_occlude;
 
-			State(Device& device, Allocator& allocator, CommandRecorder& recorder);
+			State(RenderSystem& system, TaskQueue& queue, CommandRecorder& recorder);
+			~State();
 
 		};
 
@@ -49,6 +67,9 @@ class ResourceManager {
 		 * some sort of a progress tracker
 		 * object and show a loading screen
 		 */
-		void reload(Device& device, Allocator& allocator, CommandBuffer pool);
+		void reload(RenderSystem& system, TaskQueue& queue, CommandBuffer pool);
+
+		/// close all resource and load nothing, expects that none of the assets are in use
+		void close();
 
 };

@@ -17,13 +17,13 @@ GridContext::GridContext(int width, int height, int size)
 : GridContext(width, height, - width * size / 2, - height * size / 2, 0.5f, 0.5f, size) {}
 
 GridContext::GridContext(int width, int height, int ox, int oy, float ax, float ay, int size)
-: width(width), height(height), size(size), ax(ax), ay(ay), bounding(Box2D (0, 0, width, height).scale(size).offset(ox, oy)) {
+: width(width), height(height), size(size), ax(ax), ay(ay), ox(ox), oy(oy), bounding(Box2D (0, 0, width, height)) {
 	this->sax = -1;
 	this->say = -1;
 }
 
 Box2D GridContext::getScreenBox(Box2D box) const {
-	return box.scale(size).offset(sax, say).offset(bounding.begin());
+	return box.scale(size).offset(sax, say).offset(ox, oy);
 }
 
 bool GridContext::isDebugMode(InputContext& input) const {
@@ -64,14 +64,22 @@ void GridContext::draw(ImmediateRenderer& renderer, InputContext& input) {
 	this->say = renderer.getHeight() * ay;
 
 	// screen adjusted box
-	Box2D box = bounding.offset(sax, say);
+	Box2D box = getScreenBox(bounding);
 
 	renderer.setTint(255, 255, 255);
-	renderer.drawPatch(box.begin(), width, height, size, renderer.getNinePatch("gui-smol", 8));
+	renderer.drawPatch(box.begin(), width, height, size, renderer.getNinePatch("gui", 8));
+
+	float decal = size * 2;
+	float decal_x = box.begin().x + box.width() / 2 - size;
+	float decal_y = box.begin().y - decal;
+
+	// draw decals along gui edges
+	renderer.drawSprite(decal_x, decal_y, decal, decal, renderer.getSprite("gui-top-decal"));
+	renderer.drawSprite(decal_x, box.end().y, decal, decal, renderer.getSprite("gui-bottom-decal"));
 
 	if (isDebugMode(input)) {
 		renderer.setLineSize(1);
-		renderer.setTint(80, 110, 245);
+		renderer.setTint(80/6, 110/6, 245/6);
 
 		// draw vertical grid lines
 		for (int x = 1; x < width; x++) {

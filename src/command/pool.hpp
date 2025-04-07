@@ -19,7 +19,7 @@ class CommandPool {
 		: vk_pool(vk_pool), vk_device(vk_device) {}
 
 		void close() {
-			vkDestroyCommandPool(vk_device, vk_pool, nullptr);
+			vkDestroyCommandPool(vk_device, vk_pool, AllocatorCallbackFactory::named("CommandPool"));
 		}
 
 		/**
@@ -49,7 +49,7 @@ class CommandPool {
 			VkCommandBuffer buffer;
 
 			if (vkAllocateCommandBuffers(vk_device, &create_info, &buffer) != VK_SUCCESS) {
-				throw std::runtime_error("vkAllocateCommandBuffers: Failed to allocate a command buffer!");
+				throw Exception {"Failed to allocate a command buffer!"};
 			}
 
 			return {vk_pool, buffer, vk_device};
@@ -68,8 +68,8 @@ class CommandPool {
 
 			VkCommandPool pool;
 
-			if (vkCreateCommandPool(device.vk_device, &create_info, nullptr, &pool) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateCommandPool: Failed to create command pool!");
+			if (vkCreateCommandPool(device.vk_device, &create_info, AllocatorCallbackFactory::named("CommandPool"), &pool) != VK_SUCCESS) {
+				throw Exception {"Failed to create command pool!"};
 			}
 
 			return {pool, device.vk_device};

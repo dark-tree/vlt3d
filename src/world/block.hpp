@@ -1,7 +1,6 @@
 #pragma once
 
 #include "external.hpp"
-#include "util/inline.hpp"
 
 class Block {
 

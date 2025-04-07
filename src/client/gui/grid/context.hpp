@@ -3,7 +3,7 @@
 #include "external.hpp"
 
 #include "client/gui/stack.hpp"
-#include "util/box.hpp"
+#include "util/type/box.hpp"
 #include "window/input.hpp"
 #include "window/event.hpp"
 #include "client/gui/component/component.hpp"
@@ -20,6 +20,10 @@ class GridContext : public GridNavigator {
 		// screen-space-like attachment point
 		// (0, 0) is the top left corner while (1, 1) is the bottom right one
 		float ax, ay;
+
+		// grid offsets in gui pixels, represents the offset from
+		// attachment point to the top-left grid corner
+		int ox, oy;
 
 		// attachment point translated into gui pixels
 		// shown as a green circle while in debug mode

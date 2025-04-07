@@ -25,6 +25,7 @@ class Atlas {
 		UnbakedSprite getUnbakedSprite(const std::string& identifier) const;
 		NinePatch getNinePatch(const std::string& identifier, int m) const;
 		const ImageData& getImage() const;
+		Image upload(Allocator& allocator, TaskQueue& queue, CommandRecorder& recorder) const;
 
 		void close();
 

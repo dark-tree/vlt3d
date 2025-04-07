@@ -7,6 +7,9 @@
 class Allocator;
 class CommandRecorder;
 class RenderSystem;
+class TaskQueue;
+
+// TODO God how i hate those classes
 
 class Buffer {
 
@@ -23,6 +26,8 @@ class Buffer {
 		MemoryAccess& access();
 		void close();
 
+		void setDebugName(const Device& device, const char* name) const;
+
 };
 
 /**
@@ -30,18 +35,27 @@ class Buffer {
  */
 class BasicBuffer {
 
-	private:
+	public:
 
 		Buffer buffer;
 		Buffer staged;
 		size_t capacity, count, bytes;
 		MemoryMap map;
 
-		void reallocate(RenderSystem& system, size_t capacity);
+		#if !defined(NDEBUG)
+		VkDevice debug_device = VK_NULL_HANDLE;
+		const char* debug_name = nullptr;
+		#endif
+
+		void reallocate(Allocator& allocator, TaskQueue& queue, size_t capacity);
 		size_t encompass(size_t target);
+
+		void updateDebugName() const;
 
 	public:
 
+		BasicBuffer() = default;
+		BasicBuffer(Allocator& allocator, TaskQueue& queue, size_t initial);
 		BasicBuffer(RenderSystem& system, size_t initial);
 
 		/**
@@ -75,6 +89,10 @@ class BasicBuffer {
 			write(data, count);
 		}
 
+		MemoryMap::View getMemoryView() {
+			return map.getView();
+		}
+
 		void upload(CommandRecorder& recorder);
 		void draw(CommandRecorder& recorder);
 
@@ -91,5 +109,7 @@ class BasicBuffer {
 
 		/// Frees internal vulkan resources, consider doing it from `RenderSystem.defer()`
 		void close();
+
+		void setDebugName(const Device& device, const char* name);
 
 };

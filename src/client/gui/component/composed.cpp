@@ -118,6 +118,6 @@ ComponentProducer GuiComposed::Builder::build() const {
 			cmps.emplace_back(factory.build(x, y));
 		}
 
-		return new GuiComposed {box, cmps};
+		return new GuiComposed {box.offset(x, y), cmps};
 	};
 }

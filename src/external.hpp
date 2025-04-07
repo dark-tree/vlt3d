@@ -1,10 +1,11 @@
 #pragma once
 
-#include "config.hpp"
-#include "system.hpp"
+#include "macro.hpp"
 
 // C libs
+#define _USE_MATH_DEFINES
 #include <cstring>
+#include <cmath>
 
 // C++ libs
 #include <iostream>
@@ -27,6 +28,7 @@
 #include <random>
 #include <regex>
 #include <fstream>
+#include <ranges>
 
 // STB
 #define STB_VORBIS_HEADER_ONLY
@@ -65,12 +67,14 @@
 #include <glm/gtx/norm.hpp>
 
 // Lib Format
-#include "tt.hpp"
 #include "bt.hpp"
+
+// JSON
+#include "nlohmann/json.hpp"
+
+// ankerl
+#include "ankerl/unordered_dense.h"
 
 // Perlin noise
 #include "PerlinNoise.hpp"
 
-// usage hints
-#define READONLY
-#define NULLABLE

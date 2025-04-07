@@ -1,7 +1,6 @@
 #pragma once
 
 #include "external.hpp"
-#include "platform.hpp"
 #include "input.hpp"
 #include "util/exception.hpp"
 

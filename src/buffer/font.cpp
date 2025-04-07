@@ -33,19 +33,17 @@ bool Glyph::shouldDraw() const {
  * Font Overrides
  */
 
-Font::Overrides::Overrides(const TextTreeList* overrides) {
+Font::Overrides::Overrides(const nlohmann::json& overrides) {
 
-	if (!overrides) {
+	if (!overrides.is_null()) {
 		return;
 	}
 
-	for (auto& entry : *overrides) {
-		auto override = entry->as<TextTreeDict>();
-
-		int codepoint = *override->get<TextTreeInt>("codepoint");
-		int start = *override->get<TextTreeInt>("start");
-		int width = *override->get<TextTreeInt>("width");
-		bool draw = *override->get<TextTreeBool>("draw");
+	for (auto& override : overrides) {
+		int codepoint = override["codepoint"];
+		int start = override["start"];
+		int width = override["width"];
+		bool draw = override["draw"];
 
 		if (cache.contains(codepoint)) {
 			throw Exception {"Duplicate codepoint override in font definition"};
@@ -148,21 +146,19 @@ int Font::getSize() const {
 
 Font Font::loadFromFile(Atlas& atlas, const std::string& filename) {
 
-	TextTree::Input input {filename};
-	auto root = input.root()->as<TextTreeDict>();
+	std::ifstream file {filename};
+	nlohmann::json root = nlohmann::json::parse(file);
 
-	bool monospace = *root->get<TextTreeBool>("monospace");
-	int sizing = *root->get<TextTreeInt>("sizing");
-	auto exceptions = root->getNullable<TextTreeList>("overrides");
+	bool monospace = root["monospace"];
+	int sizing = root["sizing"];
+	auto exceptions = root["overrides"];
 
 	Font font {monospace, sizing};
 	Overrides overrides {exceptions};
 
-	for (auto& entry : *root->get<TextTreeList>("pages")) {
-		auto page = entry->as<TextTreeDict>();
-
-		int base = *page->get<TextTreeInt>("base");
-		std::string path = page->get<TextTreeString>("sprite")->copy();
+	for (auto& page : root["pages"]) {
+		int base = page["base"];
+		std::string path = page["sprite"];
 
 		font.addCodePage(atlas, path, base, overrides);
 	}

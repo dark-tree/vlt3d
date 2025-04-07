@@ -2,5 +2,5 @@
 
 #include "external.hpp"
 
-void initProxyInstance(VkInstance& instance);
-void initProxyDevice(VkDevice& device);
+void loadInstanceFunction(VkInstance& vk_instance, const char* function);
+void loadDeviceFunction(VkDevice& vk_device, const char* function);

@@ -32,10 +32,14 @@ class Kind {
 		const shaderc_shader_kind shaderc;
 
 		// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkShaderStageFlagBits.html#_c_specification
-		const VkShaderStageFlagBits vulkan;
+		const VkShaderStageFlags vulkan;
 
-		inline constexpr Kind(shaderc_shader_kind kind, VkShaderStageFlagBits stage)
-		: shaderc(kind), vulkan(stage) {}
+		inline constexpr Kind(shaderc_shader_kind shaderc, VkShaderStageFlags stage)
+		: shaderc(shaderc), vulkan(stage) {}
+
+		Kind operator | (Kind other) const {
+			return {other.shaderc, other.vulkan | vulkan};
+		}
 
 };
 

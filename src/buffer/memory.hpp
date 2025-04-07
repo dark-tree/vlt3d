@@ -2,6 +2,9 @@
 
 #include "external.hpp"
 
+extern std::unordered_map<VkBuffer, std::string> buffers;
+extern std::unordered_map<VkImage, std::string> images;
+
 class MemoryMap {
 
 	private:
@@ -12,8 +15,39 @@ class MemoryMap {
 
 	public:
 
-		MemoryMap() {}
+		class View {
 
+			private:
+
+				size_t offset;
+				MemoryMap& map;
+
+			public:
+
+				View(MemoryMap& map)
+				: offset(0), map(map) {}
+
+				void write(const void* data, size_t bytes) {
+					if (bytes > 0) {
+						map.write(data, bytes, offset);
+						map.flush(offset, bytes);
+						offset += bytes;
+					}
+				}
+
+				void read(void* data, size_t bytes) {
+					if (bytes > 0) {
+						map.invalidate(offset, bytes);
+						map.read(data, bytes, offset);
+						offset += bytes;
+					}
+				}
+
+		};
+
+	public:
+
+		MemoryMap() = default;
 		MemoryMap(VmaAllocator vma_allocator, VmaAllocation vma_allocation, void* pointer)
 		: vma_allocator(vma_allocator), vma_allocation(vma_allocation), pointer((uint8_t*) pointer) {}
 
@@ -37,6 +71,10 @@ class MemoryMap {
 			vmaUnmapMemory(vma_allocator, vma_allocation);
 		}
 
+		View getView() {
+			return {*this};
+		}
+
 };
 
 class MemoryAccess {
@@ -48,8 +86,7 @@ class MemoryAccess {
 
 	public:
 
-		MemoryAccess() {}
-
+		MemoryAccess() = default;
 		MemoryAccess(VmaAllocator vma_allocator, VmaAllocation vma_allocation)
 		: vma_allocator(vma_allocator), vma_allocation(vma_allocation) {}
 
@@ -66,10 +103,12 @@ class MemoryAccess {
 		}
 
 		void closeBuffer(VkBuffer buffer) {
+			buffers.erase(buffer);
 			vmaDestroyBuffer(vma_allocator, buffer, vma_allocation);
 		}
 
 		void closeImage(VkImage image) {
+			images.erase(image);
 			vmaDestroyImage(vma_allocator, image, vma_allocation);
 		}
 

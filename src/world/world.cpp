@@ -1,6 +1,8 @@
 
 #include "world.hpp"
 #include "generator.hpp"
+#include "util/thread/pool.hpp"
+#include "util/util.hpp"
 
 /*
  * AccessError
@@ -14,69 +16,120 @@ const char* AccessError::what() const noexcept {
  * World
  */
 
-bool World::isChunkRenderReady(glm::ivec3 chunk) const {
-	if (!chunks.contains(chunk)) {
-		return false;
-	}
-
-	for (Direction direction : Bits::decompose(Direction::ALL)) {
-		glm::ivec3 neighbour = Direction::offset(direction) + chunk;
-
-		if (!chunks.contains(neighbour)) {
-			return false;
-		}
-	}
-
-	return true;
+WorldView World::getUnsafeView(glm::ivec3 chunk, Direction directions) {
+	std::shared_ptr<Chunk> center = getUnsafeChunk(chunk.x, chunk.y, chunk.z).lock();
+	return WorldView {*this, center, directions};
 }
 
 void World::pushChunkUpdate(glm::ivec3 chunk, uint8_t flags) {
+	std::lock_guard lock {updates_mutex};
 	updates[chunk] |= flags;
 }
 
-void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius) {
-	glm::ivec3 pos = {origin.x / Chunk::size, origin.y / Chunk::size, origin.z / Chunk::size};
+void World::update(WorldGenerator& generator, glm::ivec3 origin, float radius, float vertical) {
+
+	int py = origin.y / Chunk::size;
+	glm::ivec2 pos = {origin.x / Chunk::size, origin.z / Chunk::size};
 	float magnitude = radius * radius;
 
-	// chunk unloading
-	for (auto it = chunks.begin(); it != chunks.end();) {
-		if (glm::distance2(glm::vec3(it->first), glm::vec3(pos)) >= magnitude) {
-			it = chunks.erase(it);
-		} else {
-			it ++;
+	double time = Timer::of([&] () {
+
+		std::lock_guard chunks_lock {chunks_mutex};
+
+		// chunk unloading
+		for (auto it = columns.begin(); it != columns.end();) {
+			if (it->second.empty() || glm::distance2(glm::vec2(it->first), glm::vec2(pos)) >= magnitude) {
+				it = columns.erase(it);
+				continue;
+			}
+
+			it->second.update(vertical, py);
+			std::advance(it, 1);
 		}
-	}
 
-	// chunk loading
-	for (int cx = -radius; cx <= radius; cx++) {
-		for (int cy = -radius; cy <= radius; cy++) {
-			for (int cz = -radius; cz <= radius; cz++) {
+		// TODO
+		static TaskPool pool {8};
+		static std::vector<glm::ivec3> requested;
+		static std::mutex request_mutex;
 
-				glm::ivec3 key = {pos.x + cx, pos.y + cy, pos.z + cz};
-				auto it = chunks.find(key);
+		int rings = (int) radius;
+		int ring = 0;
 
-				if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
-					if (it == chunks.end()) {
-						chunks[key].reset(generator.get(key));
-						pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
+		while (ring < rings) {
+			std::lock_guard request_lock {request_mutex};
 
-						continue;
+			planeRingIterator(ring, [&] (int cx, int cz) {
+				for (int cy = -vertical; cy <= vertical; cy++) {
+
+					// glm::ivec2 uses .y but we store .z in it
+					glm::ivec3 key = {pos.x + cx, py + cy, pos.y + cz};
+
+					if (glm::length2(glm::vec3(cx, cy, cz)) < magnitude) {
+						auto it = columns.find(glm::ivec2 {key.x, key.z});
+
+						if (it == columns.end() || (!it->second.contains(key.y))) {
+							if (requested.size() > 8) {
+								return;
+							}
+
+							if (std::find(requested.begin(), requested.end(), key) != requested.end()) {
+								continue;
+							}
+
+							requested.push_back(key);
+
+							pool.enqueue([this, &generator, key]() {
+								Chunk* chunk = generator.get(key);
+
+								{
+									std::lock_guard lock {chunks_mutex};
+									columns[glm::ivec2 {key.x, key.z}].emplace(chunk);
+								}
+
+								pushChunkUpdate(key, ChunkUpdate::INITIAL_LOAD);
+
+								{
+									std::lock_guard lock {request_mutex};
+									util::fastVectorErase(requested, std::find(requested.begin(), requested.end(), key));
+								}
+							});
+
+							continue;
+						}
 					}
 				}
-			}
+			});
+
+			ring++;
 		}
+
+	}).milliseconds();
+
+	times.insert(time);
+
+	if (times.full()) {
+		float avg = std::reduce(times.begin(), times.end()) / times.size();
+
+		logger::info("Avg update time: ", avg, "ms");
+		times.clear(0);
 	}
+
 }
 
-std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {
-	const glm::ivec3 key {cx, cy, cz};
-	auto it = chunks.find(key);
+std::weak_ptr<Chunk> World::getUnsafeChunk(int cx, int cy, int cz) {
+	const glm::ivec2 key {cx, cz};
+	auto it = columns.find(key);
 
-	if (it == chunks.end()) {
+	if (it == columns.end()) {
 		return {};
 	}
 
-	return it->second;
+	return it->second.get(cy);
+}
+
+std::weak_ptr<Chunk> World::getChunk(int cx, int cy, int cz) {
+	std::lock_guard lock {chunks_mutex};
+	return getUnsafeChunk(cx, cy, cz);
 }
 
 Block World::getBlock(int x, int y, int z) {
@@ -102,7 +155,7 @@ void World::setBlock(int x, int y, int z, Block block) {
 		int mz = z & Chunk::mask;
 
 		// setting non-air blocks doesn't require updating neighbours (for now)
-		pushChunkUpdate({cx, cy, cz}, ChunkUpdate::IMPORTANT | (block.isAir() ? Chunk::getNeighboursMask(mx, my, mz) : Direction::NONE));
+		pushChunkUpdate({cx, cy, cz}, ChunkUpdate::IMPORTANT | (block.isAir() ? Chunk::getNeighboursMask(mx, my, mz).mask : Direction::NONE));
 
 		return chunk->setBlock(mx, my, mz, block);
 	}

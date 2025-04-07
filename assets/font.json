@@ -1,0 +1,12 @@
+{
+	"monospace": false,
+	"sizing": 8,
+
+	"pages": [
+		{ "base": 0, "sprite": "font-latin" }
+	],
+
+	"overrides": [
+		{ "codepoint": 32, "start": 0, "width": 4, "draw": false }
+	]
+}

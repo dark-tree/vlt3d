@@ -79,6 +79,13 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+		ankerl
+		GIT_REPOSITORY https://github.com/martinus/unordered_dense
+		GIT_TAG v4.4.0
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
 		format
 		GIT_REPOSITORY https://github.com/magistermaks/lib-format
 		GIT_TAG v0.1.1
@@ -89,6 +96,13 @@ FetchContent_Declare(
 		vstl
 		GIT_REPOSITORY https://github.com/magistermaks/lib-vstl
 		GIT_TAG v3.1
+		GIT_PROGRESS TRUE
+)
+
+FetchContent_Declare(
+		json
+		GIT_REPOSITORY https://github.com/nlohmann/json
+		GIT_TAG v3.11.3
 		GIT_PROGRESS TRUE
 )
 
@@ -123,7 +137,7 @@ set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
 # ... And finally add shaderc!
 add_subdirectory(${shaderc_SOURCE_DIR} ${shaderc_BINARY_DIR})
-FetchContent_MakeAvailable(glfw vma stb glm siv format vstl)
+FetchContent_MakeAvailable(glfw vma stb glm siv format json vstl ankerl)
 
 include_directories(
 		src/
@@ -137,6 +151,8 @@ include_directories(
 		${siv_SOURCE_DIR}                        # Headers in ./
 		${format_SOURCE_DIR}/src                 # Headers in ./
 		${vstl_SOURCE_DIR}                       # Headers in ./
+		${ankerl_SOURCE_DIR}/include             # Headers in ./ankerl
+		${json_SOURCE_DIR}/include               # Headers in ./nlohmann
 )
 
 file(GLOB_RECURSE VLT3D_SOURCES
@@ -145,6 +161,7 @@ file(GLOB_RECURSE VLT3D_SOURCES
 
 # basic unit test are build as a separate target
 list(FILTER VLT3D_SOURCES EXCLUDE REGEX "src[\\/]test\\.cpp$")
+list(FILTER VLT3D_SOURCES EXCLUDE REGEX "src[\\/]main\\.cpp$")
 
 add_library(external
 		lib/stb_image.cpp
@@ -154,11 +171,13 @@ add_library(external
 )
 
 add_executable(main
+		"src/main.cpp"
 		${VLT3D_SOURCES}
 )
 
 add_executable(test
 		"src/test.cpp"
+		${VLT3D_SOURCES}
 )
 
 set(VLT3D_LIBS
@@ -166,10 +185,10 @@ set(VLT3D_LIBS
 		Threads::Threads
 		Vulkan::Vulkan
 		glfw
-		lib-format-tt
 		lib-format-bt
 		shaderc
 		external
+		unordered_dense::unordered_dense
 )
 
 target_link_libraries(main PRIVATE ${VLT3D_LIBS})
@@ -186,8 +205,16 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		target_compile_options(main PRIVATE -g)
 	endif()
 
+	set(VLT3D_WARNING_FLAGS
+			-Wno-volatile
+			-Wall
+			-Werror=return-type
+			-Werror=return-local-addr
+	)
+
 	target_compile_options(external PRIVATE -Wno-volatile)
-	target_compile_options(main PRIVATE -Wno-volatile -Wall -Werror=return-type)
+	target_compile_options(main PRIVATE ${VLT3D_WARNING_FLAGS})
+	target_compile_options(test PRIVATE ${VLT3D_WARNING_FLAGS})
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -208,4 +235,5 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
 	)
 
 	add_dependencies(main copy-assets)
+	add_dependencies(test copy-assets)
 endif()

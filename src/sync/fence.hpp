@@ -1,6 +1,8 @@
 #pragma once
 
 #include "external.hpp"
+#include "setup/callback.hpp"
+#include "util/exception.hpp"
 
 class Fence {
 
@@ -21,13 +23,13 @@ class Fence {
 				create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 			}
 
-			if (vkCreateFence(vk_device, &create_info, nullptr, &vk_fence) != VK_SUCCESS) {
-				throw std::runtime_error("vkCreateFence: Failed to create a fence!");
+			if (vkCreateFence(vk_device, &create_info, AllocatorCallbackFactory::named("Fence"), &vk_fence) != VK_SUCCESS) {
+				throw Exception {"Failed to create a fence!"};
 			}
 		}
 
 		void close() {
-			vkDestroyFence(vk_device, vk_fence, nullptr);
+			vkDestroyFence(vk_device, vk_fence, AllocatorCallbackFactory::named("Fence"));
 		}
 
 		void wait(size_t timeout = UINT64_MAX) {

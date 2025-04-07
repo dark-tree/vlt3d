@@ -33,7 +33,7 @@ class CommandBuffer {
 			info.pInheritanceInfo = parent;
 
 			if (vkBeginCommandBuffer(vk_buffer, &info) != VK_SUCCESS) {
-				throw std::runtime_error("vkBeginCommandBuffer: Failed to begin recording a command buffer!");
+				throw Exception {"Failed to begin recording a command buffer!"};
 			}
 
 			return {vk_buffer};
